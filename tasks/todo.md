@@ -5856,9 +5856,8 @@ These are all recorded as rulings in the ledger:
 
 - **Manual checklist (README):** still to be walked with you. It covers focus, the shortcut, launch at login, wake and click-outside.
 - **Deferred minors:** listed in the ledger and in the final message.
-- **Before publishing:**
-  - remove the private org and repository names from `docs/specs` and `tasks/todo.md`
-  - scrub them from git history (commits d89f348 and 9b79611)
+- **Before publishing:** done 2026-09-29. Private org and repository names were replaced with
+  placeholders in the docs and throughout git history, via `git filter-branch` over all commits.
 - **v2:**
   - Pullover's two-phase fetch
   - snooze
