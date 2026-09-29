@@ -18,11 +18,15 @@ final class AppCoordinator {
     private var popover: PopoverController?
     private var hotKeyCenter: HotKeyCenter?
     private var closingForBrowser = false
+    private let isDemo: Bool
 
-    init() {
-        let defaults = UserDefaults.standard
+    /// In demo mode the inbox comes from `DemoFetcher`, preferences live in a separate suite with every
+    /// section open, and no global shortcut is registered, so a demo never touches the real setup.
+    init(demo: Bool = false) {
+        let defaults = demo ? Self.demoDefaults() : UserDefaults.standard
         let client = GhClient()
-        let store = InboxStore(fetcher: client)
+        let store = InboxStore(fetcher: demo ? DemoFetcher() : client)
+        isDemo = demo
         self.client = client
         self.store = store
         state = PopoverState(store: store, folds: FoldStore(defaults: defaults))
@@ -42,13 +46,21 @@ final class AppCoordinator {
             keyHandler: { [weak self] event in self?.handleKey(event) ?? false },
             onShow: { [weak self] in self?.popoverWillShow() },
             onClose: { [weak self] in self?.popoverDidClose() })
-        hotKeyCenter = HotKeyCenter { [weak self] in self?.togglePopover() }
-        applyHotKey()
+        if !isDemo {
+            hotKeyCenter = HotKeyCenter { [weak self] in self?.togglePopover() }
+            applyHotKey()
+        }
         observeBadge()
         triggers.start(
             { [weak self] in await self?.state.refresh() },
             retrySetup: { [weak self] in await self?.store.retryIfSetupNeeded() })
         refreshNow()
+    }
+
+    private static func demoDefaults() -> UserDefaults {
+        let defaults = UserDefaults(suiteName: "\(bundleID).demo") ?? .standard
+        defaults.set([String](), forKey: FoldStore.key)
+        return defaults
     }
 
     private func makeActions() -> PopoverActions {
