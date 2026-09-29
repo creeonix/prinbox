@@ -5,8 +5,12 @@ import Foundation
 /// Turns a decoded `InboxResponse` into domain values.
 enum PullRequestMapper {
     static func map(_ response: InboxResponse) throws -> FetchResult {
+        let errors = response.errors ?? []
+        if GraphQLErrors.isRateLimited(errors) {
+            throw FetchError.rateLimited(resetAt: response.data?.rateLimit?.resetAt)
+        }
         guard let data = response.data, let viewer = data.viewer?.login else {
-            throw FetchError.badResponse
+            throw errors.first.map { FetchError.other(String($0.message.prefix(120))) } ?? FetchError.badResponse
         }
         let candidates = SearchSource.allCases.flatMap { source in
             (data.search(for: source)?.nodes ?? [])
@@ -21,7 +25,7 @@ enum PullRequestMapper {
             pullRequests: unique,
             totals: perSearch(data) { $0.issueCount },
             fetched: perSearch(data) { $0.nodes.count },
-            warnings: []
+            warnings: GraphQLErrors.warnings(errors)
         )
     }
 
