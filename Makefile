@@ -1,4 +1,5 @@
-APP_NAME  := Prinbox
+PRODUCT   := Prinbox
+APP_NAME  := PRInbox
 BUNDLE_ID := io.github.creeonix.prinbox
 VERSION   := 0.1.0
 BUILD_DIR := build
@@ -30,7 +31,7 @@ coverage:
 	SWIFT_TEST_FLAGS="$(SWIFT_TEST_FLAGS)" scripts/coverage.sh 80
 
 build:
-	swift build -c release --product $(APP_NAME)
+	swift build -c release --product $(PRODUCT)
 
 # Regenerates Resources/AppIcon.icns from Resources/AppIcon-source.png: opaque, full-bleed, square
 # artwork. macOS 26+ applies its own rounded mask and margins to such icons; artwork that already carries
@@ -50,27 +51,27 @@ icon:
 app: build
 	rm -rf "$(APP)"
 	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources"
-	cp "$$(swift build -c release --show-bin-path)/$(APP_NAME)" "$(APP)/Contents/MacOS/$(APP_NAME)"
+	cp "$$(swift build -c release --show-bin-path)/$(PRODUCT)" "$(APP)/Contents/MacOS/$(PRODUCT)"
 	cp Resources/AppIcon.icns "$(APP)/Contents/Resources/AppIcon.icns"
 	sed 's/__VERSION__/$(VERSION)/g' Resources/Info.plist > "$(APP)/Contents/Info.plist"
 	codesign --force --sign - --identifier $(BUNDLE_ID) "$(APP)"
 	codesign --verify --strict "$(APP)"
 
 install: app
-	-pkill -x $(APP_NAME)
-	@for i in $$(seq 50); do pgrep -xq $(APP_NAME) || break; sleep 0.1; done
+	-pkill -x $(PRODUCT)
+	@for i in $$(seq 50); do pgrep -xq $(PRODUCT) || break; sleep 0.1; done
 	rm -rf "$(INSTALLED)"
 	cp -R "$(APP)" /Applications/
 	open "$(INSTALLED)"
 
 uninstall:
-	-"$(INSTALLED)/Contents/MacOS/$(APP_NAME)" --unregister-login-item
-	-pkill -x $(APP_NAME)
+	-"$(INSTALLED)/Contents/MacOS/$(PRODUCT)" --unregister-login-item
+	-pkill -x $(PRODUCT)
 	rm -rf "$(INSTALLED)" "$(HOME)/Library/Caches/$(BUNDLE_ID)"
 	-defaults delete $(BUNDLE_ID)
 
 run:
-	swift run $(APP_NAME)
+	swift run $(PRODUCT)
 
 clean:
 	rm -rf .build $(BUILD_DIR)

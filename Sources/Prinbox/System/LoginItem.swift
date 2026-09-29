@@ -18,7 +18,7 @@ final class LoginItem {
     var note: String? {
         if let lastError { return lastError }
         if !isInstalled { return "Install to /Applications (make install) to use this." }
-        if status == .requiresApproval { return "Approve prinbox in System Settings > General > Login Items." }
+        if status == .requiresApproval { return "Approve PRInbox in System Settings > General > Login Items." }
         return nil
     }
 

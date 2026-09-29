@@ -27,13 +27,13 @@ final class StatusItemController: NSObject {
         guard let button = item.button else { return }
         switch badge {
         case .loading:
-            show(button, title: "…", tint: nil, dimmed: true, tooltip: "prinbox: loading")
+            show(button, title: "…", tint: nil, dimmed: true, tooltip: "PRInbox: loading")
         case .count(let count):
-            show(button, title: "\(count)", tint: nil, dimmed: false, tooltip: "prinbox: \(count) waiting on you")
+            show(button, title: "\(count)", tint: nil, dimmed: false, tooltip: "PRInbox: \(count) waiting on you")
         case .zero:
-            show(button, title: "", tint: nil, dimmed: true, tooltip: "prinbox: nothing waiting on you")
+            show(button, title: "", tint: nil, dimmed: true, tooltip: "PRInbox: nothing waiting on you")
         case .error(let message):
-            show(button, title: "!", tint: .systemRed, dimmed: false, tooltip: "prinbox: \(message)")
+            show(button, title: "!", tint: .systemRed, dimmed: false, tooltip: "PRInbox: \(message)")
         }
     }
 
@@ -47,7 +47,7 @@ final class StatusItemController: NSObject {
     }
 
     private static func symbol(tint: NSColor?) -> NSImage? {
-        let base = NSImage(systemSymbolName: "arrow.triangle.pull", accessibilityDescription: "prinbox")
+        let base = NSImage(systemSymbolName: "arrow.triangle.pull", accessibilityDescription: "PRInbox")
         guard let tint else {
             base?.isTemplate = true
             return base
@@ -70,7 +70,7 @@ final class StatusItemController: NSObject {
         let refresh = menu.addItem(withTitle: "Refresh now", action: #selector(refreshChosen), keyEquivalent: "r")
         refresh.target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit prinbox", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit PRInbox", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.menu = menu
         item.button?.performClick(nil)
         item.menu = nil

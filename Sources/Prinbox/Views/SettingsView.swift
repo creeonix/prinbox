@@ -32,7 +32,7 @@ struct SettingsView: View {
             InfoLine(label: "Version", value: info.version)
             HStack {
                 Spacer()
-                Button("Quit prinbox", action: actions.quit)
+                Button("Quit PRInbox", action: actions.quit)
             }
         }
         .padding(14)
