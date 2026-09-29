@@ -5867,3 +5867,17 @@ These are all recorded as rulings in the ledger:
   - compact layout
   - the MCP server
   - treating DISMISSED reviews as "not reviewed"
+
+### Manual checklist results (user, 2026-09-29)
+
+- **Passed:**
+  - popover under the icon, left alone by OmniWM
+  - keyboard: ↑/↓, Enter, R, Esc
+  - folding and fold persistence
+  - global shortcut and recording
+  - click outside closes
+  - offline and signed-out states
+  - gh missing and gh signed out: setup panel, Copy, recovery after fixing gh
+- **Seen but not yet exercised:** the login item appears in Login Items and points at
+  /Applications/PRInbox.app; starting at the next login is still to be confirmed.
+- **Pending:** sleep/wake keeps the icon normal.
