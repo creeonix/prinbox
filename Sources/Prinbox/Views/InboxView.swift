@@ -9,14 +9,21 @@ struct InboxView: View {
 
     let state: PopoverState
     let avatars: AvatarImages
+    let hotKeys: HotKeySettings
+    let loginItem: LoginItem
+    let info: AppInfo
     let actions: PopoverActions
 
     var body: some View {
         VStack(spacing: 0) {
-            HeaderView(state: state, actions: actions)
-            WarningLinesView(lines: state.store.warningLines)
-            Divider()
-            content
+            if state.showingSettings {
+                SettingsView(state: state, hotKeys: hotKeys, loginItem: loginItem, info: info, actions: actions)
+            } else {
+                HeaderView(state: state, actions: actions)
+                WarningLinesView(lines: state.store.warningLines)
+                Divider()
+                content
+            }
         }
         .frame(width: Self.width)
     }

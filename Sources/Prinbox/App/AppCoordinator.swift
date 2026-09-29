@@ -7,17 +7,25 @@ import PrinboxCore
 final class AppCoordinator {
     static let bundleID = Bundle.main.bundleIdentifier ?? "io.github.creeonix.prinbox"
 
+    private let client: GhClient
     private let store: InboxStore
     private let state: PopoverState
+    private let hotKeys: HotKeySettings
+    private let loginItem = LoginItem()
     private let avatars: AvatarImages
     private let triggers = RefreshTriggers()
     private var statusItem: StatusItemController?
     private var popover: PopoverController?
+    private var hotKeyCenter: HotKeyCenter?
 
     init() {
-        let store = InboxStore(fetcher: GhClient())
+        let defaults = UserDefaults.standard
+        let client = GhClient()
+        let store = InboxStore(fetcher: client)
+        self.client = client
         self.store = store
-        state = PopoverState(store: store, folds: FoldStore(defaults: UserDefaults.standard))
+        state = PopoverState(store: store, folds: FoldStore(defaults: defaults))
+        hotKeys = HotKeySettings(defaults: defaults)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.defaultDirectory(bundleID: Self.bundleID)))
     }
 
@@ -25,11 +33,16 @@ final class AppCoordinator {
         statusItem = StatusItemController(
             onLeftClick: { [weak self] in self?.togglePopover() },
             onRefresh: { [weak self] in self?.refreshNow() })
+        let root = InboxView(
+            state: state, avatars: avatars, hotKeys: hotKeys, loginItem: loginItem,
+            info: AppInfo.current(client: client), actions: makeActions())
         popover = PopoverController(
-            rootView: InboxView(state: state, avatars: avatars, actions: makeActions()),
+            rootView: root,
             keyHandler: { [weak self] event in self?.handleKey(event) ?? false },
             onShow: { [weak self] in self?.popoverWillShow() },
-            onClose: {})
+            onClose: { [weak self] in self?.popoverDidClose() })
+        hotKeyCenter = HotKeyCenter { [weak self] in self?.togglePopover() }
+        applyHotKey()
         observeBadge()
         triggers.start { [weak self] in await self?.state.refresh() }
         refreshNow()
@@ -39,7 +52,10 @@ final class AppCoordinator {
         PopoverActions(
             open: { [weak self] url in self?.open(url) },
             refresh: { [weak self] in self?.refreshNow() },
-            quit: { NSApp.terminate(nil) })
+            quit: { NSApp.terminate(nil) },
+            toggleShortcutRecording: { [weak self] in self?.toggleShortcutRecording() },
+            setShortcut: { [weak self] spec in self?.setShortcut(spec) },
+            setLaunchAtLogin: { [weak self] enabled in self?.loginItem.setEnabled(enabled) })
     }
 
     private func togglePopover() {
@@ -50,6 +66,11 @@ final class AppCoordinator {
     private func popoverWillShow() {
         state.popoverWillShow()
         Task { await state.refreshIfStale() }
+    }
+
+    /// Closing mid-recording cancels it, which re-registers the shortcut that recording suspended.
+    private func popoverDidClose() {
+        if state.isRecordingShortcut { toggleShortcutRecording() }
     }
 
     private func refreshNow() {
@@ -63,6 +84,7 @@ final class AppCoordinator {
 
     private func handleKey(_ event: NSEvent) -> Bool {
         let modifiers = HotKeyModifiers(event.modifierFlags)
+        if state.isRecordingShortcut { return recordShortcut(keyCode: event.keyCode, modifiers: modifiers) }
         guard
             let command = KeyCommand(
                 keyCode: event.keyCode, characters: event.charactersIgnoringModifiers, modifiers: modifiers),
@@ -79,6 +101,41 @@ final class AppCoordinator {
         case .refresh: refreshNow()
         case .close: popover?.close()
         }
+    }
+
+    // MARK: Global shortcut
+
+    /// While recording, the current shortcut is unregistered; otherwise Carbon would swallow it and it
+    /// could never be re-recorded.
+    private func toggleShortcutRecording() {
+        if state.isRecordingShortcut {
+            state.isRecordingShortcut = false
+            applyHotKey()
+        } else {
+            hotKeyCenter?.unregister()
+            state.isRecordingShortcut = true
+        }
+    }
+
+    /// Esc cancels. Keys without ⌃, ⌥ or ⌘ are swallowed and recording continues.
+    private func recordShortcut(keyCode: UInt16, modifiers: HotKeyModifiers) -> Bool {
+        if keyCode == 53 {
+            toggleShortcutRecording()
+            return true
+        }
+        guard let spec = HotKeySpec.recorded(keyCode: keyCode, modifiers: modifiers) else { return true }
+        state.isRecordingShortcut = false
+        setShortcut(spec)
+        return true
+    }
+
+    private func setShortcut(_ spec: HotKeySpec?) {
+        hotKeys.update(spec)
+        applyHotKey()
+    }
+
+    private func applyHotKey() {
+        hotKeys.isUnavailable = !(hotKeyCenter?.register(hotKeys.spec) ?? false)
     }
 
     /// Re-renders the status item whenever anything the badge depends on changes.
