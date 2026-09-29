@@ -1,27 +1,74 @@
-# PRInbox
+<p align="center">
+  <img src="docs/images/icon.png" width="128" alt="PRInbox icon">
+</p>
 
-A macOS menu-bar code-review inbox that signs in through the GitHub CLI.
+<h1 align="center">PRInbox</h1>
 
-PRInbox shows the pull requests waiting on you in a popover under a menu-bar icon. It is an
-open-source analogue of [Pullover](https://github.com/omgovich/pullover), with one difference: it
-has no OAuth app of its own. Every request goes through `gh api graphql`, so PRInbox sees exactly
-what your `gh` login sees. That includes organizations that restrict third-party OAuth apps but
-have approved the GitHub CLI. PRInbox never reads, stores or passes your token.
+<p align="center">
+  A macOS menu-bar inbox for the pull requests waiting on you, signed in through the GitHub CLI.
+</p>
 
-## Requirements
+<p align="center">
+  <a href="https://github.com/creeonix/prinbox/actions/workflows/ci.yml"><img src="https://github.com/creeonix/prinbox/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/creeonix/prinbox/releases/latest"><img src="https://img.shields.io/github/v/release/creeonix/prinbox" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-blue" alt="macOS 14+">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
+</p>
 
-- macOS 14 or later.
-- Command Line Tools (`xcode-select --install`). Xcode is not needed.
-- The GitHub CLI, logged in: `brew install gh && gh auth login`.
-- `jq`, only for recording test fixtures.
+<p align="center">
+  <img src="docs/images/popover.png" width="460" alt="PRInbox popover with sample pull requests">
+</p>
+
+## Why
+
+Review requests get lost in email and GitHub notifications. PRInbox keeps one number in your menu bar,
+the PRs waiting on you, and one click shows what they are and how long they have waited.
+
+PRInbox is an open-source take on [Pullover](https://github.com/omgovich/pullover), with one difference:
+it has **no OAuth app of its own**. Every request goes through `gh api graphql`, so PRInbox sees exactly
+what your [GitHub CLI](https://cli.github.com) login sees. That includes organizations that block
+third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, stores or sends your token.
+
+## Features
+
+- **A count in the menu bar.** It is dimmed when nothing waits on you and red when gh needs attention.
+- **Five sections**, each foldable, with the fold state remembered:
+  - **Needs your review:** you or one of your teams was asked, and you have not reviewed yet.
+  - **Take another look:** your review was requested again after you already reviewed.
+  - **Mentions:** someone mentioned you on their PR.
+  - **Your PRs:** yours that need you: changes requested, merge conflicts, CI is red, or approved and
+    ready to merge.
+  - **Waiting on others:** the rest of yours, one quiet line each.
+- **Rows that answer "what and how long":** author avatar, repository, time waiting (counted from when
+  your review was requested), lines added and removed, and status.
+- **Keyboard first:** ↑/↓, Enter to open, R to refresh, Esc to close, and a global shortcut
+  (⌃⌥P by default).
+- **A real menu-bar popover:** tiling window managers such as OmniWM, AeroSpace and yabai leave it alone.
+- **Clear setup help:** when gh is missing or signed out, the popover shows the exact commands, and
+  PRInbox recovers by itself once they are done.
+- **Stays fresh:** refreshes every 5 minutes, after wake and when opened; it keeps the last data while
+  offline, and archived repositories are excluded.
+- **Launch at login**, from Settings in the popover.
 
 ## Install
 
-```sh
-git clone <this repository> prinbox && cd prinbox
-make install      # builds, ad-hoc signs, copies to /Applications and launches
-make uninstall    # removes the app, its login item, caches and preferences
-```
+1. Install the GitHub CLI and sign in:
+
+   ```sh
+   brew install gh
+   gh auth login
+   ```
+
+2. Download `PRInbox-<version>.dmg` from the
+   [latest release](https://github.com/creeonix/prinbox/releases/latest), open it and drag
+   **PRInbox** to **Applications**.
+3. Open PRInbox. Releases are signed ad hoc rather than with an Apple Developer ID, so macOS blocks the
+   first launch. Right-click PRInbox in Applications and choose **Open**, or go to
+   **System Settings › Privacy & Security** and click **Open Anyway**. This is needed once.
+
+Requires macOS 14 or later, on Apple silicon or Intel.
+
+To build from source instead, see [Build from source](#build-from-source).
 
 ## Usage
 
@@ -35,24 +82,6 @@ make uninstall    # removes the app, its login item, caches and preferences
 
 Left-click opens the popover. Right-click offers Refresh now and Quit.
 
-### Sections
-
-| Section | What lands there |
-|---|---|
-| Needs your review | Your review is requested (directly or through a team) and you have not reviewed yet |
-| Take another look | Your review is requested again after you already reviewed |
-| Mentions | You are mentioned on someone else's PR and not requested as a reviewer |
-| Your PRs | Your PRs that need you, first reason wins: changes requested, merge conflicts, CI is red, approved and ready to merge |
-| Waiting on others | The rest of your PRs, one dim line each |
-
-Sorting:
-- Review sections put the longest-waiting PR first. The wait is measured from the moment your
-  review was requested.
-- Your PRs are sorted newest first.
-- Each section shows at most 8 PRs, then a "+N more on GitHub" row.
-- Archived repositories are excluded.
-- Drafts are shown dimmed.
-
 ### Keyboard
 
 | Key | Action |
@@ -60,100 +89,113 @@ Sorting:
 | ↑ / ↓ | move the selection (wraps) |
 | Enter | open the selected PR in your browser, or fold/unfold a section header |
 | R | refresh now |
-| Esc | close the popover (or leave Settings) |
+| Esc | close the popover, or leave Settings |
 | ⌃⌥P | open the popover from anywhere (change it in Settings) |
 
-The global shortcut uses Carbon hot keys, so it needs no Accessibility permission. PRInbox registers it
-exclusively, so Settings reports a shortcut that another app holds exclusively. macOS lets apps that
-register without exclusivity share a shortcut silently. Pullover uses the same default ⌃⌥P, and while both
-run, one keypress opens both popovers. Pick another shortcut in either app.
-
-### Settings
-
-Open Settings with the gear in the popover. It holds the global shortcut, launch at login
-(available once the app is in `/Applications`), the detected `gh` path, the version and Quit.
-Settings stay inside the popover, so a tiling window manager never sees a window to tile.
+The global shortcut uses Carbon hot keys and needs no Accessibility permission. macOS lets apps share a
+shortcut silently: Pullover also defaults to ⌃⌥P, so if you run both, give one of them another shortcut.
 
 ### When gh is missing or signed out
 
 The popover replaces the list with setup steps, each command with a Copy button:
+
 - **gh not installed:** `brew install gh`, then `gh auth login`.
 - **gh not signed in, or its sign-in expired:** `gh auth login` (choose GitHub.com, then "Login with a
   web browser"). If your organization uses single sign-on, authorize gh for it when asked.
 
-PRInbox checks again every 10 seconds, so it recovers by itself a few seconds after you finish; Check now
-retries at once. `PRInbox --print` prints the same steps.
+PRInbox checks again every 10 seconds, so it recovers by itself shortly after you finish.
 
-If gh lives somewhere unusual, point PRInbox at it with
-`defaults write io.github.creeonix.prinbox ghPath /path/to/gh`. The override is exclusive: when it is
-set, only that path is tried, and `defaults delete io.github.creeonix.prinbox ghPath` removes it.
+If gh lives somewhere unusual, point PRInbox at it:
 
-### Refresh
+```sh
+defaults write io.github.creeonix.prinbox ghPath /path/to/gh
+```
 
-PRInbox refreshes:
-- every 5 minutes
-- after the Mac wakes
-- when you open the popover and the data is more than a minute old
-- when you press R
+When this override is set, PRInbox uses only that path. Remove it with
+`defaults delete io.github.creeonix.prinbox ghPath`.
 
-It keeps the last good data while offline.
+### Settings
+
+Open Settings with the gear in the popover. It holds the global shortcut, launch at login, the detected
+`gh` path, the version and Quit. Settings stay inside the popover, so there is never a window for a
+tiling window manager to grab.
 
 ### Command line
 
 ```sh
-/Applications/PRInbox.app/Contents/MacOS/Prinbox --print    # print the inbox once, then exit
+/Applications/PRInbox.app/Contents/MacOS/Prinbox --print   # print your inbox once
+/Applications/PRInbox.app/Contents/MacOS/Prinbox --demo    # run with sample data
 ```
+
+## Privacy and security
+
+- **No token handling:** GitHub access goes only through `gh api graphql`. PRInbox has no OAuth app,
+  and never reads, stores or sends a token.
+- **Nothing leaves your Mac:** there is no telemetry and no server. The only network traffic is gh's
+  GitHub API call and avatar downloads from `avatars.githubusercontent.com`.
+- **Local data:** avatars are cached in `~/Library/Caches/io.github.creeonix.prinbox`. Settings live in
+  the app's user defaults.
+
+## Build from source
+
+Requirements:
+- macOS 14+
+- Command Line Tools (`xcode-select --install`). Xcode also works but is not needed.
+- `jq`, only for recording test fixtures.
+
+```sh
+git clone https://github.com/creeonix/prinbox.git && cd prinbox
+make install      # builds, signs ad hoc, copies to /Applications and launches
+make uninstall    # removes the app, its login item, caches and preferences
+```
+
+Other targets:
+
+| Target | What it does |
+|---|---|
+| `make test` | runs the Swift Testing suite |
+| `make lint` | runs swift-format lint, plus a check for `@State`/`#Preview` |
+| `make coverage` | runs the tests with coverage; fails below 80% for PrinboxCore |
+| `make run` | runs the app from the build directory |
+| `make dmg VERSION=x.y.z` | builds the release DMG into `build/` |
+| `make icon` | rebuilds the app icon from `Resources/AppIcon-source.png` |
 
 ## Development
 
-```sh
-make test       # Swift Testing suite
-make lint       # swift-format lint, and a guard against @State / #Preview
-make coverage   # tests with coverage; fails below 80% for PrinboxCore
-make run        # run the app from the build directory
-```
+- **Code layout:**
+  - `Sources/PrinboxCore` holds all the logic (gh access, classification, formatting, state) and is
+    unit tested. It has no AppKit.
+  - `Sources/Prinbox` is the thin AppKit and SwiftUI shell.
+- **Design:** `docs/specs/2026-09-29-prinbox-v1-design.md`.
+- **Fixtures:** `scripts/record-fixture.sh <name>` records the live query as a test fixture. It
+  rebuilds the response from an allowlist of fields and replaces repositories, logins, titles, URLs and
+  ids with placeholders, and a test checks every string in every fixture.
+- **UI checks:** things the tests cannot cover are listed in
+  [docs/manual-checklist.md](docs/manual-checklist.md).
+- **Releases:** see [RELEASING.md](RELEASING.md).
+- **Building with Command Line Tools only**, which lack a few things Xcode provides:
+  - SwiftUI's macro plugins, so `@State` and `#Preview` do not compile; view state lives in
+    `@Observable` models instead.
+  - XCTest, so the tests use Swift Testing.
+  - A reliably found swift-testing macro plugin; `make test` passes its path explicitly.
 
-- `Sources/PrinboxCore` holds all logic and is unit tested. It has no AppKit.
-- `Sources/Prinbox` is the thin AppKit and SwiftUI shell.
-- Design: `docs/specs/2026-09-29-prinbox-v1-design.md`.
+## Roadmap
 
-### Recording fixtures
+- Snooze a PR until something new happens on it.
+- "Replies to you" from review threads.
+- Stacked PR chains.
+- A compact layout.
+- An MCP server, so AI agents can read your review queue.
 
-`scripts/record-fixture.sh <name>` runs the real query through `gh` and writes an anonymized
-fixture to `Tests/PrinboxCoreTests/Fixtures/<name>.json`.
-- `scripts/anonymize.jq` rebuilds the response from an allowlist of fields.
-- Repositories, logins, titles, URLs and ids are replaced with placeholders.
-- A test checks that every string in a fixture is a placeholder.
+## Credits
 
-### Building without Xcode
+- [Pullover](https://github.com/omgovich/pullover) by Vlad Shilov: the idea, and the classification
+  rules PRInbox ports.
+- [omarchy-pullover](https://github.com/igor-alexandrov/omarchy-pullover) by Igor Alexandrov: the
+  approach of signing in through the GitHub CLI.
 
-Command Line Tools lack three things that Xcode provides:
-- **SwiftUI macro plugins:** `@State` and `#Preview` do not compile. Keep view state in
-  `@Observable` models.
-- **XCTest:** tests use Swift Testing.
-- **A reliable path to the swift-testing macro plugin:** `make test` passes it explicitly, because
-  the default build intermittently fails with "plugin for module 'TestingMacros' not found".
-
-## Manual checklist
-
-- [ ] The popover opens anchored under the icon; the tiling window manager leaves it alone.
-- [ ] The popover draws above bars that use the pop-up window level (for example OmniWM's workspace bar).
-- [ ] Clicking outside closes the popover.
-- [ ] ↑/↓ move the selection, Enter opens a PR and closes the popover, R refreshes, Esc closes.
-- [ ] After Esc (or closing with the shortcut), typing goes to the app you were in before.
-- [ ] Clicking the icon while the popover is open closes it (it does not reopen).
-- [ ] Row tooltips (full owner/name) draw above the popover.
-- [ ] Enter on a section header folds and unfolds it; the fold state survives a relaunch.
-- [ ] The global shortcut opens the popover from another app; recording a new shortcut works; removing it works.
-- [ ] Running a second PRInbox copy: its Settings reports the shortcut as unavailable.
-- [ ] Launch at login: the toggle turns on, System Settings > General > Login Items lists PRInbox, and it starts after logging in again.
-- [ ] Offline (network off): the icon turns red with `!`, and the popover keeps the last data with an "Offline" line.
-- [ ] After sleep and wake with a working network, the icon does not turn red.
-- [ ] Signed out (`GH_CONFIG_DIR=$(mktemp -d) /Applications/PRInbox.app/Contents/MacOS/Prinbox`): red `!`, and the popover shows "Sign in to the GitHub CLI" with a working Copy button.
-- [ ] gh missing (`/Applications/PRInbox.app/Contents/MacOS/Prinbox -ghPath /nonexistent`): the popover shows the "gh not found" steps.
-- [ ] After fixing gh (for example `gh auth login`), the popover returns to the inbox within about 10 seconds without a click.
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## License
 
-MIT. See `LICENSE`. PRInbox ports classification rules from Pullover and follows omarchy-pullover's
-approach to gh authentication. See `THIRD_PARTY_NOTICES.md`.
+MIT. See [LICENSE](LICENSE).
