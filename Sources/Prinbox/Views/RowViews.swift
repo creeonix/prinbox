@@ -16,9 +16,11 @@ struct PullRequestRowView: View {
                         .font(.system(size: 13, weight: .medium))
                         .lineLimit(1)
                         .truncationMode(.tail)
-                    TimelineView(.everyMinute) { context in
+                    // The schedule only triggers a redraw each minute. Its entry date is the start of the minute,
+                    // up to 59 s in the past, which would floor "5h" to "4h", so ages use the current time.
+                    TimelineView(.everyMinute) { _ in
                         HStack(spacing: 0) {
-                            Text(RowText.meta(row, now: context.date) + " · ").foregroundStyle(.secondary)
+                            Text(RowText.meta(row, now: Date()) + " · ").foregroundStyle(.secondary)
                             Text(row.classification.reason.rawValue)
                                 .foregroundStyle(Theme.color(for: row.classification.reason.tone))
                         }
