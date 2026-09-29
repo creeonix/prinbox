@@ -6,6 +6,6 @@ let package = Package(
     platforms: [.macOS(.v14)],
     targets: [
         .target(name: "PrinboxCore"),
-        .testTarget(name: "PrinboxCoreTests", dependencies: ["PrinboxCore"]),
+        .testTarget(name: "PrinboxCoreTests", dependencies: ["PrinboxCore"], exclude: ["Fixtures"]),
     ]
 )

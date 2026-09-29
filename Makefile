@@ -1,7 +1,13 @@
+# Command Line Tools keep the swift-testing macro plugin in host/plugins/testing, which the default
+# explicit-module dependency scan intermittently misses ("plugin for module 'TestingMacros' not found").
+# Pass the directory explicitly when it exists; Xcode toolchains do not need it.
+TESTING_PLUGINS := $(shell d="$$(dirname "$$(dirname "$$(xcrun --find swift)")")/lib/swift/host/plugins/testing"; [ -d "$$d" ] && echo "$$d")
+SWIFT_TEST_FLAGS := $(if $(TESTING_PLUGINS),-Xswiftc -plugin-path -Xswiftc $(TESTING_PLUGINS))
+
 .PHONY: test lint format
 
 test:
-	swift test
+	swift test $(SWIFT_TEST_FLAGS)
 
 lint:
 	swift format lint --recursive Sources Tests Package.swift
