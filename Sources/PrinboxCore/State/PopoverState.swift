@@ -20,6 +20,7 @@ public final class PopoverState {
         self.store = store
         self.folds = folds
         lastItems = items
+        store.onInboxChange = { [weak self] in self?.reconcileSelection() }
     }
 
     public var items: [InboxItemID] {
@@ -42,14 +43,13 @@ public final class PopoverState {
         reconcileSelection()
     }
 
+    /// The store reconciles the selection through `onInboxChange`, including refreshes that start elsewhere.
     public func refresh() async {
         await store.refresh()
-        reconcileSelection()
     }
 
     public func refreshIfStale() async {
         await store.refreshIfStale()
-        reconcileSelection()
     }
 
     /// Resets transient state each time the popover opens and selects the first PR row.

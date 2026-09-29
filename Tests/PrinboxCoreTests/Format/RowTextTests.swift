@@ -19,6 +19,16 @@ import Testing
         #expect(RowText.title(makePR(number: 1, title: "Fix\nthe\t\tthing\r\nnow")) == "#1 Fix the thing now")
     }
 
+    @Test func titleNeutralizesControlAndBidiCharacters() {
+        #expect(RowText.title(makePR(number: 1, title: "a\u{1B}[31mb\u{202E}c\u{2066}d")) == "#1 a [31mb c d")
+    }
+
+    @Test func titleKeepsEmojiSequences() {
+        #expect(
+            RowText.title(makePR(number: 1, title: "ship \u{1F468}\u{200D}\u{1F4BB}"))
+                == "#1 ship \u{1F468}\u{200D}\u{1F4BB}")
+    }
+
     @Test func reviewRowsSayHowLongTheyWaited() {
         let pr = makePR(additions: 120, deletions: 4, reviewRequestedAt: date("2026-08-10T06:00:00Z"))
         #expect(RowText.meta(row(pr), now: now) == "web · waiting 6h · +120 −4")

@@ -23,9 +23,11 @@ public struct HotKeySpec: Equatable, Sendable {
         self.modifiers = modifiers
     }
 
-    /// A recorded shortcut must include ⌃, ⌥ or ⌘ so that ordinary typing can never trigger it.
+    /// A shortcut must include ⌃, ⌥ or ⌘ so that ordinary typing can never trigger it.
+    static let triggerModifiers: HotKeyModifiers = [.control, .option, .command]
+
     public static func recorded(keyCode: UInt16, modifiers: HotKeyModifiers) -> HotKeySpec? {
-        guard !modifiers.isDisjoint(with: [.control, .option, .command]) else { return nil }
+        guard !modifiers.isDisjoint(with: triggerModifiers) else { return nil }
         return HotKeySpec(keyCode: UInt32(keyCode), modifiers: modifiers)
     }
 
@@ -46,9 +48,12 @@ public struct HotKeySpec: Equatable, Sendable {
     /// The user-defaults form: `[keyCode, modifiers]`.
     public var storedValue: [Int] { [Int(keyCode), modifiers.rawValue] }
 
+    /// Rejects malformed values and, like `recorded`, shortcuts without ⌃, ⌥ or ⌘.
     public init?(storedValue: [Int]) {
         guard storedValue.count == 2, let code = UInt32(exactly: storedValue[0]) else { return nil }
-        self.init(keyCode: code, modifiers: HotKeyModifiers(rawValue: storedValue[1]))
+        let modifiers = HotKeyModifiers(rawValue: storedValue[1])
+        guard !modifiers.isDisjoint(with: Self.triggerModifiers) else { return nil }
+        self.init(keyCode: code, modifiers: modifiers)
     }
 }
 

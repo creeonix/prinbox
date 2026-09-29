@@ -30,4 +30,9 @@ import Testing
         #expect(HotKeySpec(storedValue: []) == nil)
         #expect(HotKeySpec(storedValue: [1]) == nil)
     }
+
+    @Test func storedShortcutWithoutControlOptionOrCommandIsRejected() {
+        #expect(HotKeySpec(storedValue: [35, 0]) == nil)
+        #expect(HotKeySpec(storedValue: [35, HotKeyModifiers.shift.rawValue]) == nil)
+    }
 }

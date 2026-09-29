@@ -32,6 +32,16 @@ import Testing
         }
     }
 
+    @Test func watchdogFiringAfterExitIsNotATimeout() throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/true")
+        try process.run()
+        process.waitUntilExit()
+        let watchdog = Watchdog(process: process)
+        watchdog.fireNow()
+        #expect(watchdog.fired == false)
+    }
+
     @Test func reportsLaunchFailure() async {
         await #expect(throws: CommandRunnerError.self) {
             try await runner.run(

@@ -15,6 +15,8 @@ public final class InboxStore {
     public private(set) var lastSuccess: Date?
     public private(set) var isRefreshing = false
 
+    /// Called after every inbox change, whoever triggered the refresh (timer, wake, popover, R key).
+    @ObservationIgnored public var onInboxChange: (@MainActor () -> Void)?
     @ObservationIgnored private var followUpRequested = false
     @ObservationIgnored private var pausedUntil: Date?
     @ObservationIgnored private let fetcher: InboxFetching
@@ -65,6 +67,7 @@ public final class InboxStore {
             error = nil
             lastSuccess = clock()
             pausedUntil = nil
+            onInboxChange?()
         } catch let failure as FetchError {
             error = failure
             if case .rateLimited(let resetAt) = failure {

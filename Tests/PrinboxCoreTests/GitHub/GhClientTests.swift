@@ -64,9 +64,9 @@ struct FakeRunner: CommandRunning {
         }
     }
 
-    @Test func launchFailureIsGhNotFound() async {
-        await #expect(throws: FetchError.ghNotFound) {
-            try await client { _, _, _ in throw CommandRunnerError.launchFailed("no such file") }.fetch()
+    @Test func launchFailureOfAnExistingGhExplainsItself() async {
+        await #expect(throws: FetchError.other("Could not run gh: bad CPU type in executable")) {
+            try await client { _, _, _ in throw CommandRunnerError.launchFailed("bad CPU type in executable") }.fetch()
         }
     }
 

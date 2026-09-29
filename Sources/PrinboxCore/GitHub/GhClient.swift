@@ -36,9 +36,12 @@ public struct GhClient: InboxFetching {
         } catch CommandRunnerError.timedOut {
             Self.log.error("gh timed out")
             throw FetchError.timedOut
+        } catch CommandRunnerError.launchFailed(let reason) {
+            Self.log.error("gh could not be launched: \(reason, privacy: .public)")
+            throw FetchError.other("Could not run gh: \(reason)")
         } catch {
-            Self.log.error("gh could not be launched: \(String(describing: error), privacy: .public)")
-            throw FetchError.ghNotFound
+            Self.log.error("gh failed to run: \(String(describing: error), privacy: .public)")
+            throw FetchError.other("Could not run gh: \(error.localizedDescription)")
         }
         if output.exitCode != 0 {
             Self.log.error("gh exited \(output.exitCode): \(String(output.stderr.prefix(500)), privacy: .public)")

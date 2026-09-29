@@ -78,7 +78,7 @@ private final class DataBox: @unchecked Sendable {
 }
 
 /// Terminates the process if it is still running when the timeout fires.
-private final class Watchdog: @unchecked Sendable {
+final class Watchdog: @unchecked Sendable {
     private let process: Process
     private let lock = NSLock()
     private var didFire = false
@@ -92,6 +92,9 @@ private final class Watchdog: @unchecked Sendable {
         DispatchQueue.global().asyncAfter(deadline: .now() + interval) { self.fire() }
     }
 
+    /// Test hook: what happens when the timeout fires now.
+    func fireNow() { fire() }
+
     func disarm() {
         lock.lock()
         isDisarmed = true
@@ -104,11 +107,13 @@ private final class Watchdog: @unchecked Sendable {
         return didFire
     }
 
+    /// Only a kill of a still-running process counts as a timeout; a process that already exited keeps its
+    /// output even if the deadline passes before `disarm()`.
     private func fire() {
         lock.lock()
-        let shouldKill = !isDisarmed
+        let shouldKill = !isDisarmed && process.isRunning
         if shouldKill { didFire = true }
         lock.unlock()
-        if shouldKill && process.isRunning { process.terminate() }
+        if shouldKill { process.terminate() }
     }
 }

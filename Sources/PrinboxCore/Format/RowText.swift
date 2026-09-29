@@ -2,10 +2,18 @@ import Foundation
 
 /// Every string shown for a row, a header or a placeholder, shared by the popover and `--print`.
 public enum RowText {
-    /// "#12 Title". Line breaks and tabs become single spaces so a row never wraps.
+    /// "#12 Title". Control characters (line breaks, tabs, terminal escapes) and bidi overrides become
+    /// spaces and whitespace runs collapse, so a row never wraps, recolors a terminal or reverses its text.
     public static func title(_ pr: PullRequest) -> String {
-        let flat = pr.title.split(whereSeparator: { $0.isNewline || $0 == "\t" }).joined(separator: " ")
-        return "#\(pr.number) \(flat)"
+        let scalars = pr.title.unicodeScalars.map { isUnsafe($0) ? " " : $0 }
+        let flat = String(String.UnicodeScalarView(scalars)).split(whereSeparator: \.isWhitespace)
+        return "#\(pr.number) \(flat.joined(separator: " "))"
+    }
+
+    /// C0/C1 controls plus bidi embeddings, overrides and isolates (U+202A-U+202E, U+2066-U+2069).
+    static func isUnsafe(_ scalar: Unicode.Scalar) -> Bool {
+        scalar.properties.generalCategory == .control || (0x202A...0x202E).contains(scalar.value)
+            || (0x2066...0x2069).contains(scalar.value)
     }
 
     /// "web · waiting 6h · +120 −4" for review sections, "web · updated 3h ago · +1 −0" for own PRs.

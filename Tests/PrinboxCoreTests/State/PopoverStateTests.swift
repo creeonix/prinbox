@@ -83,3 +83,21 @@ import Testing
         #expect(state.showingSettings == false)
     }
 }
+
+@MainActor
+@Suite struct PopoverStateReconcileTests {
+    let a = makePR(id: "a", number: 1, reviewRequestedAt: date("2026-08-02T10:00:00Z"))
+    let b = makePR(id: "b", number: 2, reviewRequestedAt: date("2026-08-03T10:00:00Z"))
+
+    @Test func refreshThroughTheStoreAlsoReconcilesTheSelection() async {
+        let (first, second) = (a, b)
+        let defaults = MemoryDefaults()
+        defaults.set([String](), forKey: FoldStore.key)
+        let store = InboxStore(fetcher: ScriptedFetcher { call in makeResult(call == 1 ? [first, second] : [first]) })
+        let state = PopoverState(store: store, folds: FoldStore(defaults: defaults))
+        await store.refresh()
+        state.select(.row("b"))
+        await store.refresh()
+        #expect(state.selection.current == .row("a"))
+    }
+}
