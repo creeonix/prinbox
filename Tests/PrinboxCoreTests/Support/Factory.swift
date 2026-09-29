@@ -54,3 +54,10 @@ func makePR(
         source: source
     )
 }
+
+func makeResult(_ prs: [PullRequest], totals: [SearchSource: Int]? = nil, warnings: [String] = []) -> FetchResult {
+    let counts = Dictionary(grouping: prs, by: \.source).mapValues(\.count)
+    let fetched = Dictionary(uniqueKeysWithValues: SearchSource.allCases.map { ($0, counts[$0] ?? 0) })
+    return FetchResult(
+        viewerLogin: testViewer, pullRequests: prs, totals: totals ?? fetched, fetched: fetched, warnings: warnings)
+}
