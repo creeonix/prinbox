@@ -1,0 +1,33 @@
+name: Release
+
+# Pushing a tag like v0.2.0 tests, builds a universal DMG with version 0.2.0 and publishes a GitHub
+# Release with the DMG and its SHA-256. Builds are ad hoc signed; RELEASING.md explains how to switch to
+# Developer ID signing and notarization.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  dmg:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Test
+        run: make test
+      - name: Build DMG
+        run: make dmg VERSION="${GITHUB_REF_NAME#v}"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            "build/PRInbox-$version.dmg" "build/PRInbox-$version.dmg.sha256" \
+            --title "PRInbox $version" --notes-file .github/release-notes.md --generate-notes
