@@ -308,9 +308,10 @@ Logging:
   you."
 - **Selection.** Hover and keyboard selection share one highlight. The
   selection model is a flat list of section headers, visible rows and more
-  rows; rows inside folded sections are skipped. After a refresh the selection
-  stays on the same item id, or moves to the nearest index if that item is
-  gone.
+  rows; rows inside folded sections are skipped. After a refresh or a fold,
+  the selection stays on the same item id. If that item is gone, it moves to
+  the nearest preceding item that still exists, so folding lands on the
+  section header.
 
 Age format, from the prototype: under 1 min is `<1m`, under 60 min is `Nm`,
 under 48 h is `Nh`, otherwise `Nd`, always floored.
@@ -336,7 +337,7 @@ separate window.
   loader.
 - It stores bytes at `~/Library/Caches/io.github.creeonix.prinbox/avatars/<login>.png`
   with a 7-day TTL.
-- The app keeps decoded `NSImage`s in an `NSCache`.
+- The app keeps decoded `NSImage`s in memory for the session.
 - Failures fall back to initials.
 
 ### --print mode
