@@ -342,6 +342,27 @@ separate window.
 - The app keeps decoded `NSImage`s in memory for the session.
 - Failures fall back to initials.
 
+### Setup panel (gh missing or signed out)
+
+Added 2026-09-29 after v1 review:
+- When the error is `ghNotFound` or `loggedOut`, the popover replaces the list with a setup panel from
+  `SetupGuide`: a title, a one-line summary and numbered steps whose commands have Copy buttons. The
+  header reads "Setup needed", and the warning line leaves that error out.
+  - `ghNotFound` without an override: `brew install gh`, then `gh auth login`, plus a link to
+    cli.github.com and the `ghPath` override hint.
+  - `ghNotFound` with an override: names the path, and offers
+    `defaults delete io.github.creeonix.prinbox ghPath` or `brew install gh`.
+  - `loggedOut`: `gh auth login` (GitHub.com, then "Login with a web browser"), with an SSO note.
+- While setup is needed, the app retries every 10 s (`InboxStore.setupRetryInterval`). A missing or
+  signed-out gh fails locally, so the retry costs no API requests.
+- The status-item tooltip says "gh not installed, click for setup" or "gh not signed in, click for setup".
+- `--print` prints the same steps as plain text and exits 1.
+- The `ghPath` override is exclusive: when set, only that path is tried.
+- When the first load fails for any other reason, the popover shows "Couldn't load your inbox" instead of
+  a spinner.
+- The user-facing name is PRInbox (bundle display name, menus, tooltips, texts); the app installs as
+  `/Applications/PRInbox.app`. The executable, targets and repository keep the name prinbox.
+
 ### --print mode
 
 `Prinbox --print` runs one fetch and prints the classified inbox as text to

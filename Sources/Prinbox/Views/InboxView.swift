@@ -28,11 +28,16 @@ struct InboxView: View {
         .frame(width: Self.width)
     }
 
+    /// A missing or signed-out gh replaces the list with setup steps; stale PRs would be misleading then.
     @ViewBuilder private var content: some View {
-        if let inbox = state.store.inbox, !inbox.isEmpty {
+        if let guide = state.store.error.flatMap({ SetupGuide.for($0, ghOverride: info.ghOverride) }) {
+            SetupView(guide: guide, state: state, actions: actions)
+        } else if let inbox = state.store.inbox, !inbox.isEmpty {
             InboxListView(state: state, inbox: inbox, avatars: avatars, actions: actions)
         } else if state.store.inbox != nil {
             EmptyStateView()
+        } else if state.store.error != nil {
+            UnavailableView()
         } else {
             ProgressView().padding(24)
         }
@@ -57,6 +62,20 @@ struct WarningLinesView: View {
             .padding(.horizontal, 12)
             .padding(.bottom, 6)
         }
+    }
+}
+
+/// First load failed for a reason that needs no setup (offline, timeout); the warning line says why.
+struct UnavailableView: View {
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "icloud.slash").font(.system(size: 24)).foregroundStyle(.secondary)
+            Text("Couldn't load your inbox").font(.headline)
+            Text("PRInbox tries again on the next refresh, or press R.").font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(28)
     }
 }
 

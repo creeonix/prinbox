@@ -11,6 +11,8 @@ public final class PopoverState {
     public private(set) var selection = Selection()
     public var showingSettings = false
     public var isRecordingShortcut = false
+    /// The setup command last copied, so its button can say "Copied".
+    public var copiedCommand: String?
     /// Measured height of the list content, used to size the popover.
     public var contentHeight: CGFloat = 0
 
@@ -56,6 +58,7 @@ public final class PopoverState {
     public func popoverWillShow() {
         showingSettings = false
         isRecordingShortcut = false
+        copiedCommand = nil
         reconcileSelection()
         if selection.current == nil { selection = Selection(current: firstRow ?? items.first) }
     }

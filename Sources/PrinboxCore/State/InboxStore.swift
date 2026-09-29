@@ -31,9 +31,11 @@ public final class InboxStore {
         StatusBadge.derive(inbox: inbox, error: error, lastSuccess: lastSuccess)
     }
 
-    /// The current error (if any) followed by partial-data warnings.
+    /// The current error (if any) followed by partial-data warnings. Setup errors are left out: the setup
+    /// panel explains them.
     public var warningLines: [String] {
-        (error.map { [$0.message(lastSuccess: lastSuccess)] } ?? []) + (inbox?.warnings ?? [])
+        let errorLine = error.flatMap { $0.needsSetup ? nil : $0.message(lastSuccess: lastSuccess) }
+        return (errorLine.map { [$0] } ?? []) + (inbox?.warnings ?? [])
     }
 
     public func refresh() async {
@@ -48,6 +50,18 @@ public final class InboxStore {
             await fetchOnce()
         } while followUpRequested && !isPaused
         isRefreshing = false
+    }
+
+    /// Poll interval while gh is missing or signed out, so fixing it shows up within seconds.
+    public static let setupRetryInterval: Duration = .seconds(10)
+
+    public var needsSetup: Bool { error?.needsSetup ?? false }
+
+    /// Called every `setupRetryInterval`; fetches only while setup is needed. A missing or signed-out gh
+    /// fails locally without a network request, so polling costs nothing.
+    public func retryIfSetupNeeded() async {
+        guard needsSetup else { return }
+        await refresh()
     }
 
     /// Refreshes only when the last success is older than `staleAfter`. Used when the popover opens.

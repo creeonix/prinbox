@@ -12,6 +12,16 @@ import Testing
         #expect(found.locate()?.path == "/custom/gh")
     }
 
+    @Test func overrideIsExclusive() {
+        let found = locator(override: "/missing/gh", path: "/usr/bin", executables: ["/opt/homebrew/bin/gh"])
+        #expect(found.locate() == nil)
+    }
+
+    @Test func emptyOverrideIsIgnored() {
+        let found = locator(override: "", path: nil, executables: ["/opt/homebrew/bin/gh"])
+        #expect(found.locate()?.path == "/opt/homebrew/bin/gh")
+    }
+
     @Test func findsHomebrewGhWithMinimalPath() {
         let found = locator(path: "/usr/bin:/bin:/usr/sbin:/sbin", executables: ["/opt/homebrew/bin/gh"])
         #expect(found.locate()?.path == "/opt/homebrew/bin/gh")

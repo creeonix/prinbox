@@ -1,12 +1,12 @@
-# prinbox
+# PRInbox
 
 A macOS menu-bar code-review inbox that signs in through the GitHub CLI.
 
-prinbox shows the pull requests waiting on you in a popover under a menu-bar icon. It is an
+PRInbox shows the pull requests waiting on you in a popover under a menu-bar icon. It is an
 open-source analogue of [Pullover](https://github.com/omgovich/pullover), with one difference: it
-has no OAuth app of its own. Every request goes through `gh api graphql`, so prinbox sees exactly
+has no OAuth app of its own. Every request goes through `gh api graphql`, so PRInbox sees exactly
 what your `gh` login sees. That includes organizations that restrict third-party OAuth apps but
-have approved the GitHub CLI. prinbox never reads, stores or passes your token.
+have approved the GitHub CLI. PRInbox never reads, stores or passes your token.
 
 ## Requirements
 
@@ -31,7 +31,7 @@ make uninstall    # removes the app, its login item, caches and preferences
 |---|---|
 | pull-request symbol + number | PRs waiting on you: Needs your review, Take another look and Mentions (drafts not counted) |
 | dimmed symbol | nothing is waiting on you |
-| red symbol + `!` | gh is missing, logged out, offline or rate limited; hover for the reason |
+| red symbol + `!` | gh is missing, signed out, offline or rate limited; hover for the reason |
 
 Left-click opens the popover. Right-click offers Refresh now and Quit.
 
@@ -63,7 +63,7 @@ Sorting:
 | Esc | close the popover (or leave Settings) |
 | ⌃⌥P | open the popover from anywhere (change it in Settings) |
 
-The global shortcut uses Carbon hot keys, so it needs no Accessibility permission. prinbox registers it
+The global shortcut uses Carbon hot keys, so it needs no Accessibility permission. PRInbox registers it
 exclusively, so Settings reports a shortcut that another app holds exclusively. macOS lets apps that
 register without exclusivity share a shortcut silently. Pullover uses the same default ⌃⌥P, and while both
 run, one keypress opens both popovers. Pick another shortcut in either app.
@@ -74,9 +74,23 @@ Open Settings with the gear in the popover. It holds the global shortcut, launch
 (available once the app is in `/Applications`), the detected `gh` path, the version and Quit.
 Settings stay inside the popover, so a tiling window manager never sees a window to tile.
 
+### When gh is missing or signed out
+
+The popover replaces the list with setup steps, each command with a Copy button:
+- **gh not installed:** `brew install gh`, then `gh auth login`.
+- **gh not signed in, or its sign-in expired:** `gh auth login` (choose GitHub.com, then "Login with a
+  web browser"). If your organization uses single sign-on, authorize gh for it when asked.
+
+PRInbox checks again every 10 seconds, so it recovers by itself a few seconds after you finish; Check now
+retries at once. `PRInbox --print` prints the same steps.
+
+If gh lives somewhere unusual, point PRInbox at it with
+`defaults write io.github.creeonix.prinbox ghPath /path/to/gh`. The override is exclusive: when it is
+set, only that path is tried, and `defaults delete io.github.creeonix.prinbox ghPath` removes it.
+
 ### Refresh
 
-prinbox refreshes:
+PRInbox refreshes:
 - every 5 minutes
 - after the Mac wakes
 - when you open the popover and the data is more than a minute old
@@ -87,7 +101,7 @@ It keeps the last good data while offline.
 ### Command line
 
 ```sh
-/Applications/Prinbox.app/Contents/MacOS/Prinbox --print    # print the inbox once, then exit
+/Applications/PRInbox.app/Contents/MacOS/Prinbox --print    # print the inbox once, then exit
 ```
 
 ## Development
@@ -131,13 +145,15 @@ Command Line Tools lack three things that Xcode provides:
 - [ ] Row tooltips (full owner/name) draw above the popover.
 - [ ] Enter on a section header folds and unfolds it; the fold state survives a relaunch.
 - [ ] The global shortcut opens the popover from another app; recording a new shortcut works; removing it works.
-- [ ] Running a second prinbox copy: its Settings reports the shortcut as unavailable.
-- [ ] Launch at login: the toggle turns on, System Settings > General > Login Items lists prinbox, and it starts after logging in again.
+- [ ] Running a second PRInbox copy: its Settings reports the shortcut as unavailable.
+- [ ] Launch at login: the toggle turns on, System Settings > General > Login Items lists PRInbox, and it starts after logging in again.
 - [ ] Offline (network off): the icon turns red with `!`, and the popover keeps the last data with an "Offline" line.
 - [ ] After sleep and wake with a working network, the icon does not turn red.
-- [ ] Logged out (`GH_CONFIG_DIR=$(mktemp -d) /Applications/Prinbox.app/Contents/MacOS/Prinbox`): red `!` with the `gh auth login` hint.
+- [ ] Signed out (`GH_CONFIG_DIR=$(mktemp -d) /Applications/PRInbox.app/Contents/MacOS/Prinbox`): red `!`, and the popover shows "Sign in to the GitHub CLI" with a working Copy button.
+- [ ] gh missing (`/Applications/PRInbox.app/Contents/MacOS/Prinbox -ghPath /nonexistent`): the popover shows the "gh not found" steps.
+- [ ] After fixing gh (for example `gh auth login`), the popover returns to the inbox within about 10 seconds without a click.
 
 ## License
 
-MIT. See `LICENSE`. prinbox ports classification rules from Pullover and follows omarchy-pullover's
+MIT. See `LICENSE`. PRInbox ports classification rules from Pullover and follows omarchy-pullover's
 approach to gh authentication. See `THIRD_PARTY_NOTICES.md`.

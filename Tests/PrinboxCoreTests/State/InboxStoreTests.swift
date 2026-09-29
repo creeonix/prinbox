@@ -123,6 +123,29 @@ final class StoreHolder {
         }
     }
 
+    @Test func setupErrorsAreNotRepeatedInTheWarningLines() async {
+        let store = InboxStore(fetcher: ScriptedFetcher { _ in throw FetchError.loggedOut })
+        await store.refresh()
+        #expect(store.needsSetup)
+        #expect(store.warningLines == [])
+    }
+
+    @Test func retryIfSetupNeededOnlyFetchesWhileSetupIsNeeded() async {
+        let fetcher = ScriptedFetcher { call in
+            if call == 1 { throw FetchError.ghNotFound }
+            return makeResult([])
+        }
+        let store = InboxStore(fetcher: fetcher)
+        await store.retryIfSetupNeeded()
+        #expect(await fetcher.calls == 0)
+        await store.refresh()
+        await store.retryIfSetupNeeded()
+        #expect(await fetcher.calls == 2)
+        #expect(store.needsSetup == false)
+        await store.retryIfSetupNeeded()
+        #expect(await fetcher.calls == 2)
+    }
+
     @Test func warningLinesPutTheErrorFirst() async {
         let fetcher = ScriptedFetcher { call in
             if call == 1 {

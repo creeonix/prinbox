@@ -33,7 +33,11 @@ enum CommandLineMode {
                 print(InboxPrinter.render(InboxBuilder.build(result), now: Date()))
                 return 0
             } catch let error as FetchError {
-                FileHandle.standardError.write(Data((error.message(lastSuccess: nil) + "\n").utf8))
+                let client = GhClient()
+                let text =
+                    SetupGuide.for(error, ghOverride: client.ghOverride)?.plainText
+                    ?? error.message(lastSuccess: nil)
+                FileHandle.standardError.write(Data((text + "\n").utf8))
                 return 1
             } catch {
                 FileHandle.standardError.write(Data("\(error)\n".utf8))

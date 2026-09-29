@@ -55,6 +55,7 @@ import Testing
 
     @Test func header() {
         #expect(RowText.header(badgeCount: 2, lastSuccess: nil, timeZone: utc) == "Loading…")
+        #expect(RowText.header(badgeCount: 0, lastSuccess: nil, needsSetup: true, timeZone: utc) == "Setup needed")
         #expect(
             RowText.header(badgeCount: 2, lastSuccess: date("2026-08-10T12:05:00Z"), timeZone: utc)
                 == "2 waiting on you · updated 12:05")

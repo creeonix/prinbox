@@ -45,7 +45,9 @@ final class AppCoordinator {
         hotKeyCenter = HotKeyCenter { [weak self] in self?.togglePopover() }
         applyHotKey()
         observeBadge()
-        triggers.start { [weak self] in await self?.state.refresh() }
+        triggers.start(
+            { [weak self] in await self?.state.refresh() },
+            retrySetup: { [weak self] in await self?.store.retryIfSetupNeeded() })
         refreshNow()
     }
 
@@ -56,7 +58,14 @@ final class AppCoordinator {
             quit: { NSApp.terminate(nil) },
             toggleShortcutRecording: { [weak self] in self?.toggleShortcutRecording() },
             setShortcut: { [weak self] spec in self?.setShortcut(spec) },
-            setLaunchAtLogin: { [weak self] enabled in self?.loginItem.setEnabled(enabled) })
+            setLaunchAtLogin: { [weak self] enabled in self?.loginItem.setEnabled(enabled) },
+            copy: { [weak self] command in self?.copy(command) })
+    }
+
+    private func copy(_ command: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(command, forType: .string)
+        state.copiedCommand = command
     }
 
     private func togglePopover() {

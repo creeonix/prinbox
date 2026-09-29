@@ -9,4 +9,5 @@ struct PopoverActions {
     let toggleShortcutRecording: @MainActor () -> Void
     let setShortcut: @MainActor (HotKeySpec?) -> Void
     let setLaunchAtLogin: @MainActor (Bool) -> Void
+    let copy: @MainActor (String) -> Void
 }

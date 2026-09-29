@@ -21,6 +21,6 @@ import Testing
 
     @Test func errorWinsOverData() {
         let badge = StatusBadge.derive(inbox: .empty, error: .loggedOut, lastSuccess: nil, timeZone: utc)
-        #expect(badge == .error("gh is not logged in: run gh auth login"))
+        #expect(badge == .error("gh not signed in, click for setup"))
     }
 }

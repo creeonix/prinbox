@@ -5,9 +5,9 @@ extension FetchError {
     public func message(lastSuccess: Date?, timeZone: TimeZone = .current) -> String {
         switch self {
         case .ghNotFound:
-            "gh not found: brew install gh"
+            "gh not installed, click for setup"
         case .loggedOut:
-            "gh is not logged in: run gh auth login"
+            "gh not signed in, click for setup"
         case .offline:
             lastSuccess.map { "Offline, showing data from \(ClockText.hhmm($0, timeZone: timeZone))" } ?? "Offline"
         case .timedOut:

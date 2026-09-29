@@ -7,9 +7,13 @@ struct HeaderView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(RowText.header(badgeCount: state.store.inbox?.badgeCount ?? 0, lastSuccess: state.store.lastSuccess))
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
+            Text(
+                RowText.header(
+                    badgeCount: state.store.inbox?.badgeCount ?? 0, lastSuccess: state.store.lastSuccess,
+                    needsSetup: state.store.needsSetup)
+            )
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.secondary)
             Spacer()
             if state.store.isRefreshing {
                 ProgressView().controlSize(.small)

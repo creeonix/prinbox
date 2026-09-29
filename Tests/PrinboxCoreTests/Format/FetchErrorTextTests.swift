@@ -12,8 +12,8 @@ import Testing
     }
 
     @Test func messages() {
-        #expect(text(.ghNotFound) == "gh not found: brew install gh")
-        #expect(text(.loggedOut) == "gh is not logged in: run gh auth login")
+        #expect(text(.ghNotFound) == "gh not installed, click for setup")
+        #expect(text(.loggedOut) == "gh not signed in, click for setup")
         #expect(text(.offline) == "Offline")
         #expect(text(.offline, lastSuccess: at) == "Offline, showing data from 14:05")
         #expect(text(.timedOut) == "GitHub did not answer in time")

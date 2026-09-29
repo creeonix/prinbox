@@ -75,6 +75,13 @@ import Testing
         #expect(state.handle(.escape) == .close)
     }
 
+    @Test func popoverOpeningClearsTheCopiedMarker() async {
+        let state = await makeState { _ in makeResult([]) }
+        state.copiedCommand = "gh auth login"
+        state.popoverWillShow()
+        #expect(state.copiedCommand == nil)
+    }
+
     @Test func escapeInSettingsReturnsToTheList() async {
         let state = await makeState { _ in makeResult([]) }
         state.showingSettings = true

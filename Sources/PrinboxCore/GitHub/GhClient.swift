@@ -26,6 +26,9 @@ public struct GhClient: InboxFetching {
 
     public func ghPath() -> String? { locator.locate()?.path }
 
+    /// The `ghPath` override in effect, if any.
+    public var ghOverride: String? { locator.overridePath }
+
     public func fetch() async throws -> FetchResult {
         guard let gh = locator.locate() else { throw FetchError.ghNotFound }
         let output: CommandOutput
