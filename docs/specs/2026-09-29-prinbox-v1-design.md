@@ -323,8 +323,10 @@ separate window.
 
 - **Global shortcut.** A recorder field (default ⌃⌥P) with a clear button.
   - The shortcut is stored as key code plus Carbon modifiers.
-  - If registration fails, show "Shortcut unavailable (in use by another
-    app)". Pullover also defaults to ⌃⌥P.
+  - Registration is exclusive. If it fails, show "Shortcut unavailable (in
+    use by another app)". macOS lets apps that register non-exclusively
+    (such as Pullover, which also defaults to ⌃⌥P) share a shortcut without
+    any way to detect it; both then respond.
 - **Launch at login.** A toggle using `SMAppService.mainApp`.
   - The toggle shows its status, including `requiresApproval`, which points
     to System Settings › Login Items.

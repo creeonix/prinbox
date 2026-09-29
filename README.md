@@ -63,8 +63,10 @@ Sorting:
 | Esc | close the popover (or leave Settings) |
 | ⌃⌥P | open the popover from anywhere (change it in Settings) |
 
-The global shortcut uses Carbon hot keys, so it needs no Accessibility permission. If another app
-already owns the shortcut, for example Pullover with the same default, Settings says so.
+The global shortcut uses Carbon hot keys, so it needs no Accessibility permission. prinbox registers it
+exclusively, so Settings reports a shortcut that another app holds exclusively. macOS lets apps that
+register without exclusivity share a shortcut silently. Pullover uses the same default ⌃⌥P, and while both
+run, one keypress opens both popovers. Pick another shortcut in either app.
 
 ### Settings
 
@@ -124,11 +126,15 @@ Command Line Tools lack three things that Xcode provides:
 - [ ] The popover draws above bars that use the pop-up window level (for example OmniWM's workspace bar).
 - [ ] Clicking outside closes the popover.
 - [ ] ↑/↓ move the selection, Enter opens a PR and closes the popover, R refreshes, Esc closes.
+- [ ] After Esc (or closing with the shortcut), typing goes to the app you were in before.
+- [ ] Clicking the icon while the popover is open closes it (it does not reopen).
+- [ ] Row tooltips (full owner/name) draw above the popover.
 - [ ] Enter on a section header folds and unfolds it; the fold state survives a relaunch.
 - [ ] The global shortcut opens the popover from another app; recording a new shortcut works; removing it works.
-- [ ] With Pullover running on the same shortcut, Settings reports the shortcut as unavailable.
+- [ ] Running a second prinbox copy: its Settings reports the shortcut as unavailable.
 - [ ] Launch at login: the toggle turns on, System Settings > General > Login Items lists prinbox, and it starts after logging in again.
 - [ ] Offline (network off): the icon turns red with `!`, and the popover keeps the last data with an "Offline" line.
+- [ ] After sleep and wake with a working network, the icon does not turn red.
 - [ ] Logged out (`GH_CONFIG_DIR=$(mktemp -d) /Applications/Prinbox.app/Contents/MacOS/Prinbox`): red `!` with the `gh auth login` hint.
 
 ## License

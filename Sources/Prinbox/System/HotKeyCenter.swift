@@ -2,7 +2,10 @@ import Carbon.HIToolbox
 import PrinboxCore
 
 /// A global shortcut via Carbon RegisterEventHotKey. It needs no Accessibility permission.
-/// Registration fails when another app already owns the same shortcut.
+/// Registration is exclusive: it fails when another app holds the same shortcut exclusively (for example a
+/// second prinbox) and keeps later exclusive registrations out. Carbon lets apps that register
+/// non-exclusively (Pullover, most Electron apps) share a shortcut undetectably; both then respond.
+/// The coordinator keeps one instance for the whole app run, so the unretained Carbon context stays valid.
 @MainActor
 final class HotKeyCenter {
     private static let signature: OSType = 0x5052_4E42  // "PRNB"
@@ -22,7 +25,8 @@ final class HotKeyCenter {
         guard let spec else { return true }
         let id = EventHotKeyID(signature: Self.signature, id: 1)
         let status = RegisterEventHotKey(
-            spec.keyCode, spec.carbonModifiers, id, GetApplicationEventTarget(), 0, &hotKeyRef)
+            spec.keyCode, spec.carbonModifiers, id, GetApplicationEventTarget(), OptionBits(kEventHotKeyExclusive),
+            &hotKeyRef)
         return status == noErr
     }
 

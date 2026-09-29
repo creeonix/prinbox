@@ -42,6 +42,7 @@ app: build
 
 install: app
 	-pkill -x $(APP_NAME)
+	@for i in $$(seq 50); do pgrep -xq $(APP_NAME) || break; sleep 0.1; done
 	rm -rf "$(INSTALLED)"
 	cp -R "$(APP)" /Applications/
 	open "$(INSTALLED)"

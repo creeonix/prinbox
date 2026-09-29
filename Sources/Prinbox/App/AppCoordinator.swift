@@ -17,6 +17,7 @@ final class AppCoordinator {
     private var statusItem: StatusItemController?
     private var popover: PopoverController?
     private var hotKeyCenter: HotKeyCenter?
+    private var closingForBrowser = false
 
     init() {
         let defaults = UserDefaults.standard
@@ -69,8 +70,12 @@ final class AppCoordinator {
     }
 
     /// Closing mid-recording cancels it, which re-registers the shortcut that recording suspended.
+    /// Showing the popover activated prinbox; when it closes by Esc or the shortcut, hiding hands focus back
+    /// to the previous app. A close for an opened PR leaves activation to the browser.
     private func popoverDidClose() {
         if state.isRecordingShortcut { toggleShortcutRecording() }
+        if !closingForBrowser && NSApp.isActive { NSApp.hide(nil) }
+        closingForBrowser = false
     }
 
     private func refreshNow() {
@@ -78,6 +83,7 @@ final class AppCoordinator {
     }
 
     private func open(_ url: URL) {
+        closingForBrowser = true
         NSWorkspace.shared.open(url)
         popover?.close()
     }
