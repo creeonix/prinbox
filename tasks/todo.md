@@ -150,7 +150,7 @@ Tests/PrinboxCoreTests/
   - `PullRequest`, with every spec field plus `repoShortName`
   - Test helpers: `makePR(...)`, `date(_:)`, `testViewer`
 
-- [ ] **Step 1: Create the package and tooling files**
+- [x] **Step 1: Create the package and tooling files**
 
 `Package.swift`:
 ```swift
@@ -239,7 +239,7 @@ Copyright (c) 2026 Igor Alexandrov
 ```
 Copy the MIT body verbatim from `https://github.com/omgovich/pullover/blob/main/LICENSE`. It is the standard MIT text.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `Tests/PrinboxCoreTests/Support/Factory.swift`:
 ```swift
@@ -318,12 +318,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 3: Run the test and confirm it fails**
+- [x] **Step 3: Run the test and confirm it fails**
 
 Run: `swift test`
 Expected: the build fails with `cannot find 'PullRequest' in scope`. The package also has no source files yet.
 
-- [ ] **Step 4: Implement the model**
+- [x] **Step 4: Implement the model**
 
 `Sources/PrinboxCore/Model/PullRequest.swift`:
 ```swift
@@ -426,12 +426,12 @@ public struct PullRequest: Sendable, Equatable, Identifiable {
 }
 ```
 
-- [ ] **Step 5: Run the tests and confirm they pass**
+- [x] **Step 5: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: `Test run with 2 tests ... passed`.
 
-- [ ] **Step 6: Format, lint, commit**
+- [x] **Step 6: Format, lint, commit**
 
 ```bash
 make format && make lint
@@ -463,7 +463,7 @@ git commit -m "chore: add package skeleton and pull request model"
   - `enum PullRequestMapper { static func map(_ response: InboxResponse) throws -> FetchResult }`
   - Test helper: `Fixture.data(_ name: String) throws -> Data`
 
-- [ ] **Step 1: Write the fixture**
+- [x] **Step 1: Write the fixture**
 
 `Tests/PrinboxCoreTests/Fixtures/review-mix.json`:
 ```json
@@ -601,7 +601,7 @@ enum Fixture {
 }
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 `Tests/PrinboxCoreTests/GitHub/InboxQueryTests.swift`:
 ```swift
@@ -711,12 +711,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 3: Run the tests and confirm they fail**
+- [x] **Step 3: Run the tests and confirm they fail**
 
 Run: `swift test`
 Expected: the build fails with `cannot find 'InboxQuery' in scope` and `cannot find 'PullRequestMapper' in scope`.
 
-- [ ] **Step 4: Implement the query, DTOs, result types and mapper**
+- [x] **Step 4: Implement the query, DTOs, result types and mapper**
 
 `Sources/PrinboxCore/GitHub/InboxQuery.swift`:
 ```swift
@@ -1025,12 +1025,12 @@ enum PullRequestMapper {
 }
 ```
 
-- [ ] **Step 5: Run the tests and confirm they pass**
+- [x] **Step 5: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: all tests pass (2 query tests, 13 mapper tests, and the Task 1 tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 make format && make lint
@@ -1058,7 +1058,7 @@ git commit -m "feat: decode the inbox GraphQL response into pull requests"
     - throws `.other(message)` when there are errors and no data
     - fills `warnings` when there are errors next to data
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 The stderr strings are recorded from gh 2.97 on 2026-09-29.
 
@@ -1161,14 +1161,14 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run: `swift test`
 Expected:
 - The build fails with `cannot find 'GhErrorClassifier' in scope`.
 - After a stub, the GraphQL tests fail because `warnings` is always `[]`.
 
-- [ ] **Step 3: Implement the classifier and GraphQL error handling**
+- [x] **Step 3: Implement the classifier and GraphQL error handling**
 
 `Sources/PrinboxCore/GitHub/GhErrorClassifier.swift`:
 ```swift
@@ -1265,12 +1265,12 @@ In `PullRequestMapper.swift`, replace the start of `map(_:)` and its `warnings: 
     }
 ```
 
-- [ ] **Step 4: Run the tests and confirm they pass**
+- [x] **Step 4: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: every test passes, including the Task 2 mapper tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -1302,7 +1302,7 @@ git commit -m "feat: classify gh failures and surface partial GraphQL errors as 
   - `public protocol InboxFetching: Sendable { func fetch() async throws -> FetchResult }`
   - `public struct GhClient: InboxFetching` with `init(locator:runner:timeout:)`, `func ghPath() -> String?` and `static func interpret(_ output: CommandOutput) throws -> FetchResult`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Tests/PrinboxCoreTests/GitHub/ProcessCommandRunnerTests.swift`:
 ```swift
@@ -1471,12 +1471,12 @@ struct FakeRunner: CommandRunning {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run: `swift test`
 Expected: the build fails with `cannot find 'ProcessCommandRunner' in scope` and similar errors.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `Sources/PrinboxCore/GitHub/CommandRunning.swift`:
 ```swift
@@ -1725,12 +1725,12 @@ public struct GhClient: InboxFetching {
 
 If Swift 6 rejects `Pipe` or `FileHandle` captures elsewhere, wrap them in `UncheckedBox` the same way. Do not weaken the language mode.
 
-- [ ] **Step 4: Run the tests and confirm they pass**
+- [x] **Step 4: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: every test passes. The timeout test finishes in about 0.2 s.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -1760,7 +1760,7 @@ git commit -m "feat: fetch the inbox through gh api graphql with timeout and err
   - `public enum Classifier { static func classify(_:) -> Classification }`
   - `enum WaitingSince`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Tests/PrinboxCoreTests/Inbox/ClassifierTests.swift`:
 ```swift
@@ -1898,12 +1898,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run: `swift test`
 Expected: the build fails with `cannot find 'Classifier' in scope`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `Sources/PrinboxCore/Inbox/SectionKind.swift`:
 ```swift
@@ -2048,12 +2048,12 @@ public enum Classifier {
 }
 ```
 
-- [ ] **Step 4: Run the tests and confirm they pass**
+- [x] **Step 4: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: every test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -2080,7 +2080,7 @@ git commit -m "feat: classify pull requests into inbox sections"
   - `public enum InboxBuilder { static let rowCap = 8; static func build(_ result: FetchResult, cap: Int = rowCap) -> Inbox }`
   - Test helper `makeResult(_ prs: [PullRequest], totals: [SearchSource: Int]? = nil, warnings: [String] = []) -> FetchResult`
 
-- [ ] **Step 1: Add the test helper and write the failing tests**
+- [x] **Step 1: Add the test helper and write the failing tests**
 
 Append to `Tests/PrinboxCoreTests/Support/Factory.swift`:
 ```swift
@@ -2175,12 +2175,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run: `swift test`
 Expected: the build fails with `cannot find 'InboxBuilder' in scope`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `Sources/PrinboxCore/Inbox/Inbox.swift`:
 ```swift
@@ -2275,12 +2275,12 @@ public enum InboxBuilder {
 }
 ```
 
-- [ ] **Step 4: Run the tests and confirm they pass**
+- [x] **Step 4: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: every test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -2305,7 +2305,7 @@ git commit -m "feat: build sorted, capped inbox sections and the badge count"
   - `FetchError.message(lastSuccess:timeZone:) -> String`
   - `InboxPrinter.render(_:now:) -> String`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Tests/PrinboxCoreTests/Format/RelativeAgeTests.swift`:
 ```swift
@@ -2468,12 +2468,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run: `swift test`
 Expected: the build fails with `cannot find 'RelativeAge' in scope`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `Sources/PrinboxCore/Format/RelativeAge.swift`:
 ```swift
@@ -2606,12 +2606,12 @@ public enum InboxPrinter {
 }
 ```
 
-- [ ] **Step 4: Run the tests and confirm they pass**
+- [x] **Step 4: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: every test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -2639,7 +2639,7 @@ git commit -m "feat: format ages, rows, errors and a plain-text inbox"
     - `func refresh() async` and `func refreshIfStale() async`
   - Test helpers `TestClock` and `ScriptedFetcher`
 
-- [ ] **Step 1: Write the test helpers and the failing tests**
+- [x] **Step 1: Write the test helpers and the failing tests**
 
 `Tests/PrinboxCoreTests/Support/TestClock.swift`:
 ```swift
@@ -2858,12 +2858,12 @@ final class StoreHolder {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run: `swift test`
 Expected: the build fails with `cannot find 'InboxStore' in scope`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `Sources/PrinboxCore/State/StatusBadge.swift`:
 ```swift
@@ -2969,12 +2969,12 @@ public final class InboxStore {
 }
 ```
 
-- [ ] **Step 4: Run the tests and confirm they pass**
+- [x] **Step 4: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: every test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -3009,7 +3009,7 @@ git commit -m "feat: add inbox store with coalesced refresh and rate-limit pause
     - `update(_:)`
   - Test helper `MemoryDefaults`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Tests/PrinboxCoreTests/Support/MemoryDefaults.swift`:
 ```swift
@@ -3094,12 +3094,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run: `swift test`
 Expected: the build fails with `cannot find type 'KeyValueStoring' in scope`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `Sources/PrinboxCore/State/KeyValueStoring.swift`:
 ```swift
@@ -3220,12 +3220,12 @@ public final class HotKeySettings {
 }
 ```
 
-- [ ] **Step 4: Run the tests and confirm they pass**
+- [x] **Step 4: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: every test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -3269,7 +3269,7 @@ git commit -m "feat: model the global shortcut and persist it"
     - `toggleFold(_:)`, `activate(_:) -> KeyAction` and `handle(_:) -> KeyAction?`
     - `popoverWillShow()`, `refresh() async` and `refreshIfStale() async`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Tests/PrinboxCoreTests/State/SelectionTests.swift`:
 ```swift
@@ -3497,12 +3497,12 @@ import Testing
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run: `swift test`
 Expected: the build fails with `cannot find 'Selection' in scope`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `Sources/PrinboxCore/State/InboxItemID.swift`:
 ```swift
@@ -3743,12 +3743,12 @@ public final class PopoverState {
 }
 ```
 
-- [ ] **Step 4: Run the tests and confirm they pass**
+- [x] **Step 4: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: every test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -3776,7 +3776,7 @@ git commit -m "feat: add popover navigation, folding and key handling state"
     - `func data(login:url:) async -> Data?`
     - `static func fileName(for:) -> String`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `Tests/PrinboxCoreTests/State/AvatarCacheTests.swift`:
 ```swift
@@ -3842,12 +3842,12 @@ actor CountingLoader: DataLoading {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run: `swift test`
 Expected: the build fails with `cannot find 'AvatarCache' in scope`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `Sources/PrinboxCore/State/DataLoading.swift`:
 ```swift
@@ -3939,12 +3939,12 @@ public actor AvatarCache {
 }
 ```
 
-- [ ] **Step 4: Run the tests and confirm they pass**
+- [x] **Step 4: Run the tests and confirm they pass**
 
 Run: `swift test`
 Expected: every test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -3967,7 +3967,7 @@ git commit -m "feat: cache author avatars on disk"
 - Consumes: `GhClient` (Task 4), `InboxBuilder` (Task 6), `InboxPrinter` and `FetchError.message` (Task 7), `InboxQuery.text` (Task 2).
 - Produces: `Prinbox --print` and `Prinbox --print-query`, plus the `CommandLineMode` enum that Task 15 extends.
 
-- [ ] **Step 1: Add the executable target and CLI mode**
+- [x] **Step 1: Add the executable target and CLI mode**
 
 `Package.swift`:
 ```swift
@@ -4046,7 +4046,7 @@ if let mode = CommandLineMode(arguments: CommandLine.arguments) {
 Run: `swift build`
 Expected: `Build complete!`
 
-- [ ] **Step 2: Run the live end-to-end check**
+- [x] **Step 2: Run the live end-to-end check**
 
 Run: `swift run -q Prinbox --print`
 Expected, as of 2026-09-29:
@@ -4059,7 +4059,7 @@ Check the exclusion explicitly:
 Run: `swift run -q Prinbox --print | grep -c archived-repo`
 Expected: `0`.
 
-- [ ] **Step 3: Write the anonymizer and the recording script**
+- [x] **Step 3: Write the anonymizer and the recording script**
 
 `scripts/anonymize.jq`:
 ```jq
@@ -4121,7 +4121,7 @@ echo "wrote $out"
 
 Run: `chmod +x scripts/record-fixture.sh`
 
-- [ ] **Step 4: Record the fixture and check that no private data leaked**
+- [x] **Step 4: Record the fixture and check that no private data leaked**
 
 Run: `scripts/record-fixture.sh live-2026-09-29`
 Expected: `wrote .../Fixtures/live-2026-09-29.json`
@@ -4129,7 +4129,7 @@ Expected: `wrote .../Fixtures/live-2026-09-29.json`
 Run: `grep -ciE 'example-org|creeonix|archived-repo|api|web-app' Tests/PrinboxCoreTests/Fixtures/live-2026-09-29.json`
 Expected: `0`. If it isn't 0, fix `anonymize.jq` before continuing. Never commit a fixture that fails this check.
 
-- [ ] **Step 5: Write the fixture tests and run them**
+- [x] **Step 5: Write the fixture tests and run them**
 
 `Tests/PrinboxCoreTests/GitHub/RecordedFixtureTests.swift`:
 ```swift
@@ -4172,7 +4172,7 @@ import Testing
 Run: `swift test`
 Expected: every test passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 make format && make lint
@@ -4202,7 +4202,7 @@ git commit -m "feat: add --print live check and record an anonymized live fixtur
 
 In this task a left click refreshes. Task 14 replaces that with the popover.
 
-- [ ] **Step 1: Implement the status item**
+- [x] **Step 1: Implement the status item**
 
 `Sources/Prinbox/StatusItem/StatusItemController.swift`:
 ```swift
@@ -4391,12 +4391,12 @@ app.setActivationPolicy(.accessory)
 app.run()
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run: `swift build`
 Expected: `Build complete!` with no concurrency errors.
 
-- [ ] **Step 3: Verify manually**
+- [x] **Step 3: Verify manually**
 
 Run: `swift run Prinbox`. Leave it running and check the menu bar:
 1. A pull-request symbol appears. With 0 review requests today it is dimmed with no number, and the tooltip reads "nothing waiting on you".
@@ -4408,7 +4408,7 @@ Expected: a red symbol with "!", and the tooltip "prinbox: gh is not logged in: 
 Run: `HTTPS_PROXY=http://127.0.0.1:9 swift run Prinbox`
 Expected: a red "!", and the tooltip starts with "prinbox: Offline". Quit it.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 make format && make lint
@@ -4438,7 +4438,7 @@ git commit -m "feat: show the inbox count in the menu bar with periodic refresh"
   - `InboxView(state:avatars:actions:)`, which Task 15 extends
   - `HotKeyModifiers.init(_ flags: NSEvent.ModifierFlags)`
 
-- [ ] **Step 1: Implement the popover plumbing**
+- [x] **Step 1: Implement the popover plumbing**
 
 `Sources/Prinbox/Popover/KeyMonitor.swift`:
 ```swift
@@ -4560,7 +4560,7 @@ final class AvatarImages {
 }
 ```
 
-- [ ] **Step 2: Implement the views**
+- [x] **Step 2: Implement the views**
 
 `Sources/Prinbox/Views/PopoverActions.swift` (Task 14 version):
 ```swift
@@ -4959,7 +4959,7 @@ struct AvatarView: View {
 }
 ```
 
-- [ ] **Step 3: Wire the popover into the coordinator**
+- [x] **Step 3: Wire the popover into the coordinator**
 
 `Sources/Prinbox/App/AppCoordinator.swift` (Task 14 version, replacing the whole file):
 ```swift
@@ -5057,12 +5057,12 @@ final class AppCoordinator {
 }
 ```
 
-- [ ] **Step 4: Build and lint**
+- [x] **Step 4: Build and lint**
 
 Run: `swift build && make lint`
 Expected: `Build complete!` and no lint errors. `make lint` also proves no `@State` slipped in.
 
-- [ ] **Step 5: Verify manually under OmniWM**
+- [x] **Step 5: Verify manually under OmniWM**
 
 Run: `swift run Prinbox`
 1. Click the icon. The popover opens anchored under it, and OmniWM does not tile or move it.
@@ -5077,7 +5077,7 @@ Run: `swift run Prinbox`
 Run: `ls ~/Library/Caches/io.github.creeonix.prinbox/avatars`
 Expected: `.png` files named by login. Unbundled `swift run` has no bundle id, so `AppCoordinator.bundleID` falls back to this path.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 make format && make lint
@@ -5105,7 +5105,7 @@ git commit -m "feat: add the inbox popover with keyboard navigation and avatars"
   - `AppInfo`
   - `Prinbox --unregister-login-item`
 
-- [ ] **Step 1: Implement the system integrations**
+- [x] **Step 1: Implement the system integrations**
 
 `Sources/Prinbox/System/HotKeyCenter.swift`:
 ```swift
@@ -5232,7 +5232,7 @@ In `CommandLineMode.swift`:
             }
 ```
 
-- [ ] **Step 2: Implement the settings views**
+- [x] **Step 2: Implement the settings views**
 
 `Sources/Prinbox/Views/PopoverActions.swift` (final):
 ```swift
@@ -5420,7 +5420,7 @@ struct HeaderView: View {
 }
 ```
 
-- [ ] **Step 3: Replace the coordinator with the final version**
+- [x] **Step 3: Replace the coordinator with the final version**
 
 `Sources/Prinbox/App/AppCoordinator.swift`:
 ```swift
@@ -5575,7 +5575,7 @@ final class AppCoordinator {
 }
 ```
 
-- [ ] **Step 4: Build, lint and verify manually**
+- [x] **Step 4: Build, lint and verify manually**
 
 Run: `swift build && make lint`
 Expected: `Build complete!` and a clean lint.
@@ -5590,7 +5590,7 @@ Quit Pullover first, since it also defaults to ⌃⌥P. Then run `swift run Prin
 5. Start Pullover, then relaunch prinbox. Settings shows "Shortcut unavailable (in use by another app)". Quit Pullover.
 6. The launch-at-login toggle shows the note "Install to /Applications (make install) to use this." This task runs unbundled; it is checked for real in Task 16.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -5610,7 +5610,7 @@ git commit -m "feat: add in-popover settings with global shortcut and launch at 
 - Consumes: everything from earlier tasks.
 - Produces: the `make` targets `test`, `lint`, `format`, `coverage`, `build`, `app`, `install`, `uninstall`, `run` and `clean`.
 
-- [ ] **Step 1: Write the bundle plist, coverage script and Makefile**
+- [x] **Step 1: Write the bundle plist, coverage script and Makefile**
 
 `Resources/Info.plist`:
 ```xml
@@ -5713,14 +5713,14 @@ clean:
 	rm -rf .build $(BUILD_DIR)
 ```
 
-- [ ] **Step 2: Check coverage**
+- [x] **Step 2: Check coverage**
 
 Run: `make coverage`
 Expected: `PrinboxCore line coverage: NN.N% (...)` with NN.N ≥ 80, and exit status 0.
 
 If coverage is below 80%, add tests for the uncovered Core lines. `xcrun llvm-cov report` on the profdata next to the JSON lists per-file coverage. Do not lower the threshold.
 
-- [ ] **Step 3: Build, install and verify the bundle**
+- [x] **Step 3: Build, install and verify the bundle**
 
 Run: `make install`
 Expected:
@@ -5735,7 +5735,7 @@ Launch at login:
 2. Run `sfltool dumpbtm | grep -i prinbox`. It lists `io.github.creeonix.prinbox`.
 3. Log out and back in. prinbox starts.
 
-- [ ] **Step 4: Write the README**
+- [x] **Step 4: Write the README**
 
 `README.md` must include:
 - **Title and summary:** "prinbox: a macOS menu-bar code-review inbox that signs in through the GitHub CLI", one paragraph on why (orgs that restrict third-party OAuth apps still allow gh), and a credit to Pullover.
@@ -5755,7 +5755,7 @@ Launch at login:
 - **Manual checklist:** the items from spec section 8, as a checkbox list.
 - **License:** MIT, pointing to `THIRD_PARTY_NOTICES.md`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 make format && make lint
@@ -5771,7 +5771,7 @@ git commit -m "build: package an ad-hoc signed app with make install and coverag
 - Modify: `tasks/todo.md`, ticking the boxes and adding a Review section
 - Create, only if the user corrected something: `tasks/lessons.md`
 
-- [ ] **Step 1: Run the full verification**
+- [x] **Step 1: Run the full verification**
 
 ```bash
 make lint && make test && make coverage && make install
@@ -5789,7 +5789,7 @@ Expected:
 
 Some items need the user's eyes: OmniWM behaviour, the look next to Pullover, and approving the login item. Walk the README checklist with the user and record each result.
 
-- [ ] **Step 3: Code review**
+- [x] **Step 3: Code review**
 
 Dispatch the **code-reviewer** agent on the whole branch (`git diff d89f348..HEAD`), and the **security-reviewer** agent on these areas:
 - the gh subprocess and its environment
@@ -5798,7 +5798,7 @@ Dispatch the **code-reviewer** agent on the whole branch (`git diff d89f348..HEA
 
 Fix CRITICAL and HIGH findings with tests, and commit each fix separately (`fix: ...`).
 
-- [ ] **Step 4: Record the outcome**
+- [x] **Step 4: Record the outcome**
 
 Append a `## Review` section to this file covering:
 - what shipped
@@ -5812,3 +5812,58 @@ If the user corrected anything during the work, add each pattern to `tasks/lesso
 git add tasks
 git commit -m "docs: record v1 review results"
 ```
+
+---
+
+## Review
+
+Recorded 2026-09-29 on branch `feat/v1`.
+
+### What shipped
+
+prinbox v1 covers every item in the spec's v1 list:
+- the menu-bar count, with dimmed and red states
+- an NSPopover with five collapsible sections that remember their fold state
+- rows with cached avatars, sorting and caps
+- refresh every 5 minutes, on wake, on open and on R
+- keyboard control and a configurable global shortcut
+- launch at login
+- `make install` and `make uninstall`
+- a `--print` live check and anonymized recorded fixtures
+
+### Verification
+
+- **Tests:** `make test` passes 153/153. `make coverage` reports 95.6% line coverage for PrinboxCore (916/958 lines).
+- **Live account, from `/Applications/Prinbox.app`:** `--print` lists your 7 open PRs and nothing from archived-repo. The status item read "1 waiting on you" while one review was pending and "nothing waiting on you" after you reviewed it.
+- **Error modes:** logged out prints "gh is not logged in: run gh auth login" and exits 1. Offline prints "Offline" and exits 1.
+- **Screenshots:** the popover was confirmed visually, including above OmniWM's workspace bar after the window-level ruling.
+- **Reviews:** a PrinboxCore checkpoint review, a final whole-branch review and a security review. Every Critical and Important finding is fixed, or ruled on in the ledger.
+
+### Deviations from the plan
+
+These are all recorded as rulings in the ledger:
+- **`make test` workaround:** it passes the swift-testing plugin path, because Command Line Tools intermittently fail to load TestingMacros.
+- **Package:** the test target excludes `Fixtures`.
+- **Anonymizer:** `anonymize.jq` fixes a jq argument-scoping bug and now rebuilds fixtures from an allowlist of fields.
+- **Popover level:** the window is raised one level above popup menus, so OmniWM's workspace bar can't cover it.
+- **Shortcut:** it is registered exclusively. Shared registrations, such as Pullover's, can't be detected, and the docs now say so.
+- **Focus after closing:** it returns to the previous app, except when a PR was just opened.
+- **Wake:** the wake refresh is delayed 15 s, and the timer runs on the suspending clock.
+- **`make install`:** it waits for the old instance to exit before launching the new one.
+- **Manual checks:** keyboard, shortcut and login-item checks moved to the user checklist. Synthetic input can't safely drive an accessory app while you are using the Mac.
+
+### Follow-ups
+
+- **Manual checklist (README):** still to be walked with you. It covers focus, the shortcut, launch at login, wake and click-outside.
+- **Deferred minors:** listed in the ledger and in the final message.
+- **Before publishing:**
+  - remove the private org and repository names from `docs/specs` and `tasks/todo.md`
+  - scrub them from git history (commits d89f348 and 9b79611)
+- **v2:**
+  - Pullover's two-phase fetch
+  - snooze
+  - Replies to you
+  - stacks
+  - compact layout
+  - the MCP server
+  - treating DISMISSED reviews as "not reviewed"
