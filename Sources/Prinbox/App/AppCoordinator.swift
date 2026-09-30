@@ -15,6 +15,7 @@ final class AppCoordinator {
     private let hotKeys: HotKeySettings
     private let loginItem = LoginItem()
     private let avatars: AvatarImages
+    private let info: AppInfo
     private let triggers = RefreshTriggers()
     private var statusItem: StatusItemController?
     private var popover: PopoverController?
@@ -30,6 +31,7 @@ final class AppCoordinator {
         let store = InboxStore(fetcher: demo ? DemoFetcher() : client)
         isDemo = demo
         self.client = client
+        info = AppInfo(client: client)
         self.store = store
         display = DisplaySettings(defaults: defaults)
         colors = OrgColorStore(defaults: defaults)
@@ -40,12 +42,16 @@ final class AppCoordinator {
 
     func start() {
         state.onRecordingEnded = { [weak self] in self?.applyHotKey() }
+        state.onSettingsOpened = { [weak self] in
+            self?.info.refresh()
+            self?.loginItem.refresh()
+        }
         statusItem = StatusItemController(
             onLeftClick: { [weak self] in self?.togglePopover() },
             onRefresh: { [weak self] in self?.refreshNow() })
         let root = InboxView(
             state: state, avatars: avatars, hotKeys: hotKeys, loginItem: loginItem,
-            info: AppInfo.current(client: client), actions: makeActions())
+            info: info, actions: makeActions())
         popover = PopoverController(
             rootView: root,
             keyHandler: { [weak self] event in self?.handleKey(event) ?? false },
@@ -95,7 +101,7 @@ final class AppCoordinator {
         Task { await state.refreshIfStale() }
     }
 
-    /// Closing mid-recording cancels it, which re-registers the shortcut that recording suspended.
+    /// Closing mid-recording ends it; the hook re-registers the shortcut that recording suspended.
     /// Showing the popover activated prinbox; when it closes by Esc or the shortcut, hiding hands focus back
     /// to the previous app. A close for an opened PR leaves activation to the browser.
     private func popoverDidClose() {

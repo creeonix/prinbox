@@ -27,6 +27,26 @@ struct SettingsView: View {
             if let note = loginItem.note {
                 Text(note).font(.caption).foregroundStyle(.secondary)
             }
+            SettingRow(title: "Group by organization") {
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { state.display.groupByOrganization },
+                        set: { state.setGroupByOrganization($0) })
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
+            }
+            SettingRow(title: "Show organization avatars") {
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { state.display.showOrganizationAvatars },
+                        set: { state.display.setShowOrganizationAvatars($0) })
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
+            }
             Divider()
             InfoLine(label: "gh", value: info.ghPath ?? "not found")
             InfoLine(label: "Version", value: info.version)
