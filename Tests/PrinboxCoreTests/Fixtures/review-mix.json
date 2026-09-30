@@ -1,116 +1,331 @@
 {
-  "data": {
-    "viewer": { "login": "me" },
-    "rateLimit": { "cost": 2, "remaining": 4990, "resetAt": "2026-08-10T13:00:00Z" },
-    "review": {
-      "issueCount": 5,
-      "nodes": [
-        {
-          "id": "PR_A", "number": 101, "title": "Direct review request",
-          "url": "https://github.com/acme/web/pull/101", "isDraft": false,
-          "additions": 120, "deletions": 4,
-          "createdAt": "2026-08-01T09:00:00Z", "updatedAt": "2026-08-06T09:00:00Z",
-          "author": { "login": "alice", "avatarUrl": "https://avatars.githubusercontent.com/u/1?s=64" },
-          "repository": { "nameWithOwner": "acme/web", "isArchived": false },
-          "reviewDecision": "REVIEW_REQUIRED", "mergeable": "MERGEABLE",
-          "viewerLatestReview": null,
-          "commits": { "nodes": [{ "commit": { "committedDate": "2026-08-01T08:00:00Z", "statusCheckRollup": { "state": "SUCCESS" } } }] },
-          "timelineItems": { "nodes": [
-            { "__typename": "ReviewRequestedEvent", "createdAt": "2026-08-01T12:00:00Z", "requestedReviewer": { "__typename": "Team" } },
-            { "__typename": "ReviewRequestedEvent", "createdAt": "2026-08-02T10:00:00Z", "requestedReviewer": { "__typename": "User", "login": "ME" } },
-            { "__typename": "ReviewRequestedEvent", "createdAt": "2026-08-03T10:00:00Z", "requestedReviewer": { "__typename": "User", "login": "bob" } }
-          ] }
-        },
-        {
-          "id": "PR_B", "number": 102, "title": "Team review request",
-          "url": "https://github.com/acme/api/pull/102", "isDraft": false,
-          "additions": 5, "deletions": 50,
-          "createdAt": "2026-08-02T09:00:00Z", "updatedAt": "2026-08-04T09:00:00Z",
-          "author": { "login": "bob", "avatarUrl": "https://avatars.githubusercontent.com/u/2?s=64" },
-          "repository": { "nameWithOwner": "acme/api", "isArchived": false },
-          "reviewDecision": "REVIEW_REQUIRED", "mergeable": "MERGEABLE",
-          "viewerLatestReview": { "state": "PENDING", "submittedAt": null },
-          "commits": { "nodes": [{ "commit": { "committedDate": "2026-08-02T08:00:00Z", "statusCheckRollup": { "state": "PENDING" } } }] },
-          "timelineItems": { "nodes": [
-            { "__typename": "ReadyForReviewEvent", "createdAt": "2026-08-03T07:00:00Z" },
-            { "__typename": "ReviewRequestedEvent", "createdAt": "2026-08-03T08:00:00Z", "requestedReviewer": { "__typename": "Team" } }
-          ] }
-        },
-        {
-          "id": "PR_C", "number": 103, "title": "Re-requested review",
-          "url": "https://github.com/acme/web/pull/103", "isDraft": false,
-          "additions": 1, "deletions": 1,
-          "createdAt": "2026-08-01T09:00:00Z", "updatedAt": "2026-08-05T10:00:00Z",
-          "author": { "login": "carol", "avatarUrl": "https://avatars.githubusercontent.com/u/3?s=64" },
-          "repository": { "nameWithOwner": "acme/web", "isArchived": false },
-          "reviewDecision": "CHANGES_REQUESTED", "mergeable": "MERGEABLE",
-          "viewerLatestReview": { "state": "COMMENTED", "submittedAt": "2026-08-04T09:00:00Z" },
-          "commits": { "nodes": [{ "commit": { "committedDate": "2026-08-01T08:00:00Z", "statusCheckRollup": null } }] },
-          "timelineItems": { "nodes": [
-            { "__typename": "ReviewRequestedEvent", "createdAt": "2026-08-05T09:00:00Z", "requestedReviewer": { "__typename": "User", "login": "me" } }
-          ] }
-        },
-        null,
-        {}
-      ]
-    },
-    "mentions": {
-      "issueCount": 2,
-      "nodes": [
-        {
-          "id": "PR_D", "number": 7, "title": "Mentioned by a deleted user",
-          "url": "https://github.com/acme/docs/pull/7", "isDraft": false,
-          "additions": 3, "deletions": 0,
-          "createdAt": "2026-08-01T09:00:00Z", "updatedAt": "2026-08-02T09:00:00Z",
-          "author": null,
-          "repository": { "nameWithOwner": "acme/docs", "isArchived": false },
-          "reviewDecision": null, "mergeable": "CONFLICTING",
-          "viewerLatestReview": null,
-          "commits": { "nodes": [] },
-          "timelineItems": { "nodes": [] }
-        },
-        {
-          "id": "PR_A", "number": 101, "title": "Duplicate of PR_A",
-          "url": "https://github.com/acme/web/pull/101", "isDraft": false,
-          "additions": 120, "deletions": 4,
-          "createdAt": "2026-08-01T09:00:00Z", "updatedAt": "2026-08-06T09:00:00Z",
-          "author": { "login": "alice", "avatarUrl": "https://avatars.githubusercontent.com/u/1?s=64" },
-          "repository": { "nameWithOwner": "acme/web", "isArchived": false },
-          "reviewDecision": "REVIEW_REQUIRED", "mergeable": "MERGEABLE",
-          "viewerLatestReview": null,
-          "commits": { "nodes": [] },
-          "timelineItems": { "nodes": [] }
-        }
-      ]
-    },
-    "mine": {
-      "issueCount": 40,
-      "nodes": [
-        {
-          "id": "PR_E", "number": 55, "title": "My approved change",
-          "url": "https://github.com/acme/web/pull/55", "isDraft": false,
-          "additions": 30, "deletions": 10,
-          "createdAt": "2026-08-01T09:00:00Z", "updatedAt": "2026-08-07T09:00:00Z",
-          "author": { "login": "me", "avatarUrl": "https://avatars.githubusercontent.com/u/9?s=64" },
-          "repository": { "nameWithOwner": "acme/web", "isArchived": false },
-          "reviewDecision": "APPROVED", "mergeable": "MERGEABLE",
-          "viewerLatestReview": null,
-          "commits": { "nodes": [{ "commit": { "committedDate": "2026-08-06T08:00:00Z", "statusCheckRollup": { "state": "ERROR" } } }] },
-          "timelineItems": { "nodes": [] }
-        },
-        {
-          "id": "PR_F", "number": 9, "title": "Old archived work",
-          "url": "https://github.com/acme/legacy/pull/9", "isDraft": true,
-          "additions": 0, "deletions": 0,
-          "createdAt": "2026-07-01T09:00:00Z", "updatedAt": "2026-07-02T09:00:00Z",
-          "author": { "login": "me", "avatarUrl": "https://avatars.githubusercontent.com/u/9?s=64" },
-          "repository": { "nameWithOwner": "acme/legacy", "isArchived": true },
-          "reviewDecision": "CHANGES_REQUESTED", "mergeable": "UNKNOWN",
-          "viewerLatestReview": null,
-          "commits": { "nodes": [{ "commit": { "committedDate": "2026-07-01T08:00:00Z", "statusCheckRollup": { "state": "EXPECTED" } } }] },
-          "timelineItems": { "nodes": [] }
-        }
-      ]
+  "search": {
+    "data": {
+      "viewer": {
+        "login": "me"
+      },
+      "rateLimit": {
+        "cost": 2,
+        "remaining": 4990,
+        "resetAt": "2026-08-10T13:00:00Z"
+      },
+      "review": {
+        "issueCount": 5,
+        "nodes": [
+          {
+            "id": "PR_A",
+            "updatedAt": "2026-08-06T09:00:00Z"
+          },
+          {
+            "id": "PR_B",
+            "updatedAt": "2026-08-04T09:00:00Z"
+          },
+          {
+            "id": "PR_C",
+            "updatedAt": "2026-08-05T10:00:00Z"
+          },
+          null,
+          {}
+        ]
+      },
+      "mentions": {
+        "issueCount": 2,
+        "nodes": [
+          {
+            "id": "PR_D",
+            "updatedAt": "2026-08-02T09:00:00Z"
+          },
+          {
+            "id": "PR_A",
+            "updatedAt": "2026-08-06T09:00:00Z"
+          }
+        ]
+      },
+      "mine": {
+        "issueCount": 40,
+        "nodes": [
+          {
+            "id": "PR_E",
+            "updatedAt": "2026-08-07T09:00:00Z"
+          },
+          {
+            "id": "PR_F",
+            "updatedAt": "2026-07-02T09:00:00Z"
+          }
+        ]
+      }
     }
-  }
+  },
+  "details": [
+    {
+      "data": {
+        "rateLimit": {
+          "cost": 2,
+          "remaining": 4990,
+          "resetAt": "2026-08-10T13:00:00Z"
+        },
+        "nodes": [
+          {
+            "id": "PR_A",
+            "number": 101,
+            "title": "Direct review request",
+            "url": "https://github.com/acme/web/pull/101",
+            "isDraft": false,
+            "additions": 120,
+            "deletions": 4,
+            "createdAt": "2026-08-01T09:00:00Z",
+            "updatedAt": "2026-08-06T09:00:00Z",
+            "author": {
+              "login": "alice",
+              "avatarUrl": "https://avatars.githubusercontent.com/u/1?s=64"
+            },
+            "repository": {
+              "nameWithOwner": "acme/web",
+              "isArchived": false
+            },
+            "reviewDecision": "REVIEW_REQUIRED",
+            "mergeable": "MERGEABLE",
+            "viewerLatestReview": null,
+            "commits": {
+              "nodes": [
+                {
+                  "commit": {
+                    "committedDate": "2026-08-01T08:00:00Z",
+                    "statusCheckRollup": {
+                      "state": "SUCCESS"
+                    }
+                  }
+                }
+              ]
+            },
+            "timelineItems": {
+              "nodes": [
+                {
+                  "__typename": "ReviewRequestedEvent",
+                  "createdAt": "2026-08-01T12:00:00Z",
+                  "requestedReviewer": {
+                    "__typename": "Team"
+                  }
+                },
+                {
+                  "__typename": "ReviewRequestedEvent",
+                  "createdAt": "2026-08-02T10:00:00Z",
+                  "requestedReviewer": {
+                    "__typename": "User",
+                    "login": "ME"
+                  }
+                },
+                {
+                  "__typename": "ReviewRequestedEvent",
+                  "createdAt": "2026-08-03T10:00:00Z",
+                  "requestedReviewer": {
+                    "__typename": "User",
+                    "login": "bob"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "PR_B",
+            "number": 102,
+            "title": "Team review request",
+            "url": "https://github.com/acme/api/pull/102",
+            "isDraft": false,
+            "additions": 5,
+            "deletions": 50,
+            "createdAt": "2026-08-02T09:00:00Z",
+            "updatedAt": "2026-08-04T09:00:00Z",
+            "author": {
+              "login": "bob",
+              "avatarUrl": "https://avatars.githubusercontent.com/u/2?s=64"
+            },
+            "repository": {
+              "nameWithOwner": "acme/api",
+              "isArchived": false
+            },
+            "reviewDecision": "REVIEW_REQUIRED",
+            "mergeable": "MERGEABLE",
+            "viewerLatestReview": {
+              "state": "PENDING",
+              "submittedAt": null
+            },
+            "commits": {
+              "nodes": [
+                {
+                  "commit": {
+                    "committedDate": "2026-08-02T08:00:00Z",
+                    "statusCheckRollup": {
+                      "state": "PENDING"
+                    }
+                  }
+                }
+              ]
+            },
+            "timelineItems": {
+              "nodes": [
+                {
+                  "__typename": "ReadyForReviewEvent",
+                  "createdAt": "2026-08-03T07:00:00Z"
+                },
+                {
+                  "__typename": "ReviewRequestedEvent",
+                  "createdAt": "2026-08-03T08:00:00Z",
+                  "requestedReviewer": {
+                    "__typename": "Team"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "PR_C",
+            "number": 103,
+            "title": "Re-requested review",
+            "url": "https://github.com/acme/web/pull/103",
+            "isDraft": false,
+            "additions": 1,
+            "deletions": 1,
+            "createdAt": "2026-08-01T09:00:00Z",
+            "updatedAt": "2026-08-05T10:00:00Z",
+            "author": {
+              "login": "carol",
+              "avatarUrl": "https://avatars.githubusercontent.com/u/3?s=64"
+            },
+            "repository": {
+              "nameWithOwner": "acme/web",
+              "isArchived": false
+            },
+            "reviewDecision": "CHANGES_REQUESTED",
+            "mergeable": "MERGEABLE",
+            "viewerLatestReview": {
+              "state": "COMMENTED",
+              "submittedAt": "2026-08-04T09:00:00Z"
+            },
+            "commits": {
+              "nodes": [
+                {
+                  "commit": {
+                    "committedDate": "2026-08-01T08:00:00Z",
+                    "statusCheckRollup": null
+                  }
+                }
+              ]
+            },
+            "timelineItems": {
+              "nodes": [
+                {
+                  "__typename": "ReviewRequestedEvent",
+                  "createdAt": "2026-08-05T09:00:00Z",
+                  "requestedReviewer": {
+                    "__typename": "User",
+                    "login": "me"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "PR_D",
+            "number": 7,
+            "title": "Mentioned by a deleted user",
+            "url": "https://github.com/acme/docs/pull/7",
+            "isDraft": false,
+            "additions": 3,
+            "deletions": 0,
+            "createdAt": "2026-08-01T09:00:00Z",
+            "updatedAt": "2026-08-02T09:00:00Z",
+            "author": null,
+            "repository": {
+              "nameWithOwner": "acme/docs",
+              "isArchived": false
+            },
+            "reviewDecision": null,
+            "mergeable": "CONFLICTING",
+            "viewerLatestReview": null,
+            "commits": {
+              "nodes": []
+            },
+            "timelineItems": {
+              "nodes": []
+            }
+          },
+          {
+            "id": "PR_E",
+            "number": 55,
+            "title": "My approved change",
+            "url": "https://github.com/acme/web/pull/55",
+            "isDraft": false,
+            "additions": 30,
+            "deletions": 10,
+            "createdAt": "2026-08-01T09:00:00Z",
+            "updatedAt": "2026-08-07T09:00:00Z",
+            "author": {
+              "login": "me",
+              "avatarUrl": "https://avatars.githubusercontent.com/u/9?s=64"
+            },
+            "repository": {
+              "nameWithOwner": "acme/web",
+              "isArchived": false
+            },
+            "reviewDecision": "APPROVED",
+            "mergeable": "MERGEABLE",
+            "viewerLatestReview": null,
+            "commits": {
+              "nodes": [
+                {
+                  "commit": {
+                    "committedDate": "2026-08-06T08:00:00Z",
+                    "statusCheckRollup": {
+                      "state": "ERROR"
+                    }
+                  }
+                }
+              ]
+            },
+            "timelineItems": {
+              "nodes": []
+            }
+          },
+          {
+            "id": "PR_F",
+            "number": 9,
+            "title": "Old archived work",
+            "url": "https://github.com/acme/legacy/pull/9",
+            "isDraft": true,
+            "additions": 0,
+            "deletions": 0,
+            "createdAt": "2026-07-01T09:00:00Z",
+            "updatedAt": "2026-07-02T09:00:00Z",
+            "author": {
+              "login": "me",
+              "avatarUrl": "https://avatars.githubusercontent.com/u/9?s=64"
+            },
+            "repository": {
+              "nameWithOwner": "acme/legacy",
+              "isArchived": true
+            },
+            "reviewDecision": "CHANGES_REQUESTED",
+            "mergeable": "UNKNOWN",
+            "viewerLatestReview": null,
+            "commits": {
+              "nodes": [
+                {
+                  "commit": {
+                    "committedDate": "2026-07-01T08:00:00Z",
+                    "statusCheckRollup": {
+                      "state": "EXPECTED"
+                    }
+                  }
+                }
+              ]
+            },
+            "timelineItems": {
+              "nodes": []
+            }
+          }
+        ]
+      }
+    }
+  ]
 }

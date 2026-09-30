@@ -17,18 +17,15 @@ import Testing
         ]
     }
 
-    func map(_ overrides: [String: Any]) throws -> PullRequest {
-        let node = Self.base.merging(overrides) { _, new in new }
-        let body: [String: Any] = [
-            "data": [
-                "viewer": ["login": "me"],
-                "review": ["issueCount": 1, "nodes": [node]],
-                "mentions": ["issueCount": 0, "nodes": []],
-                "mine": ["issueCount": 0, "nodes": []],
-            ]
-        ]
-        let data = try JSONSerialization.data(withJSONObject: body)
-        return try #require(try PullRequestMapper.map(InboxResponse.decode(data)).pullRequests.first)
+    func map(_ overrides: [String: Any], source: SearchSource = .review) throws -> PullRequest {
+        let node = TwoPhaseJSON.node("PR_1", Self.base.merging(overrides) { _, new in new })
+        let hit: [Any] = [TwoPhaseJSON.hit("PR_1")]
+        let search = try SearchResponse.decode(
+            TwoPhaseJSON.search(
+                review: source == .review ? hit : [], mentions: source == .mentions ? hit : [],
+                mine: source == .mine ? hit : [], involved: source == .involved ? hit : nil))
+        let details = try DetailsResponse.decode(TwoPhaseJSON.details([node]))
+        return try #require(try PullRequestMapper.merge(search: search, details: [details]).pullRequests.first)
     }
 
     @Test func missingNewFieldsDecodeToDefaults() throws {
@@ -92,5 +89,70 @@ import Testing
         let pr = try map(["viewerLatestReview": ["state": "DISMISSED", "submittedAt": "2026-08-02T10:00:00Z"]])
         #expect(pr.viewerReview == nil)
         #expect(Classifier.classify(pr, viewer: "me")?.section == .needsReview)
+    }
+
+    @Test func missingConversationFieldsAreNil() throws {
+        let pr = try map([:])
+        #expect(pr.headRef == nil)
+        #expect(pr.lastCommitAt == nil)
+        #expect(pr.threads == nil)
+        #expect(pr.reviews == nil)
+    }
+
+    @Test func mapsThreadsReviewsRefsAndTheLastCommit() throws {
+        let pr = try map([
+            "headRefName": "feature/x", "baseRefName": "main",
+            "commits": [
+                "nodes": [["commit": ["committedDate": "2026-08-02T08:00:00Z", "statusCheckRollup": NSNull()]]]
+            ],
+            "reviewThreads": [
+                "totalCount": 2,
+                "nodes": [
+                    [
+                        "isResolved": false,
+                        "comments": [
+                            "totalCount": 2,
+                            "nodes": [
+                                ["author": ["login": "me"], "createdAt": "2026-08-02T09:00:00Z"],
+                                ["author": NSNull(), "createdAt": "2026-08-02T10:00:00Z"],
+                            ],
+                        ],
+                    ],
+                    ["isResolved": true, "comments": ["totalCount": 0, "nodes": []]],
+                    NSNull(),
+                ],
+            ],
+            "reviews": [
+                "totalCount": 3,
+                "nodes": [
+                    ["author": ["login": "bob"], "state": "APPROVED", "submittedAt": "2026-08-02T11:00:00Z"],
+                    ["author": ["login": "carol"], "state": "PENDING", "submittedAt": NSNull()],
+                    ["author": NSNull(), "state": "COMMENTED", "submittedAt": "2026-08-02T12:00:00Z"],
+                ],
+            ],
+        ])
+        #expect(pr.headRef == "feature/x")
+        #expect(pr.baseRef == "main")
+        #expect(pr.lastCommitAt == date("2026-08-02T08:00:00Z"))
+        #expect(
+            pr.threads == [
+                ReviewThread(
+                    isResolved: false,
+                    comments: [
+                        ThreadComment(authorLogin: "me", createdAt: date("2026-08-02T09:00:00Z")),
+                        ThreadComment(authorLogin: "ghost", createdAt: date("2026-08-02T10:00:00Z")),
+                    ]),
+                ReviewThread(isResolved: true, comments: []),
+            ])
+        #expect(
+            pr.reviews == [
+                Review(authorLogin: "bob", state: "APPROVED", submittedAt: date("2026-08-02T11:00:00Z")),
+                Review(authorLogin: "ghost", state: "COMMENTED", submittedAt: date("2026-08-02T12:00:00Z")),
+            ])
+    }
+
+    @Test func involvedHitsKeepTheirSource() throws {
+        #expect(try map([:], source: .involved).source == .involved)
+        #expect(try map([:], source: .mine).source == .mine)
     }
 }

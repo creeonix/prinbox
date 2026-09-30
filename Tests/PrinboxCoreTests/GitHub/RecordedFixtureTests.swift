@@ -7,7 +7,7 @@ import Testing
     let result: FetchResult
 
     init() throws {
-        result = try PullRequestMapper.map(InboxResponse.decode(Fixture.data("live-2026-09-30")))
+        result = try Fixture.twoPhase("live-2026-09-30")
     }
 
     @Test func containsOnlyAnonymizedValues() {

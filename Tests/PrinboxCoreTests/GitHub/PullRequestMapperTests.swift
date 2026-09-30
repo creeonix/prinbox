@@ -7,7 +7,7 @@ import Testing
     let result: FetchResult
 
     init() throws {
-        result = try PullRequestMapper.map(InboxResponse.decode(Fixture.data("review-mix")))
+        result = try Fixture.twoPhase("review-mix")
     }
 
     func pr(_ id: String) throws -> PullRequest {
@@ -16,8 +16,8 @@ import Testing
 
     @Test func readsViewerAndCounts() {
         #expect(result.viewerLogin == "me")
-        #expect(result.totals == [.review: 5, .mentions: 2, .mine: 40, .involved: 0])
-        #expect(result.fetched == [.review: 5, .mentions: 2, .mine: 2, .involved: 0])
+        #expect(result.totals == [.review: 5, .mentions: 2, .mine: 40])
+        #expect(result.fetched == [.review: 5, .mentions: 2, .mine: 2])
         #expect(result.warnings.isEmpty)
     }
 
@@ -82,7 +82,13 @@ import Testing
     }
 
     @Test func responseWithoutDataIsBadResponse() throws {
-        let response = try InboxResponse.decode(Data(#"{"message":"Not Found"}"#.utf8))
-        #expect(throws: FetchError.badResponse) { try PullRequestMapper.map(response) }
+        let response = try SearchResponse.decode(Data(#"{"message":"Not Found"}"#.utf8))
+        #expect(throws: FetchError.badResponse) { try PullRequestMapper.merge(search: response, details: []) }
+    }
+
+    @Test func sumsTheCostAndFingerprintsTheSearch() {
+        #expect(result.cost == 4)
+        #expect(result.fingerprint.count == 6)
+        #expect(result.fingerprint["PR_C"] == date("2026-08-05T10:00:00Z"))
     }
 }

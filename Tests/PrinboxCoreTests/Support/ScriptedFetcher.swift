@@ -1,14 +1,23 @@
 @testable import PrinboxCore
 
-/// Fetcher whose answer depends on the call number (1-based).
+/// Fetcher whose answer depends on the call number (1-based). The simple form answers full results; the
+/// `outcomes` form sees the request and can answer `.unchanged`. Every request is recorded.
 actor ScriptedFetcher: InboxFetching {
     private(set) var calls = 0
-    private let script: @Sendable (Int) async throws -> FetchResult
+    private(set) var requests: [FetchRequest] = []
+    private let script: @Sendable (Int, FetchRequest) async throws -> FetchOutcome
 
-    init(_ script: @escaping @Sendable (Int) async throws -> FetchResult) { self.script = script }
+    init(_ script: @escaping @Sendable (Int) async throws -> FetchResult) {
+        self.script = { call, _ in .result(try await script(call)) }
+    }
 
-    func fetch() async throws -> FetchResult {
+    init(outcomes script: @escaping @Sendable (Int, FetchRequest) async throws -> FetchOutcome) {
+        self.script = script
+    }
+
+    func fetch(_ request: FetchRequest) async throws -> FetchOutcome {
         calls += 1
-        return try await script(calls)
+        requests.append(request)
+        return try await script(calls, request)
     }
 }

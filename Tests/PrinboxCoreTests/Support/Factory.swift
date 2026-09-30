@@ -71,7 +71,8 @@ func makeResult(_ prs: [PullRequest], totals: [SearchSource: Int]? = nil, warnin
     let counts = Dictionary(grouping: prs, by: \.source).mapValues(\.count)
     let fetched = Dictionary(uniqueKeysWithValues: SearchSource.allCases.map { ($0, counts[$0] ?? 0) })
     return FetchResult(
-        viewerLogin: testViewer, pullRequests: prs, totals: totals ?? fetched, fetched: fetched, warnings: warnings)
+        viewerLogin: testViewer, pullRequests: prs, totals: totals ?? fetched, fetched: fetched, warnings: warnings,
+        fingerprint: Dictionary(prs.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { _, new in new }))
 }
 
 func comment(_ login: String, _ at: Date) -> ThreadComment {

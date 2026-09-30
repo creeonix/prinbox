@@ -10,7 +10,7 @@ import Testing
 
     static var allowed: [Regex<Substring>] {
         [
-            /PR_\d+/, /PR title \d+/, /org-\d+\/repo-\d+/, /org-\d+/, /me|user-\d+/, /redacted/,
+            /PR_\d+/, /PR title \d+/, /org-\d+\/repo-\d+/, /org-\d+/, /me|user-\d+/, /ref-\d+/, /redacted/,
             /https:\/\/github\.com\/org-\d+\/repo-\d+\/pull\/\d+/,
             /https:\/\/avatars\.githubusercontent\.com\/u\/\d+\?v=4/,
             /\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ/,
@@ -53,38 +53,49 @@ import Testing
         return output.stdout
     }
 
+    /// A details node with every field the query asks for, plus fields it does not (bodies, names, paths),
+    /// all carrying the word "secret".
     static func node(_ id: String, repo: String, owner: String, kind: String = "Organization") -> String {
         #"{"id":"\#(id)","number":5,"title":"Secret title","url":"https://github.com/\#(repo)/pull/5","#
             + #""isDraft":false,"additions":1,"deletions":2,"createdAt":"2026-08-01T09:00:00Z","updatedAt":"2026-08-01T09:00:00Z","#
-            + #""headRefName":"secret-branch","bodyText":"secret body","totalCommentsCount":3,"#
+            + #""headRefName":"secret-branch","baseRefName":"main","bodyText":"secret body","totalCommentsCount":3,"#
             + #""author":{"login":"secret-author","avatarUrl":"https://avatars.githubusercontent.com/u/42?s=64","name":"Secret Name"},"#
             + #""repository":{"nameWithOwner":"\#(repo)","isArchived":false,"description":"secret repo","#
             + #""owner":{"__typename":"\#(kind)","login":"\#(owner)","avatarUrl":"https://avatars.githubusercontent.com/u/7?s=64","name":"Secret Org"}},"#
             + #""reviewDecision":null,"mergeable":"MERGEABLE","viewerLatestReview":null,"#
             + #""latestOpinionatedReviews":{"nodes":[{"state":"APPROVED","author":{"login":"secret-reviewer"}},null]},"#
-            + #""commits":{"nodes":[]},"timelineItems":{"nodes":[{"__typename":"ReviewRequestedEvent","#
-            + #""createdAt":"2026-08-01T09:00:00Z","requestedReviewer":{"__typename":"Team","slug":"secret-team"}}]}}"#
+            + #""commits":{"nodes":[{"commit":{"committedDate":"2026-08-01T08:00:00Z","statusCheckRollup":{"state":"SUCCESS"},"message":"secret"}}]},"#
+            + #""timelineItems":{"nodes":[{"__typename":"ReviewRequestedEvent","#
+            + #""createdAt":"2026-08-01T09:00:00Z","requestedReviewer":{"__typename":"Team","slug":"secret-team"}}]},"#
+            + #""reviewThreads":{"totalCount":1,"nodes":[{"isResolved":false,"path":"secret/file.swift","comments":{"totalCount":2,"nodes":["#
+            + #"{"author":{"login":"secret-viewer"},"createdAt":"2026-08-01T10:00:00Z","body":"secret comment"},"#
+            + #"{"author":{"login":"secret-reviewer"},"createdAt":"2026-08-01T11:00:00Z","body":"secret reply"}]}}]},"#
+            + #""reviews":{"totalCount":1,"nodes":[{"author":{"login":"secret-reviewer"},"state":"APPROVED","submittedAt":"2026-08-01T12:00:00Z","bodyText":"lgtm"}]}}"#
     }
 
-    static func response(_ nodes: [String]) -> String {
-        #"{"data":{"viewer":{"login":"secret-viewer"},"review":{"issueCount":\#(nodes.count),"nodes":[\#(nodes.joined(separator: ","))]},"#
-            + #""mentions":{"issueCount":0,"nodes":[]},"mine":{"issueCount":0,"nodes":[]}}}"#
+    /// A two-phase fixture: every node is a hit of the review search, all nodes in one batch.
+    static func fixture(_ entries: [(id: String, node: String)]) -> String {
+        let hits = entries.map { #"{"id":"\#($0.id)","updatedAt":"2026-08-01T09:00:00Z"}"# }.joined(separator: ",")
+        return
+            #"{"search":{"data":{"viewer":{"login":"secret-viewer"},"rateLimit":{"cost":1,"remaining":4999,"resetAt":"2026-08-01T13:00:00Z"},"#
+            + #""review":{"issueCount":\#(entries.count),"nodes":[\#(hits)]},"mentions":{"issueCount":0,"nodes":[]},"mine":{"issueCount":0,"nodes":[]}}},"#
+            + #""details":[{"data":{"rateLimit":{"cost":5,"remaining":4994,"resetAt":"2026-08-01T13:00:00Z"},"nodes":[\#(entries.map(\.node).joined(separator: ","))]}}]}"#
     }
 
     @Test func unknownFieldsAreDroppedNotCopied() async throws {
         let output = try await Self.anonymize(
-            Self.response([Self.node("PR_kwSECRET", repo: "secret-org/app", owner: "secret-org")]))
+            Self.fixture([("PR_kwSECRET", Self.node("PR_kwSECRET", repo: "secret-org/app", owner: "secret-org"))]))
         #expect(try Self.unexpectedStrings(in: output) == [])
     }
 
     @Test func distinctOwnersStayDistinctAndOwnersMatchTheirRepositories() async throws {
         let output = try await Self.anonymize(
-            Self.response([
-                Self.node("PR_1", repo: "zeta-org/app", owner: "zeta-org"),
-                Self.node("PR_2", repo: "alpha-org/lib", owner: "alpha-org", kind: "User"),
-                Self.node("PR_3", repo: "zeta-org/other", owner: "zeta-org"),
+            Self.fixture([
+                ("PR_1", Self.node("PR_1", repo: "zeta-org/app", owner: "zeta-org")),
+                ("PR_2", Self.node("PR_2", repo: "alpha-org/lib", owner: "alpha-org", kind: "User")),
+                ("PR_3", Self.node("PR_3", repo: "zeta-org/other", owner: "zeta-org")),
             ]))
-        let result = try PullRequestMapper.map(InboxResponse.decode(output))
+        let result = try Fixture.twoPhase(data: output)
         let byID = Dictionary(uniqueKeysWithValues: result.pullRequests.map { ($0.id, $0) })
         #expect(byID["PR_1"]?.repository == "org-2/repo-2")
         #expect(byID["PR_2"]?.repository == "org-1/repo-1")
@@ -94,5 +105,20 @@ import Testing
         #expect(byID["PR_1"]?.ownerAvatarURL == byID["PR_3"]?.ownerAvatarURL)
         #expect(byID["PR_1"]?.commentCount == 3)
         #expect(byID["PR_1"]?.reviewDecision == .approved)
+        #expect(result.fingerprint.count == 3)
+    }
+
+    @Test func conversationAuthorsAndBranchesBecomePlaceholders() async throws {
+        let output = try await Self.anonymize(
+            Self.fixture([("PR_1", Self.node("PR_1", repo: "secret-org/app", owner: "secret-org"))]))
+        let pr = try #require(try Fixture.twoPhase(data: output).pullRequests.first)
+        #expect(pr.baseRef == "ref-1")
+        #expect(pr.headRef == "ref-2")
+        #expect(pr.authorLogin == "user-1")
+        #expect(pr.threads?.first?.comments.map(\.authorLogin) == ["me", "user-2"])
+        #expect(pr.threads?.first?.isResolved == false)
+        #expect(
+            pr.reviews == [Review(authorLogin: "user-2", state: "APPROVED", submittedAt: date("2026-08-01T12:00:00Z"))])
+        #expect(pr.lastCommitAt == date("2026-08-01T08:00:00Z"))
     }
 }

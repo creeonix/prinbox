@@ -11,11 +11,13 @@ public struct DemoFetcher: InboxFetching {
         base = now()
     }
 
-    public func fetch() async throws -> FetchResult {
+    /// The demo never answers `.unchanged`: its data is frozen anyway, and the inbox is built once.
+    public func fetch(_ request: FetchRequest) async throws -> FetchOutcome {
         let prs = DemoData.pullRequests(now: base)
         let counts = Dictionary(grouping: prs, by: \.source).mapValues(\.count)
         let fetched = Dictionary(uniqueKeysWithValues: SearchSource.allCases.map { ($0, counts[$0] ?? 0) })
-        return FetchResult(viewerLogin: "me", pullRequests: prs, totals: fetched, fetched: fetched, warnings: [])
+        return .result(
+            FetchResult(viewerLogin: "me", pullRequests: prs, totals: fetched, fetched: fetched, warnings: []))
     }
 
     /// One snoozed review request and three rows that are new since the last look, for screenshots.
