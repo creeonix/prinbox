@@ -42,10 +42,9 @@ public final class UpdateStore {
 
     public func checkIfDue() async {
         guard current != nil, !checking else { return }
-        if let last = defaults.object(forKey: Self.checkedAtKey) as? Date,
-            clock().timeIntervalSince(last) < Self.interval
-        {
-            return
+        if let last = defaults.object(forKey: Self.checkedAtKey) as? Date {
+            let elapsed = clock().timeIntervalSince(last)
+            if elapsed >= 0 && elapsed < Self.interval { return }
         }
         checking = true
         defer { checking = false }

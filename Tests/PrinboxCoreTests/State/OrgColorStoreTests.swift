@@ -42,4 +42,14 @@ import Testing
         store.assign(["acme"])
         #expect(defaults.object(forKey: OrgColorStore.key) == nil)
     }
+
+    @Test func negativeSavedIndicesAreDropped() {
+        let defaults = MemoryDefaults()
+        defaults.set(["acme": -3, "globex": 1], forKey: OrgColorStore.key)
+        let store = OrgColorStore(defaults: defaults)
+        #expect(store.index(for: "acme") == 0)
+        store.assign(["acme"])
+        #expect(store.index(for: "acme") == 0)
+        #expect(store.index(for: "globex") == 1)
+    }
 }

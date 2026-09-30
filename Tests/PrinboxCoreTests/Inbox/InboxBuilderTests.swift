@@ -103,4 +103,12 @@ import Testing
         #expect(two.spansMultipleOrgs)
         #expect(Inbox.empty.spansMultipleOrgs == false)
     }
+
+    @Test func spansMultipleOrgsCountsRowsBeyondTheCap() {
+        let acme = (1...9).map { makePR(id: "a\($0)", number: $0, repository: "acme/web") }
+        let globex = [makePR(id: "g", number: 10, repository: "globex/api")]
+        let inbox = InboxBuilder.build(makeResult(acme + globex))
+        #expect(inbox.spansMultipleOrgs)
+        #expect(inbox.section(.needsReview)?.rows.count == 8)
+    }
 }

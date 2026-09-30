@@ -10,8 +10,6 @@ final class AppCoordinator {
     private let client: GhClient
     private let store: InboxStore
     private let state: PopoverState
-    private let display: DisplaySettings
-    private let colors: OrgColorStore
     private let hotKeys: HotKeySettings
     private let loginItem = LoginItem()
     private let avatars: AvatarImages
@@ -38,8 +36,8 @@ final class AppCoordinator {
             currentVersion: demo ? "dev" : info.version, checker: GhReleaseChecker(locator: GhLocator()),
             defaults: defaults)
         self.store = store
-        display = DisplaySettings(defaults: defaults)
-        colors = OrgColorStore(defaults: defaults)
+        let display = DisplaySettings(defaults: defaults)
+        let colors = OrgColorStore(defaults: defaults)
         state = PopoverState(store: store, folds: FoldStore(defaults: defaults), display: display, colors: colors)
         hotKeys = HotKeySettings(defaults: defaults)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.defaultDirectory(bundleID: Self.bundleID)))
@@ -104,7 +102,10 @@ final class AppCoordinator {
 
     private func popoverWillShow() {
         state.popoverWillShow()
-        Task { await state.refreshIfStale() }
+        Task {
+            await state.refreshIfStale()
+            await updates.checkIfDue()
+        }
     }
 
     /// Closing mid-recording ends it; the hook re-registers the shortcut that recording suspended.
@@ -127,8 +128,7 @@ final class AppCoordinator {
     }
 
     private func openUpdate() {
-        NSWorkspace.shared.open(
-            updates.available?.url ?? URL(string: "https://github.com/creeonix/prinbox/releases/latest")!)
+        NSWorkspace.shared.open(updates.available?.url ?? GhReleaseChecker.releasesPage)
     }
 
     private func open(_ url: URL) {

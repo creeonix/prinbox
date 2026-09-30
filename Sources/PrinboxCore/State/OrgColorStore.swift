@@ -14,7 +14,8 @@ public final class OrgColorStore {
 
     public init(defaults: KeyValueStoring) {
         self.defaults = defaults
-        indices = defaults.object(forKey: Self.key) as? [String: Int] ?? [:]
+        let saved = defaults.object(forKey: Self.key) as? [String: Int] ?? [:]
+        indices = saved.filter { $0.value >= 0 }
     }
 
     /// 0 for an org that was never assigned; call `assign` when the inbox changes.

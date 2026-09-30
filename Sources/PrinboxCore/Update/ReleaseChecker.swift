@@ -10,6 +10,9 @@ public struct Release: Sendable, Equatable {
     }
 
     public var version: AppVersion? { AppVersion(tag) }
+
+    /// "0.3.0" for `v0.3.0`; the raw tag when it does not parse.
+    public var displayVersion: String { version?.description ?? tag }
 }
 
 public protocol ReleaseChecking: Sendable {
@@ -20,6 +23,8 @@ public protocol ReleaseChecking: Sendable {
 /// drops it: an update check is best effort and never becomes an error the user sees.
 public struct GhReleaseChecker: ReleaseChecking {
     public static let repository = "creeonix/prinbox"
+    /// The fallback page when no release is known.
+    public static let releasesPage = URL(string: "https://github.com/\(repository)/releases/latest")!
     public static let defaultTimeout: Duration = .seconds(15)
 
     private let locator: GhLocator

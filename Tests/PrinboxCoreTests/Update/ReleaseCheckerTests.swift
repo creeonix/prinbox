@@ -40,4 +40,10 @@ import Testing
             locator: none, runner: FakeRunner { _, _, _ in CommandOutput(exitCode: 0, stdout: Data(), stderr: "") })
         await #expect(throws: FetchError.ghNotFound) { try await checker.latestRelease() }
     }
+
+    @Test func displayVersionDropsTheTagPrefixAndKeepsOddTags() {
+        let page = GhReleaseChecker.releasesPage
+        #expect(Release(tag: "v0.3.0", url: page).displayVersion == "0.3.0")
+        #expect(Release(tag: "nightly", url: page).displayVersion == "nightly")
+    }
 }

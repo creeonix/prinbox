@@ -94,4 +94,13 @@ actor ScriptedChecker: ReleaseChecking {
         let (upToDate, _) = makeStore(version: "0.3.0", release: nil, defaults: defaults)
         #expect(upToDate.available == nil)
     }
+
+    @Test func aCheckTimeInTheFutureCountsAsDue() async {
+        let defaults = MemoryDefaults()
+        defaults.set(start + 3600, forKey: UpdateStore.checkedAtKey)
+        let (store, checker) = makeStore(release: Release(tag: "v0.3.0", url: page), defaults: defaults)
+        await store.checkIfDue()
+        #expect(await checker.calls == 1)
+        #expect(defaults.object(forKey: UpdateStore.checkedAtKey) as? Date == start)
+    }
 }
