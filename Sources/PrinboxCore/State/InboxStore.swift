@@ -28,6 +28,9 @@ public final class InboxStore {
     @ObservationIgnored private var followUpRequested = false
     @ObservationIgnored private var pausedUntil: Date?
     @ObservationIgnored private var lastResult: FetchResult?
+    /// The arrivals baseline: `updatedAt` per PR id. A complete fetch replaces it; an incomplete one only
+    /// adds to it, so PRs a partial response left out do not come back as arrivals.
+    @ObservationIgnored private var known: [String: Date]?
     @ObservationIgnored private let fetcher: InboxFetching
     @ObservationIgnored private let clock: @Sendable () -> Date
 
@@ -92,6 +95,7 @@ public final class InboxStore {
         rebuild()
     }
 
+    /// Wakes a snoozed PR and rebuilds; ids that are not snoozed do nothing.
     public func unsnooze(_ id: String) {
         guard state.isSnoozed(id) else { return }
         state.unsnooze(id)
@@ -105,6 +109,12 @@ public final class InboxStore {
         onInboxChange?()
     }
 
+    private static func baseline(after result: FetchResult, extending previous: [String: Date]?) -> [String: Date] {
+        let fetched = Dictionary(
+            result.pullRequests.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { first, _ in first })
+        return result.isComplete ? fetched : (previous ?? [:]).merging(fetched) { _, new in new }
+    }
+
     private var isPaused: Bool {
         pausedUntil.map { clock() < $0 } ?? false
     }
@@ -114,7 +124,8 @@ public final class InboxStore {
             let result = try await fetcher.fetch()
             state.didFetch(result)
             let built = InboxBuilder.build(result, snoozed: state.snoozedIDs)
-            arrivals = Arrivals.compute(previous: lastResult?.pullRequests, current: built)
+            arrivals = Arrivals.compute(previous: known, current: built)
+            known = Self.baseline(after: result, extending: known)
             lastResult = result
             inbox = built
             error = nil

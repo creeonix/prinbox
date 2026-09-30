@@ -256,4 +256,29 @@ final class StoreHolder {
         #expect(store.inbox?.badgeCount == 0)
         #expect(memory.saved?.seen == ["a": start])
     }
+
+    @Test func pullRequestsMissingFromAnIncompleteFetchDoNotArriveWhenTheyReturn() async {
+        let old = date("2026-08-01T10:00:00Z")
+        let fetcher = ScriptedFetcher { call in
+            switch call {
+            case 2:
+                makeResult(
+                    [makePR(id: "b", number: 2, updatedAt: old)],
+                    warnings: ["acme requires SSO re-authorization: results incomplete"])
+            case 3:
+                makeResult([
+                    makePR(id: "a", number: 1, updatedAt: old), makePR(id: "b", number: 2, updatedAt: old),
+                    makePR(id: "c", number: 3, updatedAt: old),
+                ])
+            default:
+                makeResult([makePR(id: "a", number: 1, updatedAt: old), makePR(id: "b", number: 2, updatedAt: old)])
+            }
+        }
+        let store = InboxStore(fetcher: fetcher)
+        await store.refresh()
+        await store.refresh()
+        #expect(store.arrivals.isEmpty)
+        await store.refresh()
+        #expect(store.arrivals.map(\.id) == ["c"])
+    }
 }

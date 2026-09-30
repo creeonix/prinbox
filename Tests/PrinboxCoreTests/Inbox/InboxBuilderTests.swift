@@ -128,12 +128,14 @@ import Testing
             ])
     }
 
-    @Test func snoozedRowsCountTowardTheCapAndKeepTheOrgSpan() {
-        let prs = (1...9).map { makePR(id: "s\($0)", number: $0, repository: $0 == 1 ? "globex/x" : "acme/web") }
-        let inbox = InboxBuilder.build(makeResult(prs), snoozed: Set(prs.map(\.id)))
+    @Test func snoozedRowsAreNeverHiddenByTheCap() {
+        let own = (1...9).map { makePR(id: "o\($0)", number: $0, source: .mine) }
+        let parked = (1...3).map { makePR(id: "s\($0)", number: 100 + $0, repository: "globex/x") }
+        let inbox = InboxBuilder.build(makeResult(own + parked), snoozed: Set(parked.map(\.id)))
         let section = inbox.section(.waitingOnOthers)
-        #expect(section?.rows.count == 8)
-        #expect(section?.count == 9)
+        #expect(section?.rows.count == 8 + 3)
+        #expect(section?.rows.suffix(3).map(\.id) == ["s1", "s2", "s3"])
+        #expect(section?.count == 12)
         #expect(section?.moreCount == 1)
         #expect(inbox.spansMultipleOrgs)
     }

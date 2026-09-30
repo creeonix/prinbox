@@ -1,20 +1,20 @@
 import Foundation
 
 /// What a refresh brought into the review sections, for the notification. The baseline is the previous
-/// fetch, not the seen ledger: a PR the user has not looked at must not notify again five minutes later.
+/// fetch (extended, not replaced, by an incomplete fetch), not the seen ledger: a PR the user has not looked
+/// at must not notify again five minutes later.
 public enum Arrivals {
     static let sections: Set<SectionKind> = [.needsReview, .takeAnotherLook]
 
-    /// Non-draft rows of Needs your review and Take another look whose PR the previous fetch did not have,
-    /// or had with an older `updatedAt`. Nil `previous` (the first fetch after launch) gives nothing.
-    public static func compute(previous: [PullRequest]?, current: Inbox) -> [InboxRow] {
+    /// Non-draft rows of Needs your review and Take another look whose PR the baseline lacks, or has with
+    /// an older `updatedAt`. Nil `previous` (the first fetch after launch) gives nothing.
+    public static func compute(previous: [String: Date]?, current: Inbox) -> [InboxRow] {
         guard let previous else { return [] }
-        let known = Dictionary(previous.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { first, _ in first })
         return current.sections
             .filter { sections.contains($0.kind) }
             .flatMap(\.rows)
             .filter { row in
-                !row.pullRequest.isDraft && (known[row.id].map { row.pullRequest.updatedAt > $0 } ?? true)
+                !row.pullRequest.isDraft && (previous[row.id].map { row.pullRequest.updatedAt > $0 } ?? true)
             }
     }
 }

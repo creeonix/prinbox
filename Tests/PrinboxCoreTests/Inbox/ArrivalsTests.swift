@@ -14,7 +14,7 @@ import Testing
     }
 
     @Test func newAndUpdatedReviewRequestsArrive() {
-        let previous = [makePR(id: "a", updatedAt: old), makePR(id: "b", updatedAt: old)]
+        let previous = ["a": old, "b": old]
         let current = inbox([
             makePR(id: "a", number: 1, updatedAt: newer),
             makePR(id: "b", number: 2, updatedAt: old),
@@ -31,21 +31,18 @@ import Testing
             makePR(id: "mine", reviewDecision: .changesRequested, source: .mine),
             makePR(id: "draft", isDraft: true, source: .review),
         ])
-        #expect(Arrivals.compute(previous: [], current: current).map(\.id) == ["again"])
+        #expect(Arrivals.compute(previous: [:], current: current).map(\.id) == ["again"])
     }
 
     @Test func aMoveBetweenSectionsWithTheSameUpdatedAtIsNotAnArrival() {
-        let previous = [
-            makePR(id: "a", updatedAt: old, source: .mentions),
-            makePR(id: "a", updatedAt: newer, source: .mine),
-        ]
+        let previous = ["a": old]
         let current = inbox([makePR(id: "a", updatedAt: old, source: .review)])
         #expect(Arrivals.compute(previous: previous, current: current).isEmpty)
     }
 
     @Test func noticeForOnePullRequestOpensIt() {
         let pr = makePR(id: "a", number: 42, title: "Ship it", repository: "acme/web")
-        let rows = Arrivals.compute(previous: [], current: inbox([pr]))
+        let rows = Arrivals.compute(previous: [:], current: inbox([pr]))
         #expect(
             ArrivalNotice.make(rows)
                 == ArrivalNotice(
@@ -54,13 +51,13 @@ import Testing
 
     @Test func noticeForSeveralListsUpToThreeTitles() {
         let three = (1...3).map { makePR(id: "p\($0)", number: $0, title: "T\($0)") }
-        let notice = ArrivalNotice.make(Arrivals.compute(previous: [], current: inbox(three)))
+        let notice = ArrivalNotice.make(Arrivals.compute(previous: [:], current: inbox(three)))
         #expect(
             notice
                 == ArrivalNotice(
                     title: "3 new review requests", body: "#1 T1\n#2 T2\n#3 T3", url: nil))
         let five = (1...5).map { makePR(id: "p\($0)", number: $0, title: "T\($0)") }
-        let more = ArrivalNotice.make(Arrivals.compute(previous: [], current: inbox(five)))
+        let more = ArrivalNotice.make(Arrivals.compute(previous: [:], current: inbox(five)))
         #expect(more?.title == "5 new review requests")
         #expect(more?.body == "#1 T1\n#2 T2\n#3 T3\nand 2 more")
         #expect(ArrivalNotice.make([]) == nil)
