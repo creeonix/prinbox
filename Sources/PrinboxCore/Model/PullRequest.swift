@@ -60,13 +60,18 @@ public struct PullRequest: Sendable, Equatable, Identifiable {
     public let reviewRequestedAt: Date?
     public let readyForReviewAt: Date?
     public let source: SearchSource
+    /// `totalCommentsCount`: issue comments plus review comments.
+    public let commentCount: Int
+    public let ownerAvatarURL: URL?
+    /// The repository owner is an organization (false for a user's personal repository).
+    public let ownerIsOrganization: Bool
 
     public init(
         id: String, number: Int, title: String, url: URL, repository: String, isArchived: Bool,
         authorLogin: String, avatarURL: URL?, isDraft: Bool, additions: Int, deletions: Int,
         createdAt: Date, updatedAt: Date, reviewDecision: ReviewDecision, mergeable: Mergeable,
         ci: CIState, viewerReview: ViewerReview?, reviewRequestedAt: Date?, readyForReviewAt: Date?,
-        source: SearchSource
+        source: SearchSource, commentCount: Int = 0, ownerAvatarURL: URL? = nil, ownerIsOrganization: Bool = false
     ) {
         self.id = id
         self.number = number
@@ -88,6 +93,14 @@ public struct PullRequest: Sendable, Equatable, Identifiable {
         self.reviewRequestedAt = reviewRequestedAt
         self.readyForReviewAt = readyForReviewAt
         self.source = source
+        self.commentCount = commentCount
+        self.ownerAvatarURL = ownerAvatarURL
+        self.ownerIsOrganization = ownerIsOrganization
+    }
+
+    /// Repository owner: "acme" for "acme/web". Shown as the org name.
+    public var ownerLogin: String {
+        repository.split(separator: "/").first.map(String.init) ?? repository
     }
 
     /// Repository name without the owner: "web" for "acme/web".
