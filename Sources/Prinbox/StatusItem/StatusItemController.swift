@@ -70,14 +70,15 @@ final class StatusItemController: NSObject {
         return tinted
     }
 
-    /// Composites `arrow.up.circle.fill` at 55% of the height into the bottom-trailing corner, knocking
-    /// out a 1 pt ring first so the badge stands off the symbol. Both are template shapes, so the result
-    /// is a template image too.
+    /// Composites `arrow.up.circle.fill` at 40% of the height onto the symbol's bottom-trailing corner.
+    /// The canvas grows by half the badge so the badge hangs off the glyph instead of covering it, and a
+    /// 1 pt ring is knocked out first so it stands off. Both are template shapes, so the result is a
+    /// template image too.
     private static func badge(_ base: NSImage) -> NSImage {
-        let size = base.size
+        let side = (base.size.height * 0.4).rounded()
+        let size = NSSize(width: base.size.width + side / 2, height: base.size.height)
         let image = NSImage(size: size, flipped: false) { rect in
-            base.draw(in: rect)
-            let side = rect.height * 0.55
+            base.draw(in: NSRect(x: 0, y: 0, width: base.size.width, height: base.size.height))
             let frame = NSRect(x: rect.maxX - side, y: rect.minY, width: side, height: side)
             NSGraphicsContext.current?.compositingOperation = .destinationOut
             NSBezierPath(ovalIn: frame.insetBy(dx: -1, dy: -1)).fill()
@@ -86,6 +87,7 @@ final class StatusItemController: NSObject {
             return true
         }
         image.isTemplate = true
+        image.accessibilityDescription = "PRInbox, update available"
         return image
     }
 
