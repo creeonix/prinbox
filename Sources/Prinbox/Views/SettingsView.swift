@@ -11,7 +11,7 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Button(action: { state.showingSettings = false }) { Label("Inbox", systemImage: "chevron.left") }
+            Button(action: { state.leaveSettings() }) { Label("Inbox", systemImage: "chevron.left") }
                 .buttonStyle(.borderless)
             SettingRow(title: "Global shortcut") {
                 ShortcutRecorderView(state: state, hotKeys: hotKeys, actions: actions)

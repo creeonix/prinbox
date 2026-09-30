@@ -2,32 +2,59 @@ import Foundation
 import Observation
 
 /// View model of the popover: selection, folding, settings mode and key handling. The SwiftUI views
-/// read it directly; it contains no AppKit.
+/// read it directly; it contains no AppKit. Hooks let the app shell react (re-register the shortcut,
+/// re-read the gh path) without the model knowing about AppKit.
 @MainActor
 @Observable
 public final class PopoverState {
     public let store: InboxStore
     public let folds: FoldStore
+    public let display: DisplaySettings
+    public let colors: OrgColorStore
     public private(set) var selection = Selection()
-    public var showingSettings = false
-    public var isRecordingShortcut = false
+    public private(set) var showingSettings = false
+    public private(set) var isRecordingShortcut = false
     /// The setup command last copied, so its button can say "Copied".
     public var copiedCommand: String?
     /// Measured height of the list content, used to size the popover.
     public var contentHeight: CGFloat = 0
 
+    /// Called when Settings opens, so the shell can re-read the gh path and the login-item status.
+    @ObservationIgnored public var onSettingsOpened: (@MainActor () -> Void)?
+    /// Called when a shortcut recording ends for any reason, so the shell re-registers the shortcut.
+    @ObservationIgnored public var onRecordingEnded: (@MainActor () -> Void)?
     @ObservationIgnored private var lastItems: [InboxItemID] = []
 
-    public init(store: InboxStore, folds: FoldStore) {
+    public init(store: InboxStore, folds: FoldStore, display: DisplaySettings, colors: OrgColorStore) {
         self.store = store
         self.folds = folds
+        self.display = display
+        self.colors = colors
         lastItems = items
-        store.onInboxChange = { [weak self] in self?.reconcileSelection() }
+        store.onInboxChange = { [weak self] in self?.inboxDidChange() }
     }
 
     public var items: [InboxItemID] {
-        InboxLayout.visibleItems(store.inbox ?? .empty, folded: folds.folded)
+        InboxLayout.visibleItems(store.inbox ?? .empty, folded: folds.folded, grouped: display.groupByOrganization)
     }
+
+    // MARK: Org cues
+
+    private var spansMultipleOrgs: Bool { store.inbox?.spansMultipleOrgs ?? false }
+
+    /// `org/repo` in row text: several orgs, and no separators saying which is which.
+    public var showsOrgNames: Bool { spansMultipleOrgs && !display.groupByOrganization }
+
+    public var showsOrgBadges: Bool { spansMultipleOrgs && display.showOrganizationAvatars }
+
+    public var showsSeparators: Bool { spansMultipleOrgs && display.groupByOrganization }
+
+    public func setGroupByOrganization(_ on: Bool) {
+        display.setGroupByOrganization(on)
+        reconcileSelection()
+    }
+
+    // MARK: Selection
 
     public func isSelected(_ id: InboxItemID) -> Bool { selection.current == id }
 
@@ -38,6 +65,11 @@ public final class PopoverState {
         let current = items
         selection = selection.reconciled(previous: lastItems, current: current)
         lastItems = current
+    }
+
+    private func inboxDidChange() {
+        colors.assign((store.inbox?.sections ?? []).flatMap(\.rows).map(\.pullRequest.ownerLogin))
+        reconcileSelection()
     }
 
     public func toggleFold(_ kind: SectionKind) {
@@ -57,11 +89,36 @@ public final class PopoverState {
     /// Resets transient state each time the popover opens and selects the first PR row.
     public func popoverWillShow() {
         showingSettings = false
-        isRecordingShortcut = false
+        if isRecordingShortcut { stopRecording() }
         copiedCommand = nil
         reconcileSelection()
         if selection.current == nil { selection = Selection(current: firstRow ?? items.first) }
     }
+
+    // MARK: Settings and shortcut recording
+
+    public func openSettings() {
+        showingSettings = true
+        onSettingsOpened?()
+    }
+
+    /// Leaving Settings by the back button or Esc also cancels a recording in progress.
+    public func leaveSettings() {
+        showingSettings = false
+        if isRecordingShortcut { stopRecording() }
+    }
+
+    /// The shell unregisters the shortcut before calling this, or Carbon would swallow the new keys.
+    public func startRecording() {
+        isRecordingShortcut = true
+    }
+
+    public func stopRecording() {
+        isRecordingShortcut = false
+        onRecordingEnded?()
+    }
+
+    // MARK: Keys
 
     /// Activating a header folds it; a row or "more" row opens its URL.
     public func activate(_ id: InboxItemID) -> KeyAction {
@@ -80,7 +137,7 @@ public final class PopoverState {
     public func handle(_ command: KeyCommand) -> KeyAction? {
         if showingSettings {
             guard command == .escape else { return nil }
-            showingSettings = false
+            leaveSettings()
             return .handled
         }
         switch command {

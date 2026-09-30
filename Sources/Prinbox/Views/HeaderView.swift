@@ -20,7 +20,7 @@ struct HeaderView: View {
             } else {
                 IconButton(symbol: "arrow.clockwise", help: "Refresh (R)", action: actions.refresh)
             }
-            IconButton(symbol: "gearshape", help: "Settings") { state.showingSettings = true }
+            IconButton(symbol: "gearshape", help: "Settings") { state.openSettings() }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

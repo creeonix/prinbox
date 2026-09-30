@@ -10,6 +10,8 @@ final class AppCoordinator {
     private let client: GhClient
     private let store: InboxStore
     private let state: PopoverState
+    private let display: DisplaySettings
+    private let colors: OrgColorStore
     private let hotKeys: HotKeySettings
     private let loginItem = LoginItem()
     private let avatars: AvatarImages
@@ -29,12 +31,15 @@ final class AppCoordinator {
         isDemo = demo
         self.client = client
         self.store = store
-        state = PopoverState(store: store, folds: FoldStore(defaults: defaults))
+        display = DisplaySettings(defaults: defaults)
+        colors = OrgColorStore(defaults: defaults)
+        state = PopoverState(store: store, folds: FoldStore(defaults: defaults), display: display, colors: colors)
         hotKeys = HotKeySettings(defaults: defaults)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.defaultDirectory(bundleID: Self.bundleID)))
     }
 
     func start() {
+        state.onRecordingEnded = { [weak self] in self?.applyHotKey() }
         statusItem = StatusItemController(
             onLeftClick: { [weak self] in self?.togglePopover() },
             onRefresh: { [weak self] in self?.refreshNow() })
@@ -94,7 +99,7 @@ final class AppCoordinator {
     /// Showing the popover activated prinbox; when it closes by Esc or the shortcut, hiding hands focus back
     /// to the previous app. A close for an opened PR leaves activation to the browser.
     private func popoverDidClose() {
-        if state.isRecordingShortcut { toggleShortcutRecording() }
+        if state.isRecordingShortcut { state.stopRecording() }
         if !closingForBrowser && NSApp.isActive { NSApp.hide(nil) }
         closingForBrowser = false
     }
@@ -136,23 +141,22 @@ final class AppCoordinator {
     /// could never be re-recorded.
     private func toggleShortcutRecording() {
         if state.isRecordingShortcut {
-            state.isRecordingShortcut = false
-            applyHotKey()
+            state.stopRecording()
         } else {
             hotKeyCenter?.unregister()
-            state.isRecordingShortcut = true
+            state.startRecording()
         }
     }
 
     /// Esc cancels. Keys without ⌃, ⌥ or ⌘ are swallowed and recording continues.
     private func recordShortcut(keyCode: UInt16, modifiers: HotKeyModifiers) -> Bool {
         if keyCode == 53 {
-            toggleShortcutRecording()
+            state.stopRecording()
             return true
         }
         guard let spec = HotKeySpec.recorded(keyCode: keyCode, modifiers: modifiers) else { return true }
-        state.isRecordingShortcut = false
-        setShortcut(spec)
+        hotKeys.update(spec)
+        state.stopRecording()
         return true
     }
 
