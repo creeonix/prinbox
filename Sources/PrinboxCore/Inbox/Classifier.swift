@@ -29,12 +29,13 @@ public enum Classifier {
         }
     }
 
-    /// First match wins: changes requested, merge conflicts, red CI, approved (not draft).
+    /// First match wins: changes requested, merge conflicts, red CI, approved (not draft, CI not running).
+    /// Waiting for CI is a deviation from Pullover: nothing can be merged until it finishes.
     static func ownActionReason(_ pr: PullRequest) -> Reason? {
         if pr.reviewDecision == .changesRequested { return .changesRequested }
         if pr.mergeable == .conflicting { return .mergeConflicts }
         if pr.ci == .failure { return .ciRed }
-        if pr.reviewDecision == .approved && !pr.isDraft { return .readyToMerge }
+        if pr.reviewDecision == .approved && !pr.isDraft && pr.ci != .pending { return .readyToMerge }
         return nil
     }
 }
