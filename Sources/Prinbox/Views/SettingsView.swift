@@ -47,6 +47,14 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 .labelsHidden()
             }
+            SettingRow(title: "Compact rows") {
+                Toggle(
+                    "",
+                    isOn: Binding(get: { state.display.compactRows }, set: { state.display.setCompactRows($0) })
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
+            }
             Divider()
             InfoLine(label: "gh", value: info.ghPath ?? "not found")
             InfoLine(label: "Version", value: info.version)

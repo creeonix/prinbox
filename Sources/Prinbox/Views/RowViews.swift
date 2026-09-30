@@ -41,6 +41,10 @@ struct PullRequestRowView: View {
             .padding(.vertical, 6)
             .contentShape(Rectangle())
             .background(RowHighlight(isSelected: isSelected))
+            // The gutter dot sits on the title line, 3 pt in; nothing in the row moves for it.
+            .overlay(alignment: .topLeading) {
+                if state.isNew(row) { NewDot().padding(.top, 13).padding(.leading, 3) }
+            }
             .opacity(pr.isDraft ? 0.5 : 1)
         }
         .buttonStyle(.plain)
@@ -56,6 +60,8 @@ struct PullRequestRowView: View {
     }
 }
 
+/// One line: title, a fixed trailer (repo, Draft or Snoozed, and the age in the compact layout), marks.
+/// Used by Waiting on others always and by every section when "Compact rows" is on.
 struct CompactRowView: View {
     let row: InboxRow
     let state: PopoverState
@@ -63,6 +69,7 @@ struct CompactRowView: View {
     let onOpen: @MainActor () -> Void
 
     var body: some View {
+        let snoozed = row.classification.reason == .snoozed
         Button(action: onOpen) {
             HStack(spacing: 6) {
                 Text(RowText.title(row.pullRequest))
@@ -70,10 +77,11 @@ struct CompactRowView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .layoutPriority(-1)
-                Text(RowText.compactTrailer(row, showOrg: state.showsOrgNames))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .fixedSize()
+                if state.showsCompactAge(row.classification.section) {
+                    TimelineView(.everyMinute) { _ in trailer(age: RowText.compactAge(row, now: Date())) }
+                } else {
+                    trailer(age: nil)
+                }
                 Spacer(minLength: 4)
                 MarksInlineView(marks: RowMarks.marks(for: row.pullRequest))
             }
@@ -83,10 +91,21 @@ struct CompactRowView: View {
             .padding(.vertical, 4)
             .contentShape(Rectangle())
             .background(RowHighlight(isSelected: isSelected))
-            .opacity(row.pullRequest.isDraft ? 0.6 : 1)
+            .overlay(alignment: .leading) {
+                if state.isNew(row) { NewDot().padding(.leading, 3) }
+                if snoozed { SnoozeGlyph().padding(.leading, 12) }
+            }
+            .opacity(row.pullRequest.isDraft || snoozed ? 0.6 : 1)
         }
         .buttonStyle(.plain)
         .help(row.pullRequest.repository)
+    }
+
+    private func trailer(age: String?) -> some View {
+        Text(RowText.compactTrailer(row, showOrg: state.showsOrgNames, age: age))
+            .foregroundStyle(.tertiary)
+            .lineLimit(1)
+            .fixedSize()
     }
 }
 
@@ -108,5 +127,25 @@ struct MoreRowView: View {
                 .background(RowHighlight(isSelected: isSelected))
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// The "new since last look" mark: a small accent dot in the left gutter.
+struct NewDot: View {
+    var body: some View {
+        Circle()
+            .fill(Color.accentColor)
+            .frame(width: 6, height: 6)
+            .accessibilityLabel("New since last look")
+    }
+}
+
+/// Marks a snoozed row inside its indent.
+struct SnoozeGlyph: View {
+    var body: some View {
+        Image(systemName: "moon.zzz.fill")
+            .font(.system(size: 10))
+            .foregroundStyle(.tertiary)
+            .accessibilityLabel("Snoozed")
     }
 }

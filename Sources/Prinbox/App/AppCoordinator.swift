@@ -23,11 +23,22 @@ final class AppCoordinator {
     private let isDemo: Bool
 
     /// In demo mode the inbox comes from `DemoFetcher`, preferences live in a separate suite with every
-    /// section open, and no global shortcut is registered, so a demo never touches the real setup.
+    /// section open, the state (one snooze, three new rows) stays in memory, and no global shortcut is
+    /// registered, so a demo never touches the real setup.
     init(demo: Bool = false) {
         let defaults = demo ? Self.demoDefaults() : UserDefaults.standard
         let client = GhClient()
-        let store = InboxStore(fetcher: demo ? DemoFetcher() : client)
+        let fetcher: InboxFetching
+        let persistence: StatePersisting
+        if demo {
+            let demoFetcher = DemoFetcher()
+            fetcher = demoFetcher
+            persistence = MemoryStatePersistence(demoFetcher.initialState)
+        } else {
+            fetcher = client
+            persistence = JSONStateFile(url: JSONStateFile.defaultURL())
+        }
+        let store = InboxStore(fetcher: fetcher, state: StateStore(persistence: persistence))
         isDemo = demo
         self.client = client
         info = AppInfo(client: client)
@@ -86,7 +97,13 @@ final class AppCoordinator {
             toggleShortcutRecording: { [weak self] in self?.toggleShortcutRecording() },
             setShortcut: { [weak self] spec in self?.setShortcut(spec) },
             setLaunchAtLogin: { [weak self] enabled in self?.loginItem.setEnabled(enabled) },
-            copy: { [weak self] command in self?.copy(command) })
+            copy: { [weak self] command in self?.copy(command) },
+            snooze: { [weak self] id in self?.state.snooze(id) },
+            unsnooze: { [weak self] id in self?.state.unsnooze(id) },
+            copyLink: { url in
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(url.absoluteString, forType: .string)
+            })
     }
 
     private func copy(_ command: String) {
@@ -108,11 +125,12 @@ final class AppCoordinator {
         }
     }
 
-    /// Closing mid-recording ends it; the hook re-registers the shortcut that recording suspended.
-    /// Showing the popover activated prinbox; when it closes by Esc or the shortcut, hiding hands focus back
-    /// to the previous app. A close for an opened PR leaves activation to the browser.
+    /// Closing marks the rows shown as seen and ends a recording in progress (the hook re-registers the
+    /// shortcut that recording suspended). Showing the popover activated prinbox; when it closes by Esc or
+    /// the shortcut, hiding hands focus back to the previous app. A close for an opened PR leaves activation
+    /// to the browser.
     private func popoverDidClose() {
-        if state.isRecordingShortcut { state.stopRecording() }
+        state.popoverDidClose()
         if !closingForBrowser && NSApp.isActive { NSApp.hide(nil) }
         closingForBrowser = false
     }

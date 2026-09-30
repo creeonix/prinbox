@@ -48,7 +48,8 @@ struct OrgSeparatorView: View {
             Text("\(group.rows.count)").font(.system(size: 11).monospacedDigit()).foregroundStyle(.tertiary)
             Rectangle().fill(Color.secondary.opacity(0.18)).frame(height: 1)
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(group.org), \(group.rows.count) pull requests")
         .padding(.horizontal, 14)
         .padding(.top, 6)
         .padding(.bottom, 2)

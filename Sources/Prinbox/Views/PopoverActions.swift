@@ -10,4 +10,7 @@ struct PopoverActions {
     let setShortcut: @MainActor (HotKeySpec?) -> Void
     let setLaunchAtLogin: @MainActor (Bool) -> Void
     let copy: @MainActor (String) -> Void
+    let snooze: @MainActor (String) -> Void
+    let unsnooze: @MainActor (String) -> Void
+    let copyLink: @MainActor (URL) -> Void
 }
