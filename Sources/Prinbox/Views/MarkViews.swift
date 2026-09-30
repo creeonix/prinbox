@@ -7,9 +7,16 @@ struct MarkGlyph {
     let color: Color
     let count: Int?
     let help: String
+    var countColor: Color = .secondary
 
-    static func comments(_ count: Int?) -> MarkGlyph? {
-        count.map { MarkGlyph(symbol: "bubble.left", color: .secondary, count: $0, help: RowMarks.commentsHelp($0)) }
+    /// The comment bubble. On a row whose reason highlights the conversation (Awaiting your reply, Open
+    /// threads) the bubble and its count take the accent color and the tooltip names the threads waiting.
+    static func comments(_ count: Int?, pending: Int = 0, highlighted: Bool = false) -> MarkGlyph? {
+        count.map {
+            MarkGlyph(
+                symbol: "bubble.left", color: highlighted ? .accentColor : .secondary, count: $0,
+                help: RowMarks.commentsHelp($0, pending: pending), countColor: highlighted ? .accentColor : .secondary)
+        }
     }
 
     static func ci(_ mark: CIMark?) -> MarkGlyph? {
@@ -54,7 +61,7 @@ struct MarkCell: View {
         if let glyph {
             HStack(spacing: 3) {
                 if let count = glyph.count {
-                    Text("\(count)").foregroundStyle(.secondary).monospacedDigit()
+                    Text("\(count)").foregroundStyle(glyph.countColor).monospacedDigit()
                 }
                 Image(systemName: glyph.symbol).foregroundStyle(glyph.color)
             }
@@ -72,10 +79,14 @@ struct MarkCell: View {
 struct MarksLineView: View {
     let marks: RowMarks
     let top: Bool
+    var pending = 0
+    var highlighted = false
 
     var body: some View {
         HStack(spacing: 6) {
-            MarkCell(glyph: top ? .comments(marks.comments) : .ci(marks.ci), width: MarkCell.countWidth)
+            MarkCell(
+                glyph: top ? .comments(marks.comments, pending: pending, highlighted: highlighted) : .ci(marks.ci),
+                width: MarkCell.countWidth)
             MarkCell(glyph: top ? .review(marks.review) : .merge(marks.merge), width: MarkCell.iconWidth)
         }
         .font(.system(size: 11, weight: .medium))
@@ -85,10 +96,14 @@ struct MarksLineView: View {
 /// Compact rows: the same cells on one line, in the block's reading order.
 struct MarksInlineView: View {
     let marks: RowMarks
+    var pending = 0
+    var highlighted = false
 
     var body: some View {
         HStack(spacing: 6) {
-            MarkCell(glyph: .comments(marks.comments), width: MarkCell.countWidth)
+            MarkCell(
+                glyph: .comments(marks.comments, pending: pending, highlighted: highlighted), width: MarkCell.countWidth
+            )
             MarkCell(glyph: .review(marks.review), width: MarkCell.iconWidth)
             MarkCell(glyph: .ci(marks.ci), width: MarkCell.iconWidth)
             MarkCell(glyph: .merge(marks.merge), width: MarkCell.iconWidth)

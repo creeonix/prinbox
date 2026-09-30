@@ -45,7 +45,8 @@ enum CommandLineMode {
                 let text =
                     SetupGuide.for(error, ghOverride: client.ghOverride)?.plainText
                     ?? error.message(lastSuccess: nil)
-                FileHandle.standardError.write(Data((text + "\n").utf8))
+                let link = error.helpURL.map { " (\($0.absoluteString))" } ?? ""
+                FileHandle.standardError.write(Data((text + link + "\n").utf8))
                 return 1
             } catch {
                 FileHandle.standardError.write(Data("\(error)\n".utf8))

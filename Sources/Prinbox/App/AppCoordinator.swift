@@ -12,6 +12,7 @@ final class AppCoordinator {
     private let state: PopoverState
     private let hotKeys: HotKeySettings
     private let notifications: NotificationSettings
+    private let fetchSettings: FetchSettings
     private let notifier = Notifier()
     private let loginItem = LoginItem()
     private let avatars: AvatarImages
@@ -54,6 +55,8 @@ final class AppCoordinator {
         state = PopoverState(store: store, folds: FoldStore(defaults: defaults), display: display, colors: colors)
         hotKeys = HotKeySettings(defaults: defaults)
         notifications = NotificationSettings(defaults: defaults)
+        fetchSettings = FetchSettings(defaults: defaults)
+        store.setIncludeConversation(fetchSettings.followReviewThreads)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.defaultDirectory(bundleID: Self.bundleID)))
     }
 
@@ -75,7 +78,8 @@ final class AppCoordinator {
             onOpenUpdate: { [weak self] in self?.openUpdate() })
         let root = InboxView(
             state: state, avatars: avatars, hotKeys: hotKeys, loginItem: loginItem,
-            info: info, updates: updates, notifications: notifications, notifier: notifier, actions: makeActions())
+            info: info, updates: updates, notifications: notifications, fetchSettings: fetchSettings,
+            notifier: notifier, actions: makeActions())
         popover = PopoverController(
             rootView: root,
             keyHandler: { [weak self] event in self?.handleKey(event) ?? false },
@@ -112,17 +116,19 @@ final class AppCoordinator {
             copy: { [weak self] command in self?.copy(command) },
             snooze: { [weak self] id in self?.state.snooze(id) },
             unsnooze: { [weak self] id in self?.state.unsnooze(id) },
-            copyLink: { url in
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(url.absoluteString, forType: .string)
-            },
-            setNotifications: { [weak self] enabled in self?.setNotifications(enabled) })
+            copyLink: { [weak self] url in self?.copyToPasteboard(url.absoluteString) },
+            setNotifications: { [weak self] enabled in self?.setNotifications(enabled) },
+            setFollowReviewThreads: { [weak self] on in self?.setFollowReviewThreads(on) })
     }
 
     private func copy(_ command: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(command, forType: .string)
+        copyToPasteboard(command)
         state.copiedCommand = command
+    }
+
+    private func copyToPasteboard(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 
     private func togglePopover() {
@@ -156,7 +162,8 @@ final class AppCoordinator {
         }
         Task {
             await notifier.refresh()
-            guard notifier.status == .authorized else { return }
+            // The popover may have opened during the round-trip.
+            guard notifier.status == .authorized, !(self.popover?.isShown ?? false) else { return }
             notifier.deliver(notice)
         }
     }
@@ -171,6 +178,13 @@ final class AppCoordinator {
         notifications.setEnabled(enabled)
         // A refusal is not an error here: refresh() surfaces the status as the Settings note.
         if enabled { Task { await notifier.requestAuthorization() } }
+    }
+
+    /// The switch changes what a refresh asks for, so the next refresh is a full one, at once.
+    private func setFollowReviewThreads(_ on: Bool) {
+        fetchSettings.setFollowReviewThreads(on)
+        store.setIncludeConversation(on)
+        refreshNow()
     }
 
     private func refreshNow() {

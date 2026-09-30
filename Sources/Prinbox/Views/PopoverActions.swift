@@ -14,4 +14,5 @@ struct PopoverActions {
     let unsnooze: @MainActor (String) -> Void
     let copyLink: @MainActor (URL) -> Void
     let setNotifications: @MainActor (Bool) -> Void
+    let setFollowReviewThreads: @MainActor (Bool) -> Void
 }

@@ -8,6 +8,7 @@ struct SettingsView: View {
     let loginItem: LoginItem
     let info: AppInfo
     let notifications: NotificationSettings
+    let fetchSettings: FetchSettings
     let notifier: Notifier
     let actions: PopoverActions
 
@@ -57,7 +58,23 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 .labelsHidden()
             }
-            SettingRow(title: "Notify about new review requests") {
+            SettingRow(title: "Follow review threads") {
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { fetchSettings.followReviewThreads }, set: { actions.setFollowReviewThreads($0) })
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
+            }
+            Text(
+                fetchSettings.followReviewThreads
+                    ? "Shows Replies to you and open threads on your PRs; snoozes wake on a reply, a new commit or a re-request."
+                    : "A lighter refresh: rows only, and snoozes wake on any change."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            SettingRow(title: "Notify about new review requests and replies") {
                 Toggle("", isOn: Binding(get: { notifications.isEnabled }, set: { actions.setNotifications($0) }))
                     .toggleStyle(.switch)
                     .labelsHidden()
