@@ -17,12 +17,23 @@ public enum RowText {
     }
 
     /// "web · waiting 6h · +120 −4" for review sections, "web · updated 3h ago · +1 −0" for own PRs.
-    public static func meta(_ row: InboxRow, now: Date) -> String {
+    /// `showOrg` writes "acme/web" instead of "web": on when the inbox spans several orgs and grouping is off.
+    public static func meta(_ row: InboxRow, now: Date, showOrg: Bool = false) -> String {
         let pr = row.pullRequest
         let age =
             row.classification.waitingSince.map { "waiting \(RelativeAge.format(from: $0, to: now))" }
             ?? "updated \(RelativeAge.format(from: pr.updatedAt, to: now)) ago"
-        return [pr.repoShortName, age, "+\(pr.additions) −\(pr.deletions)"].joined(separator: " · ")
+        return [repoLabel(pr, showOrg: showOrg), age, "+\(pr.additions) −\(pr.deletions)"].joined(separator: " · ")
+    }
+
+    /// The fixed tail of a compact row, after the truncating title: "· web", or "· web · Draft".
+    public static func compactTrailer(_ row: InboxRow, showOrg: Bool = false) -> String {
+        let repo = "· \(repoLabel(row.pullRequest, showOrg: showOrg))"
+        return row.pullRequest.isDraft ? "\(repo) · Draft" : repo
+    }
+
+    static func repoLabel(_ pr: PullRequest, showOrg: Bool) -> String {
+        showOrg ? pr.repository : pr.repoShortName
     }
 
     public static func detail(_ row: InboxRow, now: Date) -> String {
