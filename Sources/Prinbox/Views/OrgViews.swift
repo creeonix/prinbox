@@ -19,7 +19,7 @@ struct OrgBadgeView: View {
             } else {
                 ZStack {
                     color
-                    Text(RowText.initials(String(org.prefix(1))))
+                    Text(org.prefix(1).uppercased())
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(.white)
                 }
@@ -48,6 +48,7 @@ struct OrgSeparatorView: View {
             Text("\(group.rows.count)").font(.system(size: 11).monospacedDigit()).foregroundStyle(.tertiary)
             Rectangle().fill(Color.secondary.opacity(0.18)).frame(height: 1)
         }
+        .accessibilityElement(children: .combine)
         .padding(.horizontal, 14)
         .padding(.top, 6)
         .padding(.bottom, 2)

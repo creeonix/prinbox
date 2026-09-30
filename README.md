@@ -39,8 +39,8 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
   - **Your PRs:** yours that need you: changes requested, merge conflicts, CI is red, or approved and
     ready to merge.
   - **Waiting on others:** the rest of yours, one quiet line each.
-- **Rows that answer "what, where and how long":** author avatar with the organization's avatar in its
-  corner, `org/repo` (when your inbox spans more than one organization), time waiting (counted from when
+- **Rows that answer "what, where and how long":** author avatar (with the organization's avatar in its
+  corner when your inbox spans more than one organization), `org/repo` (same condition), time waiting (counted from when
   your review was requested), and lines added and removed.
 - **Status at a glance:** four marks at the right edge of each row: comment count, review state
   (approved or changes requested), CI (passed, failed, running) and merge state (ready to merge or

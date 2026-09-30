@@ -10,7 +10,7 @@ struct UpdateLineView: View {
         if let release = updates.available {
             Button(action: { actions.open(release.url) }) {
                 Label(
-                    "PRInbox \(release.version?.description ?? release.tag) is available",
+                    "PRInbox \(release.displayVersion) is available",
                     systemImage: "arrow.down.circle"
                 )
                 .font(.system(size: 11, weight: .medium))

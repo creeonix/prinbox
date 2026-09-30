@@ -32,7 +32,7 @@ final class StatusItemController: NSObject {
     func render(_ badge: StatusBadge, update: Release? = nil) {
         guard let button = item.button else { return }
         self.update = update
-        let suffix = update.map { " · PRInbox \($0.version?.description ?? $0.tag) is available" } ?? ""
+        let suffix = update.map { " · PRInbox \($0.displayVersion) is available" } ?? ""
         switch badge {
         case .loading:
             show(button, title: "…", tint: nil, dimmed: true, tooltip: "PRInbox: loading" + suffix)
@@ -105,7 +105,7 @@ final class StatusItemController: NSObject {
         refresh.target = self
         if let update {
             let download = menu.addItem(
-                withTitle: "Download PRInbox \(update.version?.description ?? update.tag)…",
+                withTitle: "Download PRInbox \(update.displayVersion)…",
                 action: #selector(downloadChosen), keyEquivalent: "")
             download.target = self
         }

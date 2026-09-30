@@ -1,7 +1,8 @@
 import Foundation
 
-/// Sample inbox for screenshots and demos (`Prinbox --demo`). It never runs gh; every repository and login is fictional (three orgs: acme, globex,
-/// initech), and every mark state appears at least once.
+/// Sample inbox for screenshots and demos (`Prinbox --demo`). It never runs gh; every repository and
+/// login is fictional (three orgs: acme, globex, initech), every mark state appears at least once, and
+/// every time is relative to `now` so ages always read naturally.
 public struct DemoFetcher: InboxFetching {
     private let now: @Sendable () -> Date
 

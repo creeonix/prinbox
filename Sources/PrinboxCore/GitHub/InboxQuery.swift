@@ -1,4 +1,5 @@
-/// The single GraphQL request behind every refresh. Estimated cost 3 points (v0.2 added latestOpinionatedReviews under each PR); v1 measured 2 points and about 6 s.
+/// The single GraphQL request behind every refresh. Estimated cost 3 points (v0.2 added
+/// latestOpinionatedReviews under each PR); v1 measured 2 points and about 6 s.
 /// The three searches are disjoint: mentions excludes your own PRs and PRs where you are a requested reviewer.
 public enum InboxQuery {
     public static let text = """

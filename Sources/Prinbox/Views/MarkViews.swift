@@ -60,6 +60,7 @@ struct MarkCell: View {
             }
             .frame(width: width, alignment: .trailing)
             .help(glyph.help)
+            .accessibilityLabel(glyph.help)
         } else {
             Color.clear.frame(width: width, height: 1)
         }
