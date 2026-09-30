@@ -35,7 +35,7 @@ Run them before a release.
 - [ ] Pushing a commit (or commenting) on a snoozed PR wakes it on the next refresh, marked with the bar.
 - [ ] `Prinbox --print` shows the snoozed PR under Waiting on others as "· Snoozed".
 - [ ] After a change on GitHub, the row shows the bar at its edge and the header says "· 1 new"; closing and reopening the popover clears both.
-- [ ] Settings > Notify about new review requests: turning it on shows the macOS permission prompt; declining shows the note under the toggle.
+- [ ] Settings > Notify about new review requests and replies: turning it on shows the macOS permission prompt; declining shows the note under the toggle.
 - [ ] With the popover closed, a new review request gives one banner (title, org/repo); clicking it opens the PR. Two at once give one banner that opens the popover.
 - [ ] Nothing fires while the popover is open; the rows get the bar instead.
 - [ ] Settings > Compact rows: the new-row bar sits at the row's left edge, not floating beside the indent.
