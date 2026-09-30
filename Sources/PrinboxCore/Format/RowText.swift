@@ -26,9 +26,11 @@ public enum RowText {
         return [repoLabel(pr, showOrg: showOrg), age, "+\(pr.additions) −\(pr.deletions)"].joined(separator: " · ")
     }
 
-    /// The fixed tail of a compact row, after the truncating title: "· web", or "· web · Draft".
+    /// The fixed tail of a compact row, after the truncating title: "· web", "· web · Draft", or
+    /// "· web · Snoozed" (a snoozed draft says Snoozed; the row is dimmed either way).
     public static func compactTrailer(_ row: InboxRow, showOrg: Bool = false) -> String {
         let repo = "· \(repoLabel(row.pullRequest, showOrg: showOrg))"
+        if row.classification.reason == .snoozed { return "\(repo) · Snoozed" }
         return row.pullRequest.isDraft ? "\(repo) · Draft" : repo
     }
 

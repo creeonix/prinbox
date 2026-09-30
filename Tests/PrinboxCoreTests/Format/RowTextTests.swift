@@ -77,4 +77,11 @@ import Testing
             RowText.header(badgeCount: 2, lastSuccess: date("2026-08-10T12:05:00Z"), timeZone: utc)
                 == "2 waiting on you · updated 12:05")
     }
+
+    @Test func compactTrailerSaysSnoozedEvenForDrafts() {
+        let pr = makePR(repository: "globex/billing", isDraft: true)
+        let row = InboxRow(pullRequest: pr, classification: Classifier.classify(pr, snoozed: true))
+        #expect(RowText.compactTrailer(row, showOrg: true) == "· globex/billing · Snoozed")
+        #expect(RowText.compact(row) == "#1 Add feature · Snoozed")
+    }
 }

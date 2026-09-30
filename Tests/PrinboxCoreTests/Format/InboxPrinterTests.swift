@@ -33,4 +33,16 @@ import Testing
     @Test func rendersInboxZero() {
         #expect(InboxPrinter.render(.empty, now: now) == "waiting on you: 0\n\nInbox zero. Nothing waiting on you.")
     }
+
+    @Test func rendersSnoozedRowsInWaitingOnOthers() {
+        let inbox = InboxBuilder.build(
+            makeResult([makePR(id: "a", number: 101, title: "Parked", repository: "acme/web")]), snoozed: ["a"])
+        let expected = """
+            waiting on you: 0
+
+            Waiting on others (1)
+              #101 Parked · Snoozed  [acme/web]
+            """
+        #expect(InboxPrinter.render(inbox, now: now) == expected)
+    }
 }

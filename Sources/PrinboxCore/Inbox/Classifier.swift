@@ -12,8 +12,10 @@ public struct Classification: Sendable, Equatable {
 /// Assigns a PR to a section: the search it came from decides review vs mention vs own, and own PRs are
 /// split by the first action reason that applies.
 public enum Classifier {
-    public static func classify(_ pr: PullRequest) -> Classification {
-        switch pr.source {
+    /// `snoozed` overrides everything: the PR waits in Waiting on others until it changes.
+    public static func classify(_ pr: PullRequest, snoozed: Bool = false) -> Classification {
+        if snoozed { return Classification(section: .waitingOnOthers, reason: .snoozed, waitingSince: nil) }
+        return switch pr.source {
         case .review:
             pr.viewerReview == nil
                 ? Classification(

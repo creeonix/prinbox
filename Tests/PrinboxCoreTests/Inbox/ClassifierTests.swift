@@ -87,4 +87,16 @@ import Testing
     @Test func badgeSections() {
         #expect(SectionKind.allCases.filter(\.countsTowardBadge) == [.needsReview, .takeAnotherLook, .mentions])
     }
+
+    @Test func snoozedLandsInWaitingOnOthersWhateverTheSource() {
+        for source in SearchSource.allCases {
+            let pr = makePR(reviewDecision: .changesRequested, source: source)
+            let result = Classifier.classify(pr, snoozed: true)
+            #expect(result.section == .waitingOnOthers)
+            #expect(result.reason == .snoozed)
+            #expect(result.waitingSince == nil)
+        }
+        #expect(Reason.snoozed.tone == .neutral)
+        #expect(Reason.snoozed.rawValue == "Snoozed")
+    }
 }

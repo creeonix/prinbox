@@ -22,6 +22,12 @@ public struct FetchResult: Sendable, Equatable {
         self.fetched = fetched
         self.warnings = warnings
     }
+
+    /// True when nothing was left out: no partial-result warning, and every search returned as many nodes as
+    /// GitHub counted for it. Only a complete fetch may say that a PR is gone.
+    public var isComplete: Bool {
+        warnings.isEmpty && SearchSource.allCases.allSatisfy { (fetched[$0] ?? 0) >= (totals[$0] ?? 0) }
+    }
 }
 
 /// Why a refresh failed. Partial data is not an error; it arrives as `FetchResult.warnings`.

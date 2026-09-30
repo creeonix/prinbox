@@ -53,13 +53,14 @@ public enum Reason: String, Sendable, Equatable {
     case readyToMerge = "Ready to merge"
     case draft = "Draft"
     case waitingForReview = "Waiting for review"
+    case snoozed = "Snoozed"
 
     public var tone: ReasonTone {
         switch self {
         case .reviewRequested, .reReviewRequested, .mentioned: .attention
         case .changesRequested, .mergeConflicts, .ciRed: .failure
         case .readyToMerge: .success
-        case .draft, .waitingForReview: .neutral
+        case .draft, .waitingForReview, .snoozed: .neutral
         }
     }
 }
