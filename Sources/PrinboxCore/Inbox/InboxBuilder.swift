@@ -24,7 +24,9 @@ public enum InboxBuilder {
                 moreCount: max(0, members.count - cap) + remainder)
         }
         let badge = rows.filter { $0.classification.section.countsTowardBadge && !$0.pullRequest.isDraft }.count
-        return Inbox(sections: sections, badgeCount: badge, warnings: result.warnings)
+        let owners = Set(rows.map(\.pullRequest.ownerLogin))
+        return Inbox(
+            sections: sections, badgeCount: badge, warnings: result.warnings, spansMultipleOrgs: owners.count > 1)
     }
 
     static func unfetchedBySection(_ result: FetchResult) -> [SectionKind: Int] {
