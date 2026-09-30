@@ -4,19 +4,23 @@ Releases are built by `.github/workflows/release.yml` when a version tag is push
 
 ## Cut a release
 
-1. Make sure `main` is green in CI.
-2. Tag and push:
+1. Write the `## What's new in <version>` section at the top of `.github/release-notes.md` (older
+   versions stay below it; the file is also the changelog) and set `VERSION` in the `Makefile`.
+   `scripts/release-notes.sh` prints what the release will show and fails when the section is missing;
+   CI runs it on every push.
+2. Make sure `main` is green in CI.
+3. Tag and push:
 
    ```sh
-   git tag v0.2.0
-   git push origin v0.2.0
+   git tag v0.3.0
+   git push origin v0.3.0
    ```
 
-3. The workflow tests, runs `make dmg VERSION=0.2.0` and publishes a GitHub Release with
-   `PRInbox-0.2.0.dmg` and `PRInbox-0.2.0.dmg.sha256`. The version comes from the tag; no file needs to
+4. The workflow tests, runs `make dmg VERSION=0.3.0` and publishes a GitHub Release with
+   `PRInbox-0.3.0.dmg` and `PRInbox-0.3.0.dmg.sha256`. The version comes from the tag; no file needs to
    change.
 
-To build the same DMG locally: `make dmg VERSION=0.2.0` (output in `build/`).
+To build the same DMG locally: `make dmg VERSION=0.3.0` (output in `build/`).
 
 ## Signing
 
