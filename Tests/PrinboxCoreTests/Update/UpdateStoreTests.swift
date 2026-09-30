@@ -103,4 +103,29 @@ actor ScriptedChecker: ReleaseChecking {
         #expect(await checker.calls == 1)
         #expect(defaults.object(forKey: UpdateStore.checkedAtKey) as? Date == start)
     }
+
+    @Test func corruptedStoredReleaseBehavesLikeNothingStored() {
+        let corrupted: [Any] = [
+            "v0.3.0",
+            ["url": page.absoluteString],
+            ["tag": "v0.3.0", "url": ""],
+            ["tag": "v0.3.0", "url": 42],
+        ]
+        for value in corrupted {
+            let defaults = MemoryDefaults()
+            defaults.set(value, forKey: UpdateStore.latestReleaseKey)
+            let (store, _) = makeStore(release: nil, defaults: defaults)
+            #expect(store.latest == nil)
+            #expect(store.available == nil)
+        }
+    }
+
+    @Test func aCheckTimeOfTheWrongTypeCountsAsDue() async {
+        let defaults = MemoryDefaults()
+        defaults.set("yesterday", forKey: UpdateStore.checkedAtKey)
+        let (store, checker) = makeStore(release: Release(tag: "v0.3.0", url: page), defaults: defaults)
+        await store.checkIfDue()
+        #expect(await checker.calls == 1)
+        #expect(defaults.object(forKey: UpdateStore.checkedAtKey) as? Date == start)
+    }
 }
