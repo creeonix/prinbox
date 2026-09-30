@@ -41,3 +41,4 @@ Run them before a release.
 - [ ] `swift run Prinbox` with notifications on does not crash, and Settings says they are not available.
 - [ ] Settings > Compact rows: every section shows one-line rows with the age; ↑/↓ and Enter still work; turning it off restores the full rows.
 - [ ] VoiceOver reads an organization separator as "acme, 3 pull requests".
+- [ ] Clicking an older banner while the popover is open opens that PR; the popover closes on its own when the browser comes to the front.

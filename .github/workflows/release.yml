@@ -21,10 +21,10 @@ jobs:
           swift --version
       - name: Test
         run: make test
+      - name: Release notes
+        run: mkdir -p build && scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > build/release-notes.md
       - name: Build DMG
         run: make dmg VERSION="${GITHUB_REF_NAME#v}"
-      - name: Release notes
-        run: scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > build/release-notes.md
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

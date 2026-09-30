@@ -48,8 +48,9 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
 - **Group by organization** (off by default): each section groups its rows under a thin separator with
   the organization's color, name and count.
 - **Snooze:** `S` (or right-click) parks a PR until something changes on it. It moves to Waiting on others,
-  leaves the count, and comes back by itself when the PR is updated; `U` brings it back sooner. Snoozes are
-  kept in `~/Library/Application Support/prinbox/state.json`.
+  leaves the count, and comes back by itself when the PR is updated (any change counts, including your own
+  comment or push); `U` brings it back sooner. Snoozes are kept in
+  `~/Library/Application Support/prinbox/state.json`.
 - **New since your last look:** rows that appeared or changed since you last closed the popover carry a dot,
   and the header counts them.
 - **Notifications** (off by default): one banner per refresh when new review requests arrive; clicking it

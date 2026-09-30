@@ -17,8 +17,7 @@ Releases are built by `.github/workflows/release.yml` when a version tag is push
    ```
 
 4. The workflow tests, runs `make dmg VERSION=0.3.0` and publishes a GitHub Release with
-   `PRInbox-0.3.0.dmg` and `PRInbox-0.3.0.dmg.sha256`. The version comes from the tag; no file needs to
-   change.
+   `PRInbox-0.3.0.dmg` and `PRInbox-0.3.0.dmg.sha256`. The DMG version comes from the tag.
 
 To build the same DMG locally: `make dmg VERSION=0.3.0` (output in `build/`).
 
