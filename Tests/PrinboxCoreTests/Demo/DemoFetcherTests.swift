@@ -12,12 +12,11 @@ import Testing
     }
 
     @Test func fillsEverySection() async throws {
-        // Task 9 restores allCases
-        #expect(try await inbox().sections.map(\.kind) == SectionKind.allCases.filter { $0 != .repliesToYou })
+        #expect(try await inbox().sections.map(\.kind) == SectionKind.allCases)
     }
 
     @Test func badgeCountsTheNonDraftReviewAndMentionRows() async throws {
-        #expect(try await inbox().badgeCount == 6)
+        #expect(try await inbox().badgeCount == 8)
     }
 
     @Test func spansThreeFictionalOrganizations() async throws {
@@ -52,7 +51,7 @@ import Testing
         #expect(first == second)
     }
 
-    @Test func initialStateParksOneReviewRequestAndLeavesThreeRowsNew() async throws {
+    @Test func initialStateParksOneReviewRequestAndLeavesFourRowsNew() async throws {
         let clock = now
         let fetcher = DemoFetcher(now: { clock })
         let state = fetcher.initialState
@@ -60,13 +59,27 @@ import Testing
         let snoozed = try #require(result.pullRequests.first { $0.id == "DEMO_1284" })
         let entry = SnoozeEntry(snoozedAt: now.addingTimeInterval(-3600), updatedAt: snoozed.updatedAt)
         #expect(state.snoozed == ["DEMO_1284": entry])
-        #expect(state.seen?.count == result.pullRequests.count - 3)
+        #expect(state.seen?.count == result.pullRequests.count - 4)
         let unseen = result.pullRequests.filter { state.seen?[$0.id] == nil }.map(\.id)
-        #expect(Set(unseen) == ["DEMO_2104", "DEMO_482", "DEMO_58"])
+        #expect(Set(unseen) == ["DEMO_2104", "DEMO_482", "DEMO_58", "DEMO_145"])
         let box = InboxBuilder.build(result, snoozed: Set(state.snoozed.keys))
-        // Task 9 restores allCases
-        #expect(box.sections.map(\.kind) == SectionKind.allCases.filter { $0 != .repliesToYou })
-        #expect(box.badgeCount == 5)
+        #expect(box.sections.map(\.kind) == SectionKind.allCases)
+        #expect(box.badgeCount == 7)
         #expect(box.section(.waitingOnOthers)?.rows.last?.classification.reason == .snoozed)
+    }
+
+    @Test func showsTwoRepliesAndOneOpenThread() async throws {
+        let box = try await inbox()
+        let replies = try #require(box.section(.repliesToYou))
+        #expect(replies.rows.map(\.id) == ["DEMO_2077", "DEMO_145"])
+        #expect(replies.rows.map(\.pendingReplies) == [2, 1])
+        #expect(replies.rows.map(\.classification.reason) == [.awaitingReply, .awaitingReply])
+        #expect(RowText.meta(replies.rows[0], now: now).contains("waiting 4h"))
+        #expect(RowText.meta(replies.rows[1], now: now).contains("waiting 1h"))
+        let own = try #require(box.section(.yourPRs)?.rows.first { $0.id == "DEMO_489" })
+        #expect(own.classification.reason == .openThreads)
+        #expect(own.pendingReplies == 1)
+        #expect(RowMarks.isReady(own.pullRequest))
+        #expect(box.sections.flatMap(\.rows).count == 16)
     }
 }
