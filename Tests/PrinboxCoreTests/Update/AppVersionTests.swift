@@ -34,4 +34,9 @@ import Testing
         #expect(AppVersion("v1.٢") == nil)
         #expect(AppVersion("007.1")?.components == [7, 1])
     }
+
+    @Test func componentsThatOverflowIntDoNotParse() {
+        #expect(AppVersion("99999999999999999999.1") == nil)
+        #expect(AppVersion("1.99999999999999999999") == nil)
+    }
 }
