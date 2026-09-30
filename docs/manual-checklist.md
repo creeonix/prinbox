@@ -32,12 +32,13 @@ Run them before a release.
 - [ ] U on the snoozed row brings it back to its section with its original waiting time.
 - [ ] Right-clicking a row opens the menu inside the popover; Open on GitHub, Snooze until it changes (Unsnooze on a snoozed row) and Copy link work.
 - [ ] A snooze survives quitting and relaunching PRInbox; `~/Library/Application Support/prinbox/state.json` lists it.
-- [ ] Pushing a commit (or commenting) on a snoozed PR wakes it on the next refresh, marked with a dot.
+- [ ] Pushing a commit (or commenting) on a snoozed PR wakes it on the next refresh, marked with the bar.
 - [ ] `Prinbox --print` shows the snoozed PR under Waiting on others as "· Snoozed".
-- [ ] After a change on GitHub, the row shows the dot and the header says "· 1 new"; closing and reopening the popover clears both.
+- [ ] After a change on GitHub, the row shows the bar at its edge and the header says "· 1 new"; closing and reopening the popover clears both.
 - [ ] Settings > Notify about new review requests: turning it on shows the macOS permission prompt; declining shows the note under the toggle.
 - [ ] With the popover closed, a new review request gives one banner (title, org/repo); clicking it opens the PR. Two at once give one banner that opens the popover.
-- [ ] Nothing fires while the popover is open; the rows get dots instead.
+- [ ] Nothing fires while the popover is open; the rows get the bar instead.
+- [ ] Settings > Compact rows: the new-row bar sits at the row's left edge, not floating beside the indent.
 - [ ] `swift run Prinbox` with notifications on does not crash, and Settings says they are not available.
 - [ ] Settings > Compact rows: every section shows one-line rows with the age; ↑/↓ and Enter still work; turning it off restores the full rows.
 - [ ] VoiceOver reads an organization separator as "acme, 3 pull requests".

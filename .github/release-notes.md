@@ -1,3 +1,8 @@
+## What's new in 0.3.1
+
+- The "new since your last look" mark is now a thin bar at the row's left edge, in both row styles. The 0.3.0
+  dot floated beside the indent of compact rows.
+
 ## What's new in 0.3.0
 
 - **Snooze.** Press `S` on a pull request, or right-click it, to park it until something changes on it. It
