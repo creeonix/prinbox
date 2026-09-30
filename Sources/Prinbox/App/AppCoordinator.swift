@@ -26,7 +26,7 @@ final class AppCoordinator {
     private let isDemo: Bool
 
     /// In demo mode the inbox comes from `DemoFetcher`, preferences live in a separate suite with every
-    /// section open, the state (one snooze, three new rows) stays in memory, and no global shortcut is
+    /// section open, the state (one snooze, four new rows) stays in memory, and no global shortcut is
     /// registered, so a demo never touches the real setup.
     init(demo: Bool = false) {
         let defaults = demo ? Self.demoDefaults() : UserDefaults.standard

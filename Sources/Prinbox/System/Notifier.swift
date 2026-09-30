@@ -10,8 +10,8 @@ import os
 @Observable
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let isAvailable = Bundle.main.bundleURL.pathExtension == "app"
-    /// One identifier for every arrivals banner, so a new one replaces the previous unread one instead of
-    /// stacking.
+    /// One identifier for every arrivals banner, so a new one replaces any earlier arrivals banner still in
+    /// Notification Center instead of stacking.
     static let arrivalsIdentifier = "io.github.creeonix.prinbox.arrivals"
     nonisolated private static let log = Logger(subsystem: "io.github.creeonix.prinbox", category: "notifications")
 

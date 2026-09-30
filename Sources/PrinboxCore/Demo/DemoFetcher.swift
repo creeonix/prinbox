@@ -21,7 +21,7 @@ public struct DemoFetcher: InboxFetching {
             FetchResult(viewerLogin: "me", pullRequests: prs, totals: fetched, fetched: fetched, warnings: []))
     }
 
-    /// One snoozed review request and three rows that are new since the last look, for screenshots.
+    /// One snoozed review request and four rows that are new since the last look, for screenshots.
     public var initialState: AppState { DemoData.initialState(now: base) }
 }
 

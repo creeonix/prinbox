@@ -1,12 +1,12 @@
 import Foundation
 
-/// What a refresh brought into the review sections and Replies to you, for the notification. The baseline is the previous
-/// fetch (extended, not replaced, by an incomplete fetch), not the seen ledger: a PR the user has not looked
-/// at must not notify again five minutes later.
+/// What a refresh brought into the review sections and Replies to you, for the notification. The baseline is
+/// the previous fetch (extended, not replaced, by an incomplete fetch), not the seen ledger: a PR the user has
+/// not looked at must not notify again five minutes later.
 public enum Arrivals {
     static let sections: [SectionKind] = [.needsReview, .repliesToYou, .takeAnotherLook]
 
-    /// Non-draft rows of Needs your review and Take another look whose PR the baseline lacks, or has with
+    /// Non-draft rows of Needs your review, Replies to you and Take another look whose PR the baseline lacks, or has with
     /// an older `updatedAt`. Nil `previous` (the first fetch after launch) gives nothing.
     public static func compute(previous: [String: Date]?, current: Inbox) -> [InboxRow] {
         guard let previous else { return [] }
