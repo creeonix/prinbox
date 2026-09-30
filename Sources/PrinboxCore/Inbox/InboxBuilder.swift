@@ -1,6 +1,6 @@
 import Foundation
 
-/// Turns a fetch into the displayed inbox: drop archived repositories, classify, sort each section,
+/// Turns a fetch into the displayed inbox: drop archived repositories and hidden PRs, classify, sort each section,
 /// cap it (snoozed rows are never hidden), and count the badge.
 public enum InboxBuilder {
     public static let rowCap = 8
@@ -12,10 +12,15 @@ public enum InboxBuilder {
 
     /// `snoozed` holds the ids the user parked; they are classified as snoozed before anything else.
     public static func build(_ result: FetchResult, snoozed: Set<String> = [], cap: Int = rowCap) -> Inbox {
+        let viewer = result.viewerLogin
         let rows = result.pullRequests
             .filter { !$0.isArchived }
-            .map {
-                InboxRow(pullRequest: $0, classification: Classifier.classify($0, snoozed: snoozed.contains($0.id)))
+            .compactMap { pr -> InboxRow? in
+                guard let classification = Classifier.classify(pr, viewer: viewer, snoozed: snoozed.contains(pr.id))
+                else { return nil }
+                return InboxRow(
+                    pullRequest: pr, classification: classification,
+                    pendingReplies: Classifier.pendingReplies(pr, viewer: viewer, reason: classification.reason))
             }
         let remainders = unfetchedBySection(result)
         let sections = SectionKind.allCases.compactMap { kind -> InboxSection? in

@@ -5,6 +5,11 @@ public enum SearchSource: String, Sendable, CaseIterable {
     case review
     case mentions
     case mine
+    case involved
+
+    /// The `involved` search is best effort: most of its PRs are hidden, so its truncation must not stop the
+    /// completeness checks that prune snoozes and the seen ledger.
+    public var boundsCompleteness: Bool { self != .involved }
 }
 
 public enum ReviewDecision: Sendable, Equatable {

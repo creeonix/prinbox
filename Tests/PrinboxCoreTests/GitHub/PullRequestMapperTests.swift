@@ -16,8 +16,8 @@ import Testing
 
     @Test func readsViewerAndCounts() {
         #expect(result.viewerLogin == "me")
-        #expect(result.totals == [.review: 5, .mentions: 2, .mine: 40])
-        #expect(result.fetched == [.review: 5, .mentions: 2, .mine: 2])
+        #expect(result.totals == [.review: 5, .mentions: 2, .mine: 40, .involved: 0])
+        #expect(result.fetched == [.review: 5, .mentions: 2, .mine: 2, .involved: 0])
         #expect(result.warnings.isEmpty)
     }
 

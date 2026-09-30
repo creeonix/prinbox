@@ -8,7 +8,7 @@ import Testing
     let utc = TimeZone(identifier: "UTC")!
 
     func row(_ pr: PullRequest) -> InboxRow {
-        InboxRow(pullRequest: pr, classification: Classifier.classify(pr))
+        InboxRow(pullRequest: pr, classification: Classifier.classify(pr, viewer: testViewer)!)
     }
 
     @Test func metaShowsTheOwnerOnlyWhenAsked() {
@@ -80,7 +80,7 @@ import Testing
 
     @Test func compactTrailerSaysSnoozedEvenForDrafts() {
         let pr = makePR(repository: "globex/billing", isDraft: true)
-        let row = InboxRow(pullRequest: pr, classification: Classifier.classify(pr, snoozed: true))
+        let row = InboxRow(pullRequest: pr, classification: Classifier.classify(pr, viewer: testViewer, snoozed: true)!)
         #expect(RowText.compactTrailer(row, showOrg: true) == "· globex/billing · Snoozed")
         #expect(RowText.compact(row) == "#1 Add feature · Snoozed")
     }
@@ -108,7 +108,8 @@ import Testing
         #expect(RowText.compactTrailer(draft, showOrg: true, age: "2h") == "· globex/billing · Draft · 2h")
         #expect(RowText.compactTrailer(draft, age: nil) == "· billing · Draft")
         let pr = makePR(repository: "globex/billing")
-        let snoozed = InboxRow(pullRequest: pr, classification: Classifier.classify(pr, snoozed: true))
+        let snoozed = InboxRow(
+            pullRequest: pr, classification: Classifier.classify(pr, viewer: testViewer, snoozed: true)!)
         #expect(RowText.compactTrailer(snoozed, age: "2h") == "· billing · Snoozed · 2h")
     }
 }

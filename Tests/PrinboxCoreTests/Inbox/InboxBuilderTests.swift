@@ -139,4 +139,34 @@ import Testing
         #expect(section?.moreCount == 1)
         #expect(inbox.spansMultipleOrgs)
     }
+
+    @Test func repliesSectionSitsAfterNeedsReviewAndCountsTowardTheBadge() {
+        let owed = thread(
+            comment("alice", date("2026-08-03T10:00:00Z")), comment(testViewer, date("2026-08-04T10:00:00Z")),
+            comment("alice", date("2026-08-05T10:00:00Z")))
+        let inbox = InboxBuilder.build(
+            makeResult([
+                makePR(id: "r", number: 1, source: .review),
+                makePR(id: "reply", number: 2, source: .involved, threads: [owed]),
+                makePR(id: "again", number: 3, viewerReview: reviewed, source: .review),
+                makePR(id: "draft", number: 4, isDraft: true, source: .involved, threads: [owed]),
+            ]))
+        #expect(inbox.sections.map(\.kind) == [.needsReview, .repliesToYou, .takeAnotherLook])
+        #expect(inbox.section(.repliesToYou)?.rows.map(\.id) == ["reply", "draft"])
+        #expect(inbox.section(.repliesToYou)?.rows.first?.pendingReplies == 1)
+        #expect(inbox.badgeCount == 3)
+    }
+
+    @Test func hiddenPullRequestsLeaveNoTraceAndInvolvedHasNoMoreRow() {
+        let inbox = InboxBuilder.build(
+            makeResult(
+                [
+                    makePR(id: "r", repository: "acme/web", source: .review),
+                    makePR(id: "quiet", repository: "globex/x", source: .involved),
+                ],
+                totals: [.review: 1, .mentions: 0, .mine: 0, .involved: 40]))
+        #expect(inbox.sections.map(\.kind) == [.needsReview])
+        #expect(!inbox.spansMultipleOrgs)
+        #expect(inbox.section(.needsReview)?.moreCount == 0)
+    }
 }

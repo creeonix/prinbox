@@ -91,6 +91,6 @@ import Testing
     @Test func dismissedViewerReviewCountsAsNoReview() throws {
         let pr = try map(["viewerLatestReview": ["state": "DISMISSED", "submittedAt": "2026-08-02T10:00:00Z"]])
         #expect(pr.viewerReview == nil)
-        #expect(Classifier.classify(pr).section == .needsReview)
+        #expect(Classifier.classify(pr, viewer: "me")?.section == .needsReview)
     }
 }

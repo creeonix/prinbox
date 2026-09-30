@@ -62,4 +62,11 @@ import Testing
         #expect(more?.body == "#1 T1\n#2 T2\n#3 T3\nand 2 more")
         #expect(ArrivalNotice.make([]) == nil)
     }
+
+    @Test func repliesArriveLikeReviewRequests() {
+        let owed = thread(comment("alice", old), comment(testViewer, old), comment("alice", newer))
+        let current = inbox([makePR(id: "reply", source: .involved, threads: [owed])])
+        #expect(Arrivals.compute(previous: [:], current: current).map(\.id) == ["reply"])
+        #expect(Arrivals.sections == [.needsReview, .repliesToYou, .takeAnotherLook])
+    }
 }

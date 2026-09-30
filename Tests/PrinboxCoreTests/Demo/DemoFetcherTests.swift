@@ -12,7 +12,8 @@ import Testing
     }
 
     @Test func fillsEverySection() async throws {
-        #expect(try await inbox().sections.map(\.kind) == SectionKind.allCases)
+        // Task 9 restores allCases
+        #expect(try await inbox().sections.map(\.kind) == SectionKind.allCases.filter { $0 != .repliesToYou })
     }
 
     @Test func badgeCountsTheNonDraftReviewAndMentionRows() async throws {
@@ -63,7 +64,8 @@ import Testing
         let unseen = result.pullRequests.filter { state.seen?[$0.id] == nil }.map(\.id)
         #expect(Set(unseen) == ["DEMO_2104", "DEMO_482", "DEMO_58"])
         let box = InboxBuilder.build(result, snoozed: Set(state.snoozed.keys))
-        #expect(box.sections.map(\.kind) == SectionKind.allCases)
+        // Task 9 restores allCases
+        #expect(box.sections.map(\.kind) == SectionKind.allCases.filter { $0 != .repliesToYou })
         #expect(box.badgeCount == 5)
         #expect(box.section(.waitingOnOthers)?.rows.last?.classification.reason == .snoozed)
     }

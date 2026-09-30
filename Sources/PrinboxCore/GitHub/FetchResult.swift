@@ -26,7 +26,8 @@ public struct FetchResult: Sendable, Equatable {
     /// True when nothing was left out: no partial-result warning, and every search returned as many nodes as
     /// GitHub counted for it. Only a complete fetch may say that a PR is gone.
     public var isComplete: Bool {
-        warnings.isEmpty && SearchSource.allCases.allSatisfy { (fetched[$0] ?? 0) >= (totals[$0] ?? 0) }
+        warnings.isEmpty
+            && SearchSource.allCases.filter(\.boundsCompleteness).allSatisfy { (fetched[$0] ?? 0) >= (totals[$0] ?? 0) }
     }
 }
 

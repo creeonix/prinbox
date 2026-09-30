@@ -23,6 +23,7 @@ struct InboxResponse: Decodable {
             case .review: review
             case .mentions: mentions
             case .mine: mine
+            case .involved: nil
             }
         }
     }

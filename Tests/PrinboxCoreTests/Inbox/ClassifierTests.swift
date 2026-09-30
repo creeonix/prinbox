@@ -5,7 +5,8 @@ import Testing
 @testable import PrinboxCore
 
 @Suite struct ClassifierTests {
-    func classify(_ pr: PullRequest) -> Classification { Classifier.classify(pr) }
+    /// Every PR in these tests is visible; a hidden verdict fails the test loudly.
+    func classify(_ pr: PullRequest) -> Classification { Classifier.classify(pr, viewer: testViewer)! }
 
     @Test func requestedWithoutViewerReviewNeedsReview() {
         let result = classify(makePR(source: .review))
@@ -85,18 +86,105 @@ import Testing
     }
 
     @Test func badgeSections() {
-        #expect(SectionKind.allCases.filter(\.countsTowardBadge) == [.needsReview, .takeAnotherLook, .mentions])
+        #expect(
+            SectionKind.allCases.filter(\.countsTowardBadge) == [
+                .needsReview, .repliesToYou, .takeAnotherLook, .mentions,
+            ])
     }
 
     @Test func snoozedLandsInWaitingOnOthersWhateverTheSource() {
-        for source in SearchSource.allCases {
+        for source in SearchSource.allCases where source != .involved {
             let pr = makePR(reviewDecision: .changesRequested, source: source)
-            let result = Classifier.classify(pr, snoozed: true)
+            let result = Classifier.classify(pr, viewer: testViewer, snoozed: true)!
             #expect(result.section == .waitingOnOthers)
             #expect(result.reason == .snoozed)
             #expect(result.waitingSince == nil)
         }
         #expect(Reason.snoozed.tone == .neutral)
         #expect(Reason.snoozed.rawValue == "Snoozed")
+    }
+
+    let t1 = date("2026-08-03T10:00:00Z")
+    let t2 = date("2026-08-04T10:00:00Z")
+    let t3 = date("2026-08-05T10:00:00Z")
+
+    /// A thread the viewer took part in where alice spoke last, at t3.
+    var owed: ReviewThread { thread(comment("alice", t1), comment(testViewer, t2), comment("alice", t3)) }
+
+    @Test func repliesBeatTakeAnotherLookAndMentions() {
+        let reviewed = ViewerReview(state: "COMMENTED", submittedAt: t2)
+        let again = classify(makePR(viewerReview: reviewed, reviewRequestedAt: t3, source: .review, threads: [owed]))
+        #expect(again.section == .repliesToYou)
+        #expect(again.reason == .awaitingReply)
+        #expect(again.waitingSince == t3)
+        let mention = classify(makePR(source: .mentions, threads: [owed]))
+        #expect(mention.section == .repliesToYou)
+        #expect(Reason.awaitingReply.tone == .attention)
+    }
+
+    @Test func aRequestNotYetAnsweredBeatsReplies() {
+        let pr = makePR(source: .review, threads: [owed])
+        #expect(classify(pr).section == .needsReview)
+    }
+
+    @Test func involvedIsRepliesToYouOrHidden() {
+        #expect(classify(makePR(source: .involved, threads: [owed])).section == .repliesToYou)
+        #expect(Classifier.classify(makePR(source: .involved, threads: []), viewer: testViewer) == nil)
+        #expect(Classifier.classify(makePR(source: .involved), viewer: testViewer) == nil)
+        let answered = thread(comment("alice", t1), comment(testViewer, t2))
+        #expect(Classifier.classify(makePR(source: .involved, threads: [answered]), viewer: testViewer) == nil)
+    }
+
+    @Test func hiddenBeatsSnoozed() {
+        #expect(Classifier.classify(makePR(source: .involved), viewer: testViewer, snoozed: true) == nil)
+        let parked = Classifier.classify(makePR(source: .involved, threads: [owed]), viewer: testViewer, snoozed: true)
+        #expect(parked?.reason == .snoozed)
+    }
+
+    @Test func repliesWaitingSinceIsTheOldestPendingReplyFlooredAtVisibleSince() {
+        let newer = thread(comment("bob", t1), comment(testViewer, t2), comment("bob", date("2026-08-06T10:00:00Z")))
+        let pr = makePR(source: .involved, threads: [newer, owed])
+        #expect(classify(pr).waitingSince == t3)
+        let draftUntil = date("2026-08-05T12:00:00Z")
+        let floored = makePR(readyForReviewAt: draftUntil, source: .involved, threads: [owed])
+        #expect(classify(floored).waitingSince == draftUntil)
+    }
+
+    @Test func ownOpenThreadsSitBetweenConflictsAndRedCI() {
+        let unanswered = thread(comment("bob", t1))
+        let open = makePR(ci: .failure, source: .mine, threads: [unanswered])
+        #expect(classify(open).section == .yourPRs)
+        #expect(classify(open).reason == .openThreads)
+        #expect(Reason.openThreads.tone == .attention)
+        let conflicting = makePR(mergeable: .conflicting, source: .mine, threads: [unanswered])
+        #expect(classify(conflicting).reason == .mergeConflicts)
+        let answeredByMe = makePR(
+            reviewDecision: .approved, source: .mine, threads: [thread(comment("bob", t1), comment(testViewer, t2))])
+        #expect(classify(answeredByMe).reason == .readyToMerge)
+        let botThread = makePR(source: .mine, threads: [thread(comment("dependabot[bot]", t1))])
+        #expect(classify(botThread).reason == .openThreads)
+    }
+
+    @Test func pendingRepliesCountsTheThreadsWaitingForMe() {
+        let pr = makePR(source: .involved, threads: [owed, owed, thread(comment("bob", t1))])
+        #expect(Classifier.pendingReplies(pr, viewer: testViewer, reason: .awaitingReply) == 2)
+        let mine = makePR(
+            source: .mine,
+            threads: [owed, thread(comment("bob", t1)), thread(comment("bob", t1), comment(testViewer, t2))])
+        #expect(Classifier.pendingReplies(mine, viewer: testViewer, reason: .openThreads) == 2)
+        #expect(Classifier.pendingReplies(mine, viewer: testViewer, reason: .ciRed) == 0)
+    }
+
+    @Test func repliesSectionFacts() {
+        #expect(SectionKind.allCases[1] == .repliesToYou)
+        #expect(SectionKind.repliesToYou.title == "Replies to you")
+        #expect(SectionKind.repliesToYou.countsTowardBadge)
+        #expect(!SectionKind.repliesToYou.sortsByRecency)
+        #expect(!SectionKind.repliesToYou.usesCompactRows)
+        #expect(
+            SectionKind.repliesToYou.moreURL.absoluteString
+                == "https://github.com/pulls?q=is%3Aopen+is%3Apr+involves%3A%40me+-author%3A%40me")
+        #expect(!SearchSource.involved.boundsCompleteness)
+        #expect(SearchSource.review.boundsCompleteness)
     }
 }
