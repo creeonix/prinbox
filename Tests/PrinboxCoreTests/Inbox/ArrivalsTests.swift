@@ -69,4 +69,37 @@ import Testing
         #expect(Arrivals.compute(previous: [:], current: current).map(\.id) == ["reply"])
         #expect(Arrivals.sections == [.needsReview, .repliesToYou, .takeAnotherLook])
     }
+
+    @Test func noticeForSeveralNamesRequestsAndReplies() {
+        let owed = thread(comment("alice", old), comment(testViewer, old), comment("alice", newer))
+        let mixed = Arrivals.compute(
+            previous: [:],
+            current: inbox([
+                makePR(id: "r1", number: 1, title: "R1"), makePR(id: "r2", number: 2, title: "R2"),
+                makePR(id: "p1", number: 3, title: "P1", source: .involved, threads: [owed]),
+            ]))
+        #expect(ArrivalNotice.make(mixed)?.title == "3 new: 2 review requests, 1 reply")
+        let moreReplies = Arrivals.compute(
+            previous: [:],
+            current: inbox([
+                makePR(id: "r1", number: 1, title: "R1"),
+                makePR(id: "p1", number: 2, title: "P1", source: .involved, threads: [owed]),
+                makePR(id: "p2", number: 3, title: "P2", source: .involved, threads: [owed]),
+            ]))
+        #expect(ArrivalNotice.make(moreReplies)?.title == "3 new: 1 review request, 2 replies")
+        let replies = Arrivals.compute(
+            previous: [:],
+            current: inbox([
+                makePR(id: "p1", number: 1, source: .involved, threads: [owed]),
+                makePR(id: "p2", number: 2, source: .involved, threads: [owed]),
+            ]))
+        #expect(ArrivalNotice.make(replies)?.title == "2 new replies")
+        let one = Arrivals.compute(
+            previous: [:],
+            current: inbox([
+                makePR(
+                    id: "p1", number: 7, title: "Answer me", repository: "acme/api", source: .involved, threads: [owed])
+            ]))
+        #expect(ArrivalNotice.make(one)?.body == "acme/api · Replies to you")
+    }
 }

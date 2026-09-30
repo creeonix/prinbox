@@ -71,4 +71,8 @@ public enum Reason: String, Sendable, Equatable {
         case .draft, .waitingForReview, .snoozed: .neutral
         }
     }
+
+    /// Rows with these reasons draw the comment bubble and its count in the accent color: the conversation is
+    /// what needs attention.
+    public var highlightsComments: Bool { self == .awaitingReply || self == .openThreads }
 }

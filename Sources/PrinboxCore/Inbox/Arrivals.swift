@@ -1,6 +1,6 @@
 import Foundation
 
-/// What a refresh brought into the review sections, for the notification. The baseline is the previous
+/// What a refresh brought into the review sections and Replies to you, for the notification. The baseline is the previous
 /// fetch (extended, not replaced, by an incomplete fetch), not the seen ledger: a PR the user has not looked
 /// at must not notify again five minutes later.
 public enum Arrivals {
@@ -40,9 +40,23 @@ public struct ArrivalNotice: Equatable, Sendable {
                 title: RowText.title(pr), body: "\(pr.repository) · \(first.classification.section.title)",
                 url: pr.url)
         }
+        let replies = rows.filter { $0.classification.section == .repliesToYou }.count
+        let requests = rows.count - replies
+        let title: String
+        switch (requests, replies) {
+        case (_, 0): title = "\(rows.count) new review requests"
+        case (0, _): title = "\(rows.count) new replies"
+        default:
+            title =
+                "\(rows.count) new: \(counted(requests, "review request")), \(counted(replies, "reply", plural: "replies"))"
+        }
         let titles = rows.prefix(3).map { RowText.title($0.pullRequest) }
         let rest = rows.count - titles.count
         let lines = titles + (rest > 0 ? ["and \(rest) more"] : [])
-        return ArrivalNotice(title: "\(rows.count) new review requests", body: lines.joined(separator: "\n"), url: nil)
+        return ArrivalNotice(title: title, body: lines.joined(separator: "\n"), url: nil)
+    }
+
+    static func counted(_ n: Int, _ singular: String, plural: String? = nil) -> String {
+        "\(n) \(n == 1 ? singular : (plural ?? singular + "s"))"
     }
 }
