@@ -1,7 +1,7 @@
 PRODUCT   := Prinbox
 APP_NAME  := PRInbox
 BUNDLE_ID := io.github.creeonix.prinbox
-VERSION   ?= 0.3.1
+VERSION   ?= 0.4.0
 BUILD_DIR := build
 APP       := $(BUILD_DIR)/$(APP_NAME).app
 DMG       := $(BUILD_DIR)/$(APP_NAME)-$(VERSION).dmg
