@@ -84,4 +84,15 @@ import Testing
         #expect(RowText.compactTrailer(row, showOrg: true) == "· globex/billing · Snoozed")
         #expect(RowText.compact(row) == "#1 Add feature · Snoozed")
     }
+
+    @Test func headerCountsNewRows() {
+        let at = date("2026-08-10T12:05:00Z")
+        #expect(
+            RowText.header(badgeCount: 5, lastSuccess: at, newCount: 3, timeZone: utc)
+                == "5 waiting on you · updated 12:05 · 3 new")
+        #expect(
+            RowText.header(badgeCount: 5, lastSuccess: at, newCount: 0, timeZone: utc)
+                == "5 waiting on you · updated 12:05")
+        #expect(RowText.header(badgeCount: 0, lastSuccess: nil, newCount: 3, timeZone: utc) == "Loading…")
+    }
 }

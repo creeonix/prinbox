@@ -169,6 +169,104 @@ import Testing
         #expect(state.colors.index(for: "acme") == 0)
         #expect(state.colors.index(for: "globex") == 1)
     }
+
+    @Test func sSnoozesTheSelectedRowAndKeepsThePosition() async {
+        let prs = [a, b]
+        let state = await makeState { _ in makeResult(prs) }
+        state.popoverWillShow()
+        #expect(state.selection.current == .row("a"))
+        #expect(state.handle(.snooze) == .handled)
+        #expect(state.store.state.isSnoozed("a"))
+        #expect(state.items == [.header(.needsReview), .row("b"), .header(.waitingOnOthers), .row("a")])
+        #expect(state.selection.current == .row("b"))
+    }
+
+    @Test func uWakesTheSelectedSnoozedRowAndKeepsThePosition() async {
+        let prs = [a, b]
+        let state = await makeState { _ in makeResult(prs) }
+        state.popoverWillShow()
+        _ = state.handle(.snooze)
+        state.select(.row("a"))
+        #expect(state.handle(.unsnooze) == .handled)
+        #expect(!state.store.state.isSnoozed("a"))
+        #expect(state.items == [.header(.needsReview), .row("a"), .row("b")])
+        #expect(state.selection.current == .row("b"))
+    }
+
+    @Test func sOnASnoozedRowAndUOnAPlainRowDoNothing() async {
+        let prs = [a, b]
+        let state = await makeState { _ in makeResult(prs) }
+        state.popoverWillShow()
+        #expect(state.handle(.unsnooze) == .handled)
+        #expect(!state.store.state.isSnoozed("a"))
+        #expect(state.selection.current == .row("a"))
+        state.snooze("a")
+        state.select(.row("a"))
+        let before = state.items
+        #expect(state.handle(.snooze) == .handled)
+        #expect(state.items == before)
+        #expect(state.selection.current == .row("a"))
+    }
+
+    @Test func sWithNoRowSelectedDoesNothingAndAFoldedTargetIsFine() async {
+        let prs = [a]
+        let state = await makeState(folded: [.waitingOnOthers]) { _ in makeResult(prs) }
+        #expect(state.selection.current == nil)
+        #expect(state.handle(.snooze) == .handled)
+        #expect(!state.store.state.isSnoozed("a"))
+        state.select(.header(.needsReview))
+        #expect(state.handle(.snooze) == .handled)
+        #expect(!state.store.state.isSnoozed("a"))
+        #expect(state.selection.current == .header(.needsReview))
+        state.select(.row("a"))
+        #expect(state.handle(.snooze) == .handled)
+        #expect(state.items == [.header(.waitingOnOthers)])
+        #expect(state.selection.current == .header(.waitingOnOthers))
+    }
+
+    @Test func snoozeKeysAreIgnoredInSettings() async {
+        let prs = [a]
+        let state = await makeState { _ in makeResult(prs) }
+        state.select(.row("a"))
+        state.openSettings()
+        #expect(state.handle(.snooze) == nil)
+        #expect(state.handle(.unsnooze) == nil)
+        #expect(!state.store.state.isSnoozed("a"))
+    }
+
+    @Test func newRowsAreCountedUntilThePopoverCloses() async {
+        let old = date("2026-08-01T10:00:00Z")
+        let newer = date("2026-08-02T10:00:00Z")
+        let state = await makeState { call in
+            call == 1
+                ? makeResult([makePR(id: "a", number: 1, updatedAt: old)])
+                : makeResult([
+                    makePR(id: "a", number: 1, updatedAt: newer),
+                    makePR(id: "b", number: 2, updatedAt: old, source: .mine),
+                ])
+        }
+        #expect(state.newCount == 0)
+        await state.refresh()
+        let rows = state.store.inbox?.sections.flatMap(\.rows) ?? []
+        #expect(rows.map { state.isNew($0) } == [true, true])
+        #expect(state.newCount == 2)
+        state.popoverWillShow()
+        #expect(state.newCount == 2)
+        state.popoverDidClose()
+        #expect(state.newCount == 0)
+        #expect(rows.allSatisfy { !state.isNew($0) })
+    }
+
+    @Test func closingThePopoverEndsARecording() async {
+        let prs = [a]
+        let state = await makeState { _ in makeResult(prs) }
+        let ended = Counter()
+        state.onRecordingEnded = { ended.bump() }
+        state.startRecording()
+        state.popoverDidClose()
+        #expect(!state.isRecordingShortcut)
+        #expect(ended.value == 1)
+    }
 }
 
 @MainActor

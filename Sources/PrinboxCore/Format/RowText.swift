@@ -52,13 +52,15 @@ public enum RowText {
     /// Up to two uppercase characters for the avatar placeholder.
     public static func initials(_ login: String) -> String { String(login.prefix(2)).uppercased() }
 
-    /// "3 waiting on you · updated 14:05", "Setup needed" while gh is missing or signed out, or "Loading…"
-    /// before the first successful refresh.
+    /// "3 waiting on you · updated 14:05", plus "· 2 new" when rows are new since the last look; "Setup
+    /// needed" while gh is missing or signed out, or "Loading…" before the first successful refresh.
     public static func header(
-        badgeCount: Int, lastSuccess: Date?, needsSetup: Bool = false, timeZone: TimeZone = .current
+        badgeCount: Int, lastSuccess: Date?, needsSetup: Bool = false, newCount: Int = 0,
+        timeZone: TimeZone = .current
     ) -> String {
         if needsSetup { return "Setup needed" }
         guard let lastSuccess else { return "Loading…" }
-        return "\(badgeCount) waiting on you · updated \(ClockText.hhmm(lastSuccess, timeZone: timeZone))"
+        let base = "\(badgeCount) waiting on you · updated \(ClockText.hhmm(lastSuccess, timeZone: timeZone))"
+        return newCount > 0 ? "\(base) · \(newCount) new" : base
     }
 }
