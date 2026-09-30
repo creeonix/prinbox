@@ -2,3 +2,5 @@
 build/
 .swiftpm/
 .DS_Store
+tasks/
+docs/specs/

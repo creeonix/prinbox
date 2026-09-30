@@ -166,7 +166,6 @@ Other targets:
   - `Sources/PrinboxCore` holds all the logic (gh access, classification, formatting, state) and is
     unit tested. It has no AppKit.
   - `Sources/Prinbox` is the thin AppKit and SwiftUI shell.
-- **Design:** `docs/specs/2026-09-29-prinbox-v1-design.md`.
 - **Fixtures:** `scripts/record-fixture.sh <name>` records the live query as a test fixture. It
   rebuilds the response from an allowlist of fields and replaces repositories, logins, titles, URLs and
   ids with placeholders, and a test checks every string in every fixture.
