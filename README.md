@@ -38,7 +38,7 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
   - **Mentions:** someone mentioned you on their PR.
   - **Your PRs:** yours that need you: changes requested, merge conflicts, CI is red, or approved and
     ready to merge.
-  - **Waiting on others:** the rest of yours, one quiet line each.
+  - **Waiting on others:** the rest of yours, one quiet line each, plus anything you snoozed.
 - **Rows that answer "what, where and how long":** author avatar (with the organization's avatar in its
   corner when your inbox spans more than one organization), `org/repo` (same condition), time waiting (counted from when
   your review was requested), and lines added and removed.
@@ -47,8 +47,15 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
   conflicts). Hover a mark for its meaning.
 - **Group by organization** (off by default): each section groups its rows under a thin separator with
   the organization's color, name and count.
-- **Keyboard first:** ↑/↓, Enter to open, R to refresh, Esc to close, and a global shortcut
-  (⌃⌥P by default).
+- **Snooze:** `S` (or right-click) parks a PR until something changes on it. It moves to Waiting on others,
+  leaves the count, and comes back by itself when the PR is updated; `U` brings it back sooner. Snoozes are
+  kept in `~/Library/Application Support/prinbox/state.json`.
+- **New since your last look:** rows that appeared or changed since you last closed the popover carry a dot,
+  and the header counts them.
+- **Notifications** (off by default): one banner per refresh when new review requests arrive; clicking it
+  opens the PR (or the popover, when several arrived at once).
+- **Compact rows** (off by default): every section as one-line rows, with the waiting time.
+- **Keyboard first:** ↑/↓, Enter to open, S to snooze, U to unsnooze, R to refresh, Esc to close, and a global shortcut (⌃⌥P by default).
 - **A real menu-bar popover:** tiling window managers such as OmniWM, AeroSpace and yabai leave it alone.
 - **Clear setup help:** when gh is missing or signed out, the popover shows the exact commands, and
   PRInbox recovers by itself once they are done.
@@ -97,9 +104,13 @@ Left-click opens the popover. Right-click offers Refresh now and Quit.
 |---|---|
 | ↑ / ↓ | move the selection (wraps) |
 | Enter | open the selected PR in your browser, or fold/unfold a section header |
+| S | snooze the selected PR until it changes |
+| U | unsnooze the selected PR |
 | R | refresh now |
 | Esc | close the popover, or leave Settings |
 | ⌃⌥P | open the popover from anywhere (change it in Settings) |
+
+Right-click a row for Open on GitHub, Snooze until it changes (or Unsnooze) and Copy link.
 
 The global shortcut uses Carbon hot keys and needs no Accessibility permission. macOS lets apps share a
 shortcut silently: Pullover also defaults to ⌃⌥P, so if you run both, give one of them another shortcut.
@@ -126,13 +137,15 @@ When this override is set, PRInbox uses only that path. Remove it with
 ### Settings
 
 Open Settings with the gear in the popover. It holds the global shortcut, launch at login, **Group by
-organization**, **Show organization avatars**, the detected `gh` path, the version and Quit. Settings
-stay inside the popover, so there is never a window for a tiling window manager to grab.
+organization**, **Show organization avatars**, **Compact rows**, **Notify about new review requests**, the
+detected `gh` path, the version and Quit. Turning notifications on asks macOS for permission once; if you
+decline, Settings says where to turn them on. Settings stay inside the popover, so there is never a window
+for a tiling window manager to grab.
 
 ### Command line
 
 ```sh
-/Applications/PRInbox.app/Contents/MacOS/Prinbox --print   # print your inbox once
+/Applications/PRInbox.app/Contents/MacOS/Prinbox --print   # print your inbox once (snoozed PRs show as such)
 /Applications/PRInbox.app/Contents/MacOS/Prinbox --demo    # run with sample data
 ```
 
@@ -144,7 +157,9 @@ stay inside the popover, so there is never a window for a tiling window manager 
   GitHub API calls (your inbox every five minutes, the latest PRInbox release once a day) and avatar
   downloads from `avatars.githubusercontent.com` (authors and repository owners).
 - **Local data:** avatars are cached in `~/Library/Caches/io.github.creeonix.prinbox`. Settings live in
-  the app's user defaults.
+  the app's user defaults. Snoozes and the "seen" ledger live in
+  `~/Library/Application Support/prinbox/state.json`, a small JSON file keyed by PR id; `make uninstall`
+  removes all three.
 
 ## Build from source
 
@@ -190,10 +205,9 @@ Other targets:
 
 ## Roadmap
 
-- Snooze a PR until something new happens on it.
 - "Replies to you" from review threads.
 - Stacked PR chains.
-- A compact layout.
+- A smarter wake for snoozed PRs (a reply or a new commit, not any change).
 - An MCP server, so AI agents can read your review queue.
 
 ## Credits
