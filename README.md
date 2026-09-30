@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/popover.png" width="460" alt="PRInbox popover with sample pull requests">
+  <img src="docs/images/popover.png" width="500" alt="PRInbox popover with sample pull requests">
 </p>
 
 ## Why
@@ -39,8 +39,14 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
   - **Your PRs:** yours that need you: changes requested, merge conflicts, CI is red, or approved and
     ready to merge.
   - **Waiting on others:** the rest of yours, one quiet line each.
-- **Rows that answer "what and how long":** author avatar, repository, time waiting (counted from when
-  your review was requested), lines added and removed, and status.
+- **Rows that answer "what, where and how long":** author avatar with the organization's avatar in its
+  corner, `org/repo` (when your inbox spans more than one organization), time waiting (counted from when
+  your review was requested), and lines added and removed.
+- **Status at a glance:** four marks at the right edge of each row: comment count, review state
+  (approved or changes requested), CI (passed, failed, running) and merge state (ready to merge or
+  conflicts). Hover a mark for its meaning.
+- **Group by organization** (off by default): each section groups its rows under a thin separator with
+  the organization's color, name and count.
 - **Keyboard first:** ↑/↓, Enter to open, R to refresh, Esc to close, and a global shortcut
   (⌃⌥P by default).
 - **A real menu-bar popover:** tiling window managers such as OmniWM, AeroSpace and yabai leave it alone.
@@ -119,9 +125,9 @@ When this override is set, PRInbox uses only that path. Remove it with
 
 ### Settings
 
-Open Settings with the gear in the popover. It holds the global shortcut, launch at login, the detected
-`gh` path, the version and Quit. Settings stay inside the popover, so there is never a window for a
-tiling window manager to grab.
+Open Settings with the gear in the popover. It holds the global shortcut, launch at login, **Group by
+organization**, **Show organization avatars**, the detected `gh` path, the version and Quit. Settings
+stay inside the popover, so there is never a window for a tiling window manager to grab.
 
 ### Command line
 
@@ -136,7 +142,7 @@ tiling window manager to grab.
   and never reads, stores or sends a token.
 - **Nothing leaves your Mac:** there is no telemetry and no server. The only network traffic is gh's
   GitHub API calls (your inbox every five minutes, the latest PRInbox release once a day) and avatar
-  downloads from `avatars.githubusercontent.com`.
+  downloads from `avatars.githubusercontent.com` (authors and repository owners).
 - **Local data:** avatars are cached in `~/Library/Caches/io.github.creeonix.prinbox`. Settings live in
   the app's user defaults.
 
