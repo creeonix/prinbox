@@ -9,6 +9,9 @@ struct TwoPhaseFixture: Decodable {
 }
 
 enum Fixture {
+    /// The fixture recorded from a real account by `scripts/record-fixture.sh` (anonymized).
+    static let liveName = "live-2026-10-01"
+
     /// Loads Tests/PrinboxCoreTests/Fixtures/<name>.json from the source tree (no SwiftPM resources).
     static func data(_ name: String) throws -> Data {
         let url = URL(fileURLWithPath: #filePath)

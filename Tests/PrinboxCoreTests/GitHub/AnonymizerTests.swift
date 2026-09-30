@@ -35,7 +35,7 @@ import Testing
     }
 
     @Test func committedFixtureHoldsOnlyPlaceholders() throws {
-        #expect(try Self.unexpectedStrings(in: Fixture.data("live-2026-09-30")) == [])
+        #expect(try Self.unexpectedStrings(in: Fixture.data(Fixture.liveName)) == [])
     }
 
     static func anonymize(_ raw: String) async throws -> Data {
