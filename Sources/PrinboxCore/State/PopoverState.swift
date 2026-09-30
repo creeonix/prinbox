@@ -49,6 +49,9 @@ public final class PopoverState {
 
     public var showsSeparators: Bool { spansMultipleOrgs && display.groupByOrganization }
 
+    /// Compact rows outside Waiting on others carry the age, since the compact layout drops the meta line.
+    public func showsCompactAge(_ kind: SectionKind) -> Bool { display.compactRows && !kind.usesCompactRows }
+
     public func setGroupByOrganization(_ on: Bool) {
         display.setGroupByOrganization(on)
         reconcileSelection()
@@ -76,6 +79,40 @@ public final class PopoverState {
         folds.toggle(kind)
         reconcileSelection()
     }
+
+    // MARK: Snooze and new rows
+
+    /// Snoozes through the store and keeps the selection at its position, so the next row is selected (the
+    /// snoozed row moves to Waiting on others, which is folded by default), as when archiving mail.
+    public func snooze(_ id: String) {
+        keepingPosition { store.snooze(id) }
+    }
+
+    public func unsnooze(_ id: String) {
+        keepingPosition { store.unsnooze(id) }
+    }
+
+    private func keepingPosition(_ change: () -> Void) {
+        let index = selection.current.flatMap { items.firstIndex(of: $0) }
+        change()
+        let current = items
+        guard let index, !current.isEmpty else { return }
+        selection = Selection(current: current[min(index, current.count - 1)])
+        lastItems = current
+    }
+
+    public func isNew(_ row: InboxRow) -> Bool { store.state.isNew(row.pullRequest) }
+
+    /// Rows marked new in every section, folded or not; the header shows it.
+    public var newCount: Int { allRows.filter(isNew).count }
+
+    /// The popover closed: the rows it showed are now seen, and a recording in progress ends.
+    public func popoverDidClose() {
+        if isRecordingShortcut { stopRecording() }
+        store.state.markSeen(allRows.map(\.pullRequest))
+    }
+
+    private var allRows: [InboxRow] { (store.inbox?.sections ?? []).flatMap(\.rows) }
 
     /// The store reconciles the selection through `onInboxChange`, including refreshes that start elsewhere.
     public func refresh() async {
@@ -151,6 +188,12 @@ public final class PopoverState {
             return selection.current.map(activate) ?? .handled
         case .refresh:
             return .refresh
+        case .snooze:
+            if case .row(let id) = selection.current, !store.state.isSnoozed(id) { snooze(id) }
+            return .handled
+        case .unsnooze:
+            if case .row(let id) = selection.current, store.state.isSnoozed(id) { unsnooze(id) }
+            return .handled
         case .escape:
             return .close
         }

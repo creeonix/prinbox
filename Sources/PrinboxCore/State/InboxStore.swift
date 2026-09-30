@@ -3,7 +3,8 @@ import Observation
 
 /// Owns the inbox and serializes refreshes: one fetch at a time, a refresh requested meanwhile runs
 /// exactly once afterwards, rate limiting pauses refreshes until GitHub's reset time, and a failure keeps
-/// the last good inbox.
+/// the last good inbox. It also owns the `StateStore`: snoozes shape the inbox it builds, and consecutive
+/// fetches are diffed for arrivals.
 @MainActor
 @Observable
 public final class InboxStore {
@@ -14,16 +15,31 @@ public final class InboxStore {
     public private(set) var error: FetchError?
     public private(set) var lastSuccess: Date?
     public private(set) var isRefreshing = false
+    /// Rows that arrived in the review sections with the last successful fetch (see `Arrivals`). Cleared by
+    /// `snooze` and `unsnooze`, which rebuild without fetching.
+    public private(set) var arrivals: [InboxRow] = []
+    /// Snoozes and the seen ledger; the popover reads and writes it through this store.
+    public let state: StateStore
 
     /// Called after every inbox change, whoever triggered the refresh (timer, wake, popover, R key).
     @ObservationIgnored public var onInboxChange: (@MainActor () -> Void)?
+    /// Called after `onInboxChange` when a fetch brought arrivals.
+    @ObservationIgnored public var onArrivals: (@MainActor ([InboxRow]) -> Void)?
     @ObservationIgnored private var followUpRequested = false
     @ObservationIgnored private var pausedUntil: Date?
+    @ObservationIgnored private var lastResult: FetchResult?
+    /// The arrivals baseline: `updatedAt` per PR id. A complete fetch replaces it; an incomplete one only
+    /// adds to it, so PRs a partial response left out do not come back as arrivals.
+    @ObservationIgnored private var known: [String: Date]?
     @ObservationIgnored private let fetcher: InboxFetching
     @ObservationIgnored private let clock: @Sendable () -> Date
 
-    public init(fetcher: InboxFetching, clock: @escaping @Sendable () -> Date = { Date() }) {
+    public init(
+        fetcher: InboxFetching, state: StateStore = StateStore(persistence: MemoryStatePersistence()),
+        clock: @escaping @Sendable () -> Date = { Date() }
+    ) {
         self.fetcher = fetcher
+        self.state = state
         self.clock = clock
     }
 
@@ -70,6 +86,35 @@ public final class InboxStore {
         await refresh()
     }
 
+    // MARK: Snooze
+
+    /// Parks a PR of the last fetch and rebuilds; unknown or already snoozed ids do nothing.
+    public func snooze(_ id: String) {
+        guard let pr = lastResult?.pullRequests.first(where: { $0.id == id }), !state.isSnoozed(id) else { return }
+        state.snooze(pr)
+        rebuild()
+    }
+
+    /// Wakes a snoozed PR and rebuilds; ids that are not snoozed do nothing.
+    public func unsnooze(_ id: String) {
+        guard state.isSnoozed(id) else { return }
+        state.unsnooze(id)
+        rebuild()
+    }
+
+    private func rebuild() {
+        guard let lastResult else { return }
+        arrivals = []
+        inbox = InboxBuilder.build(lastResult, snoozed: state.snoozedIDs)
+        onInboxChange?()
+    }
+
+    private static func baseline(after result: FetchResult, extending previous: [String: Date]?) -> [String: Date] {
+        let fetched = Dictionary(
+            result.pullRequests.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { first, _ in first })
+        return result.isComplete ? fetched : (previous ?? [:]).merging(fetched) { _, new in new }
+    }
+
     private var isPaused: Bool {
         pausedUntil.map { clock() < $0 } ?? false
     }
@@ -77,11 +122,17 @@ public final class InboxStore {
     private func fetchOnce() async {
         do {
             let result = try await fetcher.fetch()
-            inbox = InboxBuilder.build(result)
+            state.didFetch(result)
+            let built = InboxBuilder.build(result, snoozed: state.snoozedIDs)
+            arrivals = Arrivals.compute(previous: known, current: built)
+            known = Self.baseline(after: result, extending: known)
+            lastResult = result
+            inbox = built
             error = nil
             lastSuccess = clock()
             pausedUntil = nil
             onInboxChange?()
+            if !arrivals.isEmpty { onArrivals?(arrivals) }
         } catch let failure as FetchError {
             error = failure
             if case .rateLimited(let resetAt) = failure {

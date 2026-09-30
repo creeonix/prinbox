@@ -21,6 +21,8 @@ jobs:
           swift --version
       - name: Test
         run: make test
+      - name: Release notes
+        run: mkdir -p build && scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > build/release-notes.md
       - name: Build DMG
         run: make dmg VERSION="${GITHUB_REF_NAME#v}"
       - name: Publish release
@@ -30,4 +32,4 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           gh release create "$GITHUB_REF_NAME" \
             "build/PRInbox-$version.dmg" "build/PRInbox-$version.dmg.sha256" \
-            --title "PRInbox $version" --notes-file .github/release-notes.md --generate-notes
+            --title "PRInbox $version" --notes-file build/release-notes.md --generate-notes

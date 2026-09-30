@@ -1,0 +1,134 @@
+import Foundation
+import Testing
+
+@testable import PrinboxCore
+
+/// Persistence whose load or save fails, for the error paths.
+struct FailingPersistence: StatePersisting {
+    struct Failure: Error {}
+    let loadFails: Bool
+    let saveFails: Bool
+
+    func load() throws -> AppState? {
+        if loadFails { throw Failure() }
+        return nil
+    }
+
+    func save(_ state: AppState) throws {
+        if saveFails { throw Failure() }
+    }
+}
+
+@MainActor
+@Suite struct StateStoreTests {
+    let start = date("2026-08-10T12:00:00Z")
+    let old = date("2026-08-01T10:00:00Z")
+    let newer = date("2026-08-02T10:00:00Z")
+
+    func makeStore(_ memory: MemoryStatePersistence = MemoryStatePersistence()) -> (StateStore, MemoryStatePersistence)
+    {
+        let clock = TestClock(start)
+        return (StateStore(persistence: memory, clock: { clock.now }), memory)
+    }
+
+    @Test func snoozeRecordsTheClockAndTheUpdatedAtAndSaves() {
+        let (store, memory) = makeStore()
+        let pr = makePR(id: "a", updatedAt: old)
+        store.snooze(pr)
+        #expect(store.isSnoozed("a"))
+        #expect(store.snoozedIDs == ["a"])
+        #expect(store.state.snoozed["a"] == SnoozeEntry(snoozedAt: start, updatedAt: old))
+        #expect(memory.saved?.snoozed["a"]?.updatedAt == old)
+        store.unsnooze("a")
+        #expect(!store.isSnoozed("a"))
+        #expect(memory.saved?.snoozed.isEmpty == true)
+        #expect(memory.saveCount == 2)
+    }
+
+    @Test func unchangedStateIsNotSavedAgain() {
+        let (store, memory) = makeStore()
+        store.unsnooze("missing")
+        #expect(memory.saveCount == 0)
+    }
+
+    @Test func storedStateIsLoadedAtInit() {
+        let memory = MemoryStatePersistence(
+            AppState(snoozed: ["a": SnoozeEntry(snoozedAt: start, updatedAt: old)], seen: ["b": old]))
+        let (store, _) = makeStore(memory)
+        #expect(store.isSnoozed("a"))
+        #expect(store.isNew(makePR(id: "b", updatedAt: newer)))
+    }
+
+    @Test func didFetchWakesAndPrunesSnoozes() {
+        let (store, _) = makeStore()
+        store.snooze(makePR(id: "a", updatedAt: old))
+        store.snooze(makePR(id: "gone", updatedAt: old))
+        store.didFetch(makeResult([makePR(id: "a", updatedAt: newer)]))
+        #expect(store.snoozedIDs.isEmpty)
+    }
+
+    @Test func didFetchKeepsSnoozesAbsentFromAnIncompleteFetch() {
+        let (store, _) = makeStore()
+        store.snooze(makePR(id: "gone", updatedAt: old))
+        store.didFetch(makeResult([makePR(id: "a")], warnings: ["partial"]))
+        #expect(store.isSnoozed("gone"))
+    }
+
+    @Test func firstFetchSeedsTheLedgerSoNothingIsNew() {
+        let (store, memory) = makeStore()
+        let pr = makePR(id: "a", updatedAt: old)
+        #expect(!store.isNew(pr))
+        store.didFetch(makeResult([pr]))
+        #expect(store.state.seen == ["a": old])
+        #expect(!store.isNew(pr))
+        #expect(memory.saved?.seen == ["a": old])
+    }
+
+    @Test func afterSeedingAbsentAndNewerPullRequestsAreNew() {
+        let (store, _) = makeStore()
+        store.didFetch(makeResult([makePR(id: "a", updatedAt: old)]))
+        #expect(store.isNew(makePR(id: "b", updatedAt: old)))
+        #expect(store.isNew(makePR(id: "a", updatedAt: newer)))
+        #expect(!store.isNew(makePR(id: "a", updatedAt: old)))
+    }
+
+    @Test func markSeenUpsertsWithoutForgetting() {
+        let (store, _) = makeStore()
+        store.didFetch(makeResult([makePR(id: "a", updatedAt: old), makePR(id: "b", updatedAt: old)]))
+        store.markSeen([makePR(id: "a", updatedAt: newer), makePR(id: "c", updatedAt: old)])
+        #expect(store.state.seen == ["a": newer, "b": old, "c": old])
+        #expect(!store.isNew(makePR(id: "a", updatedAt: newer)))
+    }
+
+    @Test func markSeenBeforeAnyFetchDoesNotCreateAnEmptyLedger() {
+        let (store, memory) = makeStore()
+        store.markSeen([])
+        #expect(store.state.seen == nil)
+        #expect(memory.saveCount == 0)
+        store.didFetch(makeResult([makePR(id: "a", updatedAt: old)]))
+        #expect(!store.isNew(makePR(id: "a", updatedAt: old)))
+    }
+
+    @Test func completeFetchPrunesTheLedgerIncompleteKeepsIt() {
+        let (store, _) = makeStore()
+        store.didFetch(makeResult([makePR(id: "a", updatedAt: old), makePR(id: "b", updatedAt: old)]))
+        store.didFetch(makeResult([makePR(id: "a", updatedAt: old)], warnings: ["partial"]))
+        #expect(store.state.seen?.keys.sorted() == ["a", "b"])
+        store.didFetch(makeResult([makePR(id: "a", updatedAt: old)]))
+        #expect(store.state.seen == ["a": old])
+    }
+
+    @Test func emptyInboxSeedsAnEmptyLedgerSoLaterArrivalsAreNew() {
+        let (store, _) = makeStore()
+        store.didFetch(makeResult([]))
+        #expect(store.state.seen == [:])
+        #expect(store.isNew(makePR(id: "a")))
+    }
+
+    @Test func corruptFileStartsEmptyAndSaveFailureKeepsMemory() {
+        let store = StateStore(persistence: FailingPersistence(loadFails: true, saveFails: true))
+        #expect(store.state == AppState())
+        store.snooze(makePR(id: "a"))
+        #expect(store.isSnoozed("a"))
+    }
+}

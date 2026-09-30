@@ -111,4 +111,32 @@ import Testing
         #expect(inbox.spansMultipleOrgs)
         #expect(inbox.section(.needsReview)?.rows.count == 8)
     }
+
+    @Test func snoozedRowsLeaveTheBadgeAndSortAfterOwnRows() {
+        let inbox = InboxBuilder.build(
+            makeResult([
+                makePR(id: "r", number: 1, updatedAt: date("2026-08-09T10:00:00Z"), source: .review),
+                makePR(id: "m", number: 2, updatedAt: date("2026-08-08T10:00:00Z"), source: .mentions),
+                makePR(id: "own", number: 3, updatedAt: date("2026-08-01T10:00:00Z"), source: .mine),
+            ]), snoozed: ["r", "m"])
+        #expect(inbox.badgeCount == 0)
+        #expect(inbox.sections.map(\.kind) == [.waitingOnOthers])
+        #expect(inbox.section(.waitingOnOthers)?.rows.map(\.id) == ["own", "r", "m"])
+        #expect(
+            inbox.section(.waitingOnOthers)?.rows.map(\.classification.reason) == [
+                .waitingForReview, .snoozed, .snoozed,
+            ])
+    }
+
+    @Test func snoozedRowsAreNeverHiddenByTheCap() {
+        let own = (1...9).map { makePR(id: "o\($0)", number: $0, source: .mine) }
+        let parked = (1...3).map { makePR(id: "s\($0)", number: 100 + $0, repository: "globex/x") }
+        let inbox = InboxBuilder.build(makeResult(own + parked), snoozed: Set(parked.map(\.id)))
+        let section = inbox.section(.waitingOnOthers)
+        #expect(section?.rows.count == 8 + 3)
+        #expect(section?.rows.suffix(3).map(\.id) == ["s1", "s2", "s3"])
+        #expect(section?.count == 12)
+        #expect(section?.moreCount == 1)
+        #expect(inbox.spansMultipleOrgs)
+    }
 }

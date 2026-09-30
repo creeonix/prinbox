@@ -30,7 +30,8 @@ enum CommandLineMode {
         case .printInbox:
             do {
                 let result = try await GhClient().fetch()
-                print(InboxPrinter.render(InboxBuilder.build(result), now: Date()))
+                let inbox = InboxBuilder.build(result, snoozed: Self.snoozedIDs(for: result))
+                print(InboxPrinter.render(inbox, now: Date()))
                 return 0
             } catch let error as FetchError {
                 let client = GhClient()
@@ -51,6 +52,17 @@ enum CommandLineMode {
                 FileHandle.standardError.write(Data("login item: \(error.localizedDescription)\n".utf8))
                 return 1
             }
+        }
+    }
+
+    /// Snoozes from state.json, woken in memory as the app would; the file is never written here.
+    private static func snoozedIDs(for result: FetchResult) -> Set<String> {
+        do {
+            let state = try JSONStateFile(url: JSONStateFile.defaultURL()).load() ?? AppState()
+            return Set(Snooze.reconcile(state.snoozed, with: result).keys)
+        } catch {
+            FileHandle.standardError.write(Data("warning: state.json unreadable, ignoring snoozes\n".utf8))
+            return []
         }
     }
 }

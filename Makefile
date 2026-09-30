@@ -1,7 +1,7 @@
 PRODUCT   := Prinbox
 APP_NAME  := PRInbox
 BUNDLE_ID := io.github.creeonix.prinbox
-VERSION   ?= 0.2.0
+VERSION   ?= 0.3.0
 BUILD_DIR := build
 APP       := $(BUILD_DIR)/$(APP_NAME).app
 DMG       := $(BUILD_DIR)/$(APP_NAME)-$(VERSION).dmg
@@ -80,7 +80,7 @@ install: app
 uninstall:
 	-"$(INSTALLED)/Contents/MacOS/$(PRODUCT)" --unregister-login-item
 	-pkill -x $(PRODUCT)
-	rm -rf "$(INSTALLED)" "$(HOME)/Library/Caches/$(BUNDLE_ID)"
+	rm -rf "$(INSTALLED)" "$(HOME)/Library/Caches/$(BUNDLE_ID)" "$(HOME)/Library/Application Support/prinbox"
 	-defaults delete $(BUNDLE_ID)
 
 run:

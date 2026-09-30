@@ -77,4 +77,38 @@ import Testing
             RowText.header(badgeCount: 2, lastSuccess: date("2026-08-10T12:05:00Z"), timeZone: utc)
                 == "2 waiting on you · updated 12:05")
     }
+
+    @Test func compactTrailerSaysSnoozedEvenForDrafts() {
+        let pr = makePR(repository: "globex/billing", isDraft: true)
+        let row = InboxRow(pullRequest: pr, classification: Classifier.classify(pr, snoozed: true))
+        #expect(RowText.compactTrailer(row, showOrg: true) == "· globex/billing · Snoozed")
+        #expect(RowText.compact(row) == "#1 Add feature · Snoozed")
+    }
+
+    @Test func headerCountsNewRows() {
+        let at = date("2026-08-10T12:05:00Z")
+        #expect(
+            RowText.header(badgeCount: 5, lastSuccess: at, newCount: 3, timeZone: utc)
+                == "5 waiting on you · updated 12:05 · 3 new")
+        #expect(
+            RowText.header(badgeCount: 5, lastSuccess: at, newCount: 0, timeZone: utc)
+                == "5 waiting on you · updated 12:05")
+        #expect(RowText.header(badgeCount: 0, lastSuccess: nil, newCount: 3, timeZone: utc) == "Loading…")
+    }
+
+    @Test func compactAgeIsTheWaitingAgeOrTheUpdateAge() {
+        let waiting = row(makePR(reviewRequestedAt: date("2026-08-10T04:00:00Z")))
+        #expect(RowText.compactAge(waiting, now: now) == "8h")
+        let own = row(makePR(updatedAt: date("2026-08-10T11:00:00Z"), source: .mine))
+        #expect(RowText.compactAge(own, now: now) == "1h ago")
+    }
+
+    @Test func compactTrailerAppendsTheAgeAfterDraftOrSnoozed() {
+        let draft = row(makePR(repository: "globex/billing", isDraft: true))
+        #expect(RowText.compactTrailer(draft, showOrg: true, age: "2h") == "· globex/billing · Draft · 2h")
+        #expect(RowText.compactTrailer(draft, age: nil) == "· billing · Draft")
+        let pr = makePR(repository: "globex/billing")
+        let snoozed = InboxRow(pullRequest: pr, classification: Classifier.classify(pr, snoozed: true))
+        #expect(RowText.compactTrailer(snoozed, age: "2h") == "· billing · Snoozed · 2h")
+    }
 }

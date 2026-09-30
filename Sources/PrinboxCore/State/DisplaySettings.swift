@@ -7,15 +7,18 @@ import Observation
 public final class DisplaySettings {
     public static let groupKey = "groupByOrganization"
     public static let orgAvatarsKey = "showOrganizationAvatars"
+    public static let compactKey = "compactRows"
 
     public private(set) var groupByOrganization: Bool
     public private(set) var showOrganizationAvatars: Bool
+    public private(set) var compactRows: Bool
     @ObservationIgnored private let defaults: KeyValueStoring
 
     public init(defaults: KeyValueStoring) {
         self.defaults = defaults
         groupByOrganization = defaults.object(forKey: Self.groupKey) as? Bool ?? false
         showOrganizationAvatars = defaults.object(forKey: Self.orgAvatarsKey) as? Bool ?? true
+        compactRows = defaults.object(forKey: Self.compactKey) as? Bool ?? false
     }
 
     public func setGroupByOrganization(_ on: Bool) {
@@ -26,5 +29,10 @@ public final class DisplaySettings {
     public func setShowOrganizationAvatars(_ on: Bool) {
         showOrganizationAvatars = on
         defaults.set(on, forKey: Self.orgAvatarsKey)
+    }
+
+    public func setCompactRows(_ on: Bool) {
+        compactRows = on
+        defaults.set(on, forKey: Self.compactKey)
     }
 }

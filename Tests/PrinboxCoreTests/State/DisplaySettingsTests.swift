@@ -20,4 +20,13 @@ import Testing
         #expect(reloaded.groupByOrganization == true)
         #expect(reloaded.showOrganizationAvatars == false)
     }
+
+    @Test func compactRowsIsOffByDefaultAndPersists() {
+        let defaults = MemoryDefaults()
+        let settings = DisplaySettings(defaults: defaults)
+        #expect(settings.compactRows == false)
+        settings.setCompactRows(true)
+        #expect(defaults.object(forKey: DisplaySettings.compactKey) as? Bool == true)
+        #expect(DisplaySettings(defaults: defaults).compactRows == true)
+    }
 }

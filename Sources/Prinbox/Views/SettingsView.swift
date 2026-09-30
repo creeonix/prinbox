@@ -7,6 +7,8 @@ struct SettingsView: View {
     let hotKeys: HotKeySettings
     let loginItem: LoginItem
     let info: AppInfo
+    let notifications: NotificationSettings
+    let notifier: Notifier
     let actions: PopoverActions
 
     var body: some View {
@@ -46,6 +48,22 @@ struct SettingsView: View {
                 )
                 .toggleStyle(.switch)
                 .labelsHidden()
+            }
+            SettingRow(title: "Compact rows") {
+                Toggle(
+                    "",
+                    isOn: Binding(get: { state.display.compactRows }, set: { state.display.setCompactRows($0) })
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
+            }
+            SettingRow(title: "Notify about new review requests") {
+                Toggle("", isOn: Binding(get: { notifications.isEnabled }, set: { actions.setNotifications($0) }))
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+            }
+            if let note = notifier.status.note {
+                Text(note).font(.caption).foregroundStyle(.secondary)
             }
             Divider()
             InfoLine(label: "gh", value: info.ghPath ?? "not found")

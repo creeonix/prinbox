@@ -24,4 +24,12 @@ import Testing
         #expect(command(15, "r", [.command]) == nil)
         #expect(command(0, "a") == nil)
     }
+
+    @Test func plainSAndUSnoozeAndUnsnooze() {
+        #expect(command(1, "s") == .snooze)
+        #expect(command(1, "S", [.shift]) == .snooze)
+        #expect(command(32, "u") == .unsnooze)
+        #expect(command(1, "s", [.command]) == nil)
+        #expect(command(32, "u", [.option]) == nil)
+    }
 }

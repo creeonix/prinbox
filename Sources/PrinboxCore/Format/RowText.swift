@@ -26,10 +26,19 @@ public enum RowText {
         return [repoLabel(pr, showOrg: showOrg), age, "+\(pr.additions) −\(pr.deletions)"].joined(separator: " · ")
     }
 
-    /// The fixed tail of a compact row, after the truncating title: "· web", or "· web · Draft".
-    public static func compactTrailer(_ row: InboxRow, showOrg: Bool = false) -> String {
+    /// The fixed tail of a compact row, after the truncating title: "· web", "· web · Draft" or
+    /// "· web · Snoozed" (a snoozed draft says Snoozed; the row is dimmed either way), then "· 8h" when the
+    /// compact layout shows an age.
+    public static func compactTrailer(_ row: InboxRow, showOrg: Bool = false, age: String? = nil) -> String {
         let repo = "· \(repoLabel(row.pullRequest, showOrg: showOrg))"
-        return row.pullRequest.isDraft ? "\(repo) · Draft" : repo
+        let status = row.classification.reason == .snoozed ? " · Snoozed" : row.pullRequest.isDraft ? " · Draft" : ""
+        return repo + status + (age.map { " · \($0)" } ?? "")
+    }
+
+    /// The age for a compact row outside Waiting on others: "8h" waiting, or "1h ago" since the last update.
+    public static func compactAge(_ row: InboxRow, now: Date) -> String {
+        row.classification.waitingSince.map { RelativeAge.format(from: $0, to: now) }
+            ?? "\(RelativeAge.format(from: row.pullRequest.updatedAt, to: now)) ago"
     }
 
     static func repoLabel(_ pr: PullRequest, showOrg: Bool) -> String {
@@ -50,13 +59,15 @@ public enum RowText {
     /// Up to two uppercase characters for the avatar placeholder.
     public static func initials(_ login: String) -> String { String(login.prefix(2)).uppercased() }
 
-    /// "3 waiting on you · updated 14:05", "Setup needed" while gh is missing or signed out, or "Loading…"
-    /// before the first successful refresh.
+    /// "3 waiting on you · updated 14:05", plus "· 2 new" when rows are new since the last look; "Setup
+    /// needed" while gh is missing or signed out, or "Loading…" before the first successful refresh.
     public static func header(
-        badgeCount: Int, lastSuccess: Date?, needsSetup: Bool = false, timeZone: TimeZone = .current
+        badgeCount: Int, lastSuccess: Date?, needsSetup: Bool = false, newCount: Int = 0,
+        timeZone: TimeZone = .current
     ) -> String {
         if needsSetup { return "Setup needed" }
         guard let lastSuccess else { return "Loading…" }
-        return "\(badgeCount) waiting on you · updated \(ClockText.hhmm(lastSuccess, timeZone: timeZone))"
+        let base = "\(badgeCount) waiting on you · updated \(ClockText.hhmm(lastSuccess, timeZone: timeZone))"
+        return newCount > 0 ? "\(base) · \(newCount) new" : base
     }
 }

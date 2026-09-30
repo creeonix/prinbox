@@ -6,7 +6,7 @@ Run them before a release.
 - [ ] The popover opens anchored under the icon; the tiling window manager leaves it alone.
 - [ ] The popover draws above bars that use the pop-up window level (for example OmniWM's workspace bar).
 - [ ] Clicking outside closes the popover.
-- [ ] ↑/↓ move the selection, Enter opens a PR and closes the popover, R refreshes, Esc closes.
+- [ ] ↑/↓ move the selection, Enter opens a PR and closes the popover, S snoozes, U unsnoozes, R refreshes, Esc closes.
 - [ ] After Esc (or closing with the shortcut), typing goes to the app you were in before.
 - [ ] Clicking the icon while the popover is open closes it (it does not reopen).
 - [ ] Row tooltips (full owner/name) draw above the popover.
@@ -28,3 +28,17 @@ Run them before a release.
 - [ ] Start recording a shortcut, leave Settings with the back button: the old shortcut opens the popover again at once.
 - [ ] Change the login item in System Settings > General > Login Items, reopen Settings: the toggle shows the new state.
 - [ ] With the network off, open the popover (initials show); turn the network on, wait five minutes, reopen: avatars load.
+- [ ] S on a selected PR moves it to Waiting on others with the moon glyph and "Snoozed"; the selection lands on the next row; the badge count drops.
+- [ ] U on the snoozed row brings it back to its section with its original waiting time.
+- [ ] Right-clicking a row opens the menu inside the popover; Open on GitHub, Snooze until it changes (Unsnooze on a snoozed row) and Copy link work.
+- [ ] A snooze survives quitting and relaunching PRInbox; `~/Library/Application Support/prinbox/state.json` lists it.
+- [ ] Pushing a commit (or commenting) on a snoozed PR wakes it on the next refresh, marked with a dot.
+- [ ] `Prinbox --print` shows the snoozed PR under Waiting on others as "· Snoozed".
+- [ ] After a change on GitHub, the row shows the dot and the header says "· 1 new"; closing and reopening the popover clears both.
+- [ ] Settings > Notify about new review requests: turning it on shows the macOS permission prompt; declining shows the note under the toggle.
+- [ ] With the popover closed, a new review request gives one banner (title, org/repo); clicking it opens the PR. Two at once give one banner that opens the popover.
+- [ ] Nothing fires while the popover is open; the rows get dots instead.
+- [ ] `swift run Prinbox` with notifications on does not crash, and Settings says they are not available.
+- [ ] Settings > Compact rows: every section shows one-line rows with the age; ↑/↓ and Enter still work; turning it off restores the full rows.
+- [ ] VoiceOver reads an organization separator as "acme, 3 pull requests".
+- [ ] Clicking an older banner while the popover is open opens that PR; the popover closes on its own when the browser comes to the front.

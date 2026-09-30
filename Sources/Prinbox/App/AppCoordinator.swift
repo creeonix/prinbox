@@ -11,6 +11,8 @@ final class AppCoordinator {
     private let store: InboxStore
     private let state: PopoverState
     private let hotKeys: HotKeySettings
+    private let notifications: NotificationSettings
+    private let notifier = Notifier()
     private let loginItem = LoginItem()
     private let avatars: AvatarImages
     private let info: AppInfo
@@ -23,11 +25,22 @@ final class AppCoordinator {
     private let isDemo: Bool
 
     /// In demo mode the inbox comes from `DemoFetcher`, preferences live in a separate suite with every
-    /// section open, and no global shortcut is registered, so a demo never touches the real setup.
+    /// section open, the state (one snooze, three new rows) stays in memory, and no global shortcut is
+    /// registered, so a demo never touches the real setup.
     init(demo: Bool = false) {
         let defaults = demo ? Self.demoDefaults() : UserDefaults.standard
         let client = GhClient()
-        let store = InboxStore(fetcher: demo ? DemoFetcher() : client)
+        let fetcher: InboxFetching
+        let persistence: StatePersisting
+        if demo {
+            let demoFetcher = DemoFetcher()
+            fetcher = demoFetcher
+            persistence = MemoryStatePersistence(demoFetcher.initialState)
+        } else {
+            fetcher = client
+            persistence = JSONStateFile(url: JSONStateFile.defaultURL())
+        }
+        let store = InboxStore(fetcher: fetcher, state: StateStore(persistence: persistence))
         isDemo = demo
         self.client = client
         info = AppInfo(client: client)
@@ -40,6 +53,7 @@ final class AppCoordinator {
         let colors = OrgColorStore(defaults: defaults)
         state = PopoverState(store: store, folds: FoldStore(defaults: defaults), display: display, colors: colors)
         hotKeys = HotKeySettings(defaults: defaults)
+        notifications = NotificationSettings(defaults: defaults)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.defaultDirectory(bundleID: Self.bundleID)))
     }
 
@@ -48,14 +62,20 @@ final class AppCoordinator {
         state.onSettingsOpened = { [weak self] in
             self?.info.refresh()
             self?.loginItem.refresh()
+            Task { await self?.notifier.refresh() }
         }
+        notifier.onOpen = { [weak self] url in
+            if let url { NSWorkspace.shared.open(url) } else { self?.showPopover() }
+        }
+        notifier.start()
+        store.onArrivals = { [weak self] rows in self?.notify(rows) }
         statusItem = StatusItemController(
             onLeftClick: { [weak self] in self?.togglePopover() },
             onRefresh: { [weak self] in self?.refreshNow() },
             onOpenUpdate: { [weak self] in self?.openUpdate() })
         let root = InboxView(
             state: state, avatars: avatars, hotKeys: hotKeys, loginItem: loginItem,
-            info: info, updates: updates, actions: makeActions())
+            info: info, updates: updates, notifications: notifications, notifier: notifier, actions: makeActions())
         popover = PopoverController(
             rootView: root,
             keyHandler: { [weak self] event in self?.handleKey(event) ?? false },
@@ -82,11 +102,21 @@ final class AppCoordinator {
         PopoverActions(
             open: { [weak self] url in self?.open(url) },
             refresh: { [weak self] in self?.refreshNow() },
-            quit: { NSApp.terminate(nil) },
+            quit: { [weak self] in
+                self?.state.popoverDidClose()
+                NSApp.terminate(nil)
+            },
             toggleShortcutRecording: { [weak self] in self?.toggleShortcutRecording() },
             setShortcut: { [weak self] spec in self?.setShortcut(spec) },
             setLaunchAtLogin: { [weak self] enabled in self?.loginItem.setEnabled(enabled) },
-            copy: { [weak self] command in self?.copy(command) })
+            copy: { [weak self] command in self?.copy(command) },
+            snooze: { [weak self] id in self?.state.snooze(id) },
+            unsnooze: { [weak self] id in self?.state.unsnooze(id) },
+            copyLink: { url in
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(url.absoluteString, forType: .string)
+            },
+            setNotifications: { [weak self] enabled in self?.setNotifications(enabled) })
     }
 
     private func copy(_ command: String) {
@@ -108,13 +138,39 @@ final class AppCoordinator {
         }
     }
 
-    /// Closing mid-recording ends it; the hook re-registers the shortcut that recording suspended.
-    /// Showing the popover activated prinbox; when it closes by Esc or the shortcut, hiding hands focus back
-    /// to the previous app. A close for an opened PR leaves activation to the browser.
+    /// Closing marks the rows shown as seen and ends a recording in progress (the hook re-registers the
+    /// shortcut that recording suspended). Showing the popover activated prinbox; when it closes by Esc or
+    /// the shortcut, hiding hands focus back to the previous app. A close for an opened PR leaves activation
+    /// to the browser.
     private func popoverDidClose() {
-        if state.isRecordingShortcut { state.stopRecording() }
+        state.popoverDidClose()
         if !closingForBrowser && NSApp.isActive { NSApp.hide(nil) }
         closingForBrowser = false
+    }
+
+    /// One banner per refresh, only while the popover is closed: an open popover already shows the dots.
+    /// The permission is re-read each time, so one granted later in System Settings takes effect at once.
+    private func notify(_ rows: [InboxRow]) {
+        guard notifications.isEnabled, !(popover?.isShown ?? false), let notice = ArrivalNotice.make(rows) else {
+            return
+        }
+        Task {
+            await notifier.refresh()
+            guard notifier.status == .authorized else { return }
+            notifier.deliver(notice)
+        }
+    }
+
+    private func showPopover() {
+        guard let anchor = statusItem?.anchor, let popover, !popover.isShown else { return }
+        popover.show(relativeTo: anchor)
+    }
+
+    /// Turning the setting on asks macOS; a refusal keeps the setting on and Settings shows what to fix.
+    private func setNotifications(_ enabled: Bool) {
+        notifications.setEnabled(enabled)
+        // A refusal is not an error here: refresh() surfaces the status as the Settings note.
+        if enabled { Task { await notifier.requestAuthorization() } }
     }
 
     private func refreshNow() {

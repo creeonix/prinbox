@@ -39,10 +39,11 @@ struct SectionView: View {
         }
     }
 
+    /// Waiting on others is always compact; "Compact rows" makes every section so.
     @ViewBuilder private func rowView(_ row: InboxRow) -> some View {
         let selected = state.isSelected(.row(row.id))
         Group {
-            if section.kind.usesCompactRows {
+            if section.kind.usesCompactRows || state.display.compactRows {
                 CompactRowView(row: row, state: state, isSelected: selected) { actions.open(row.pullRequest.url) }
             } else {
                 PullRequestRowView(row: row, state: state, avatars: avatars, isSelected: selected) {
@@ -50,6 +51,7 @@ struct SectionView: View {
                 }
             }
         }
+        .contextMenu { RowContextMenu(row: row, isSnoozed: state.store.state.isSnoozed(row.id), actions: actions) }
         .id(InboxItemID.row(row.id))
         .onHover { inside in if inside { state.select(.row(row.id)) } }
     }

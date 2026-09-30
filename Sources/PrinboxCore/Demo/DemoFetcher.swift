@@ -2,23 +2,42 @@ import Foundation
 
 /// Sample inbox for screenshots and demos (`Prinbox --demo`). It never runs gh; every repository and
 /// login is fictional (three orgs: acme, globex, initech), every mark state appears at least once, and
-/// every time is relative to `now` so ages always read naturally.
+/// every time is relative to the moment the fetcher was created, so ages read naturally and refreshes
+/// return identical PRs: nothing "changes", the demo snooze stays asleep and the new marks stay put.
 public struct DemoFetcher: InboxFetching {
-    private let now: @Sendable () -> Date
+    private let base: Date
 
     public init(now: @escaping @Sendable () -> Date = { Date() }) {
-        self.now = now
+        base = now()
     }
 
     public func fetch() async throws -> FetchResult {
-        let prs = DemoData.pullRequests(now: now())
+        let prs = DemoData.pullRequests(now: base)
         let counts = Dictionary(grouping: prs, by: \.source).mapValues(\.count)
         let fetched = Dictionary(uniqueKeysWithValues: SearchSource.allCases.map { ($0, counts[$0] ?? 0) })
         return FetchResult(viewerLogin: "me", pullRequests: prs, totals: fetched, fetched: fetched, warnings: [])
     }
+
+    /// One snoozed review request and three rows that are new since the last look, for screenshots.
+    public var initialState: AppState { DemoData.initialState(now: base) }
 }
 
 enum DemoData {
+    /// The re-requested review is parked; a second Take-another-look PR keeps that section populated.
+    static let snoozedID = "DEMO_1284"
+    /// Two review requests and the mention are new since the last look.
+    static let newIDs: Set<String> = ["DEMO_2104", "DEMO_482", "DEMO_58"]
+
+    static func initialState(now: Date) -> AppState {
+        let prs = pullRequests(now: now)
+        let snoozed = prs.filter { $0.id == snoozedID }.map {
+            ($0.id, SnoozeEntry(snoozedAt: now.addingTimeInterval(-3600), updatedAt: $0.updatedAt))
+        }
+        let seen = prs.filter { !newIDs.contains($0.id) }.map { ($0.id, $0.updatedAt) }
+        return AppState(
+            snoozed: Dictionary(uniqueKeysWithValues: snoozed), seen: Dictionary(uniqueKeysWithValues: seen))
+    }
+
     static func pullRequests(now: Date) -> [PullRequest] {
         func ago(_ hours: Double) -> Date { now.addingTimeInterval(-hours * 3600) }
         func pr(
@@ -53,6 +72,9 @@ enum DemoData {
             pr(
                 1284, "Cache avatar images on disk", repo: "acme/web", author: "dave",
                 96, 12, updated: 3, source: .review, decision: .approved, comments: 12, reviewed: 50, requested: 3),
+            pr(
+                917, "Add a retry budget to the sync worker", repo: "globex/sync", author: "grace",
+                210, 44, updated: 5, source: .review, comments: 6, reviewed: 30, requested: 5),
             pr(
                 58, "Document the release process", repo: "initech/docs", author: "erin",
                 140, 6, updated: 0.5, source: .mentions, ci: .none, comments: 4),

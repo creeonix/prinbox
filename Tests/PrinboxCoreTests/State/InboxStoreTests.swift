@@ -162,4 +162,123 @@ final class StoreHolder {
                 "acme restricts gh (OAuth app access): results incomplete",
             ])
     }
+
+    @Test func snoozeMovesTheRowAndUnsnoozeRestoresIt() async {
+        let store = InboxStore(fetcher: ScriptedFetcher { _ in makeResult([makePR(id: "a"), makePR(id: "b")]) })
+        let changes = Counter()
+        await store.refresh()
+        store.onInboxChange = { changes.bump() }
+        store.snooze("a")
+        #expect(store.inbox?.badgeCount == 1)
+        #expect(store.inbox?.section(.waitingOnOthers)?.rows.map(\.id) == ["a"])
+        #expect(store.state.isSnoozed("a"))
+        #expect(changes.value == 1)
+        store.snooze("a")
+        store.snooze("unknown")
+        #expect(changes.value == 1)
+        store.unsnooze("a")
+        #expect(store.inbox?.badgeCount == 2)
+        #expect(store.inbox?.section(.waitingOnOthers) == nil)
+        store.unsnooze("a")
+        #expect(changes.value == 2)
+    }
+
+    @Test func snoozesSurviveARefreshUntilThePullRequestChanges() async {
+        let old = date("2026-08-01T10:00:00Z")
+        let fetcher = ScriptedFetcher { call in
+            makeResult([makePR(id: "a", updatedAt: call < 3 ? old : old.addingTimeInterval(60))])
+        }
+        let store = InboxStore(fetcher: fetcher)
+        await store.refresh()
+        store.snooze("a")
+        await store.refresh()
+        #expect(store.inbox?.badgeCount == 0)
+        await store.refresh()
+        #expect(store.inbox?.badgeCount == 1)
+        #expect(!store.state.isSnoozed("a"))
+    }
+
+    @Test func arrivalsAreTheDiffAgainstThePreviousFetch() async {
+        let old = date("2026-08-01T10:00:00Z")
+        let newer = date("2026-08-02T10:00:00Z")
+        let fetcher = ScriptedFetcher { call in
+            switch call {
+            case 1:
+                makeResult([
+                    makePR(id: "a", number: 1, updatedAt: old),
+                    makePR(id: "d", number: 3, isDraft: true, updatedAt: old),
+                ])
+            case 2:
+                makeResult([
+                    makePR(id: "a", number: 1, updatedAt: newer), makePR(id: "b", number: 2, updatedAt: old),
+                    makePR(id: "d", number: 3, isDraft: true, updatedAt: newer),
+                    makePR(id: "m", number: 4, source: .mentions),
+                ])
+            default:
+                makeResult([makePR(id: "a", number: 1, updatedAt: newer), makePR(id: "b", number: 2, updatedAt: old)])
+            }
+        }
+        let store = InboxStore(fetcher: fetcher)
+        let seen = Counter()
+        store.onArrivals = { rows in
+            seen.bump()
+            #expect(rows.map(\.id) == ["a", "b"])
+        }
+        await store.refresh()
+        #expect(store.arrivals.isEmpty)
+        #expect(seen.value == 0)
+        await store.refresh()
+        #expect(store.arrivals.map(\.id) == ["a", "b"])
+        #expect(seen.value == 1)
+        await store.refresh()
+        #expect(store.arrivals.isEmpty)
+        #expect(seen.value == 1)
+    }
+
+    @Test func snoozeClearsTheArrivals() async {
+        let fetcher = ScriptedFetcher { call in
+            call == 1 ? makeResult([]) : makeResult([makePR(id: "a")])
+        }
+        let store = InboxStore(fetcher: fetcher)
+        await store.refresh()
+        await store.refresh()
+        #expect(store.arrivals.map(\.id) == ["a"])
+        store.snooze("a")
+        #expect(store.arrivals.isEmpty)
+    }
+
+    @Test func anInjectedStateStoreIsUsedForSnoozes() async {
+        let memory = MemoryStatePersistence(AppState(snoozed: ["a": SnoozeEntry(snoozedAt: start, updatedAt: start)]))
+        let store = InboxStore(
+            fetcher: ScriptedFetcher { _ in makeResult([makePR(id: "a", updatedAt: start)]) },
+            state: StateStore(persistence: memory))
+        await store.refresh()
+        #expect(store.inbox?.badgeCount == 0)
+        #expect(memory.saved?.seen == ["a": start])
+    }
+
+    @Test func pullRequestsMissingFromAnIncompleteFetchDoNotArriveWhenTheyReturn() async {
+        let old = date("2026-08-01T10:00:00Z")
+        let fetcher = ScriptedFetcher { call in
+            switch call {
+            case 2:
+                makeResult(
+                    [makePR(id: "b", number: 2, updatedAt: old)],
+                    warnings: ["acme requires SSO re-authorization: results incomplete"])
+            case 3:
+                makeResult([
+                    makePR(id: "a", number: 1, updatedAt: old), makePR(id: "b", number: 2, updatedAt: old),
+                    makePR(id: "c", number: 3, updatedAt: old),
+                ])
+            default:
+                makeResult([makePR(id: "a", number: 1, updatedAt: old), makePR(id: "b", number: 2, updatedAt: old)])
+            }
+        }
+        let store = InboxStore(fetcher: fetcher)
+        await store.refresh()
+        await store.refresh()
+        #expect(store.arrivals.isEmpty)
+        await store.refresh()
+        #expect(store.arrivals.map(\.id) == ["c"])
+    }
 }

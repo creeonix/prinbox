@@ -26,4 +26,12 @@ import Testing
         #expect(!(oneOh < oneOhOh) && !(oneOhOh < oneOh))
         #expect(tenth < oneOh)
     }
+
+    @Test func signedAndNonDigitComponentsDoNotParse() {
+        #expect(AppVersion("1.-2") == nil)
+        #expect(AppVersion("+1.0") == nil)
+        #expect(AppVersion("1. 2") == nil)
+        #expect(AppVersion("v1.٢") == nil)
+        #expect(AppVersion("007.1")?.components == [7, 1])
+    }
 }

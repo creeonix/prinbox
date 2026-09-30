@@ -10,7 +10,7 @@ struct HeaderView: View {
             Text(
                 RowText.header(
                     badgeCount: state.store.inbox?.badgeCount ?? 0, lastSuccess: state.store.lastSuccess,
-                    needsSetup: state.store.needsSetup)
+                    needsSetup: state.store.needsSetup, newCount: state.newCount)
             )
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(.secondary)

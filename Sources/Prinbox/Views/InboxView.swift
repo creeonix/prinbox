@@ -13,12 +13,16 @@ struct InboxView: View {
     let loginItem: LoginItem
     let info: AppInfo
     let updates: UpdateStore
+    let notifications: NotificationSettings
+    let notifier: Notifier
     let actions: PopoverActions
 
     var body: some View {
         VStack(spacing: 0) {
             if state.showingSettings {
-                SettingsView(state: state, hotKeys: hotKeys, loginItem: loginItem, info: info, actions: actions)
+                SettingsView(
+                    state: state, hotKeys: hotKeys, loginItem: loginItem, info: info, notifications: notifications,
+                    notifier: notifier, actions: actions)
             } else {
                 HeaderView(state: state, actions: actions)
                 WarningLinesView(lines: state.store.warningLines)

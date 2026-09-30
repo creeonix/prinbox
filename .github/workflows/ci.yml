@@ -23,5 +23,7 @@ jobs:
           swift --version
       - name: Lint
         run: make lint
+      - name: Release notes for the Makefile version
+        run: scripts/release-notes.sh
       - name: Test with coverage
         run: make coverage

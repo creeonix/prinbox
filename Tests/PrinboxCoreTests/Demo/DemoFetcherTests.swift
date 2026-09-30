@@ -16,7 +16,7 @@ import Testing
     }
 
     @Test func badgeCountsTheNonDraftReviewAndMentionRows() async throws {
-        #expect(try await inbox().badgeCount == 5)
+        #expect(try await inbox().badgeCount == 6)
     }
 
     @Test func spansThreeFictionalOrganizations() async throws {
@@ -40,5 +40,31 @@ import Testing
     @Test func agesAreRelativeToNow() async throws {
         let review = try #require(try await inbox().section(.needsReview)?.rows.first)
         #expect(RowText.meta(review, now: now).contains("waiting 2d"))
+    }
+
+    @Test func refreshesReturnIdenticalPullRequests() async throws {
+        let clock = TestClock(now)
+        let fetcher = DemoFetcher(now: { clock.now })
+        let first = try await fetcher.fetch()
+        clock.advance(3600)
+        let second = try await fetcher.fetch()
+        #expect(first == second)
+    }
+
+    @Test func initialStateParksOneReviewRequestAndLeavesThreeRowsNew() async throws {
+        let clock = now
+        let fetcher = DemoFetcher(now: { clock })
+        let state = fetcher.initialState
+        let result = try await fetcher.fetch()
+        let snoozed = try #require(result.pullRequests.first { $0.id == "DEMO_1284" })
+        let entry = SnoozeEntry(snoozedAt: now.addingTimeInterval(-3600), updatedAt: snoozed.updatedAt)
+        #expect(state.snoozed == ["DEMO_1284": entry])
+        #expect(state.seen?.count == result.pullRequests.count - 3)
+        let unseen = result.pullRequests.filter { state.seen?[$0.id] == nil }.map(\.id)
+        #expect(Set(unseen) == ["DEMO_2104", "DEMO_482", "DEMO_58"])
+        let box = InboxBuilder.build(result, snoozed: Set(state.snoozed.keys))
+        #expect(box.sections.map(\.kind) == SectionKind.allCases)
+        #expect(box.badgeCount == 5)
+        #expect(box.section(.waitingOnOthers)?.rows.last?.classification.reason == .snoozed)
     }
 }
