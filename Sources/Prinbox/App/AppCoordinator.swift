@@ -11,6 +11,8 @@ final class AppCoordinator {
     private let store: InboxStore
     private let state: PopoverState
     private let hotKeys: HotKeySettings
+    private let notifications: NotificationSettings
+    private let notifier = Notifier()
     private let loginItem = LoginItem()
     private let avatars: AvatarImages
     private let info: AppInfo
@@ -51,6 +53,7 @@ final class AppCoordinator {
         let colors = OrgColorStore(defaults: defaults)
         state = PopoverState(store: store, folds: FoldStore(defaults: defaults), display: display, colors: colors)
         hotKeys = HotKeySettings(defaults: defaults)
+        notifications = NotificationSettings(defaults: defaults)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.defaultDirectory(bundleID: Self.bundleID)))
     }
 
@@ -59,14 +62,20 @@ final class AppCoordinator {
         state.onSettingsOpened = { [weak self] in
             self?.info.refresh()
             self?.loginItem.refresh()
+            Task { await self?.notifier.refresh() }
         }
+        notifier.onOpen = { [weak self] url in
+            if let url { NSWorkspace.shared.open(url) } else { self?.showPopover() }
+        }
+        notifier.start()
+        store.onArrivals = { [weak self] rows in self?.notify(rows) }
         statusItem = StatusItemController(
             onLeftClick: { [weak self] in self?.togglePopover() },
             onRefresh: { [weak self] in self?.refreshNow() },
             onOpenUpdate: { [weak self] in self?.openUpdate() })
         let root = InboxView(
             state: state, avatars: avatars, hotKeys: hotKeys, loginItem: loginItem,
-            info: info, updates: updates, actions: makeActions())
+            info: info, updates: updates, notifications: notifications, notifier: notifier, actions: makeActions())
         popover = PopoverController(
             rootView: root,
             keyHandler: { [weak self] event in self?.handleKey(event) ?? false },
@@ -103,7 +112,8 @@ final class AppCoordinator {
             copyLink: { url in
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(url.absoluteString, forType: .string)
-            })
+            },
+            setNotifications: { [weak self] enabled in self?.setNotifications(enabled) })
     }
 
     private func copy(_ command: String) {
@@ -133,6 +143,25 @@ final class AppCoordinator {
         state.popoverDidClose()
         if !closingForBrowser && NSApp.isActive { NSApp.hide(nil) }
         closingForBrowser = false
+    }
+
+    /// One banner per refresh, only while the popover is closed: an open popover already shows the dots.
+    private func notify(_ rows: [InboxRow]) {
+        guard notifications.isEnabled, notifier.status == .authorized, !(popover?.isShown ?? false),
+            let notice = ArrivalNotice.make(rows)
+        else { return }
+        notifier.deliver(notice)
+    }
+
+    private func showPopover() {
+        guard let anchor = statusItem?.anchor, let popover, !popover.isShown else { return }
+        popover.show(relativeTo: anchor)
+    }
+
+    /// Turning the setting on asks macOS; a refusal keeps the setting on and Settings shows what to fix.
+    private func setNotifications(_ enabled: Bool) {
+        notifications.setEnabled(enabled)
+        if enabled { Task { await notifier.requestAuthorization() } }
     }
 
     private func refreshNow() {
