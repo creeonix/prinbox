@@ -70,6 +70,27 @@ final class ReceivedRows {
         #expect(store.isRefreshing == false)
     }
 
+    @Test func aToggleDuringAFetchDoesNotLetItsFingerprintSkipTheFollowUp() async {
+        let holder = StoreHolder()
+        let prs = [makePR(id: "a")]
+        let fetcher = ScriptedFetcher(outcomes: { call, _ in
+            if call == 1, let store = await holder.store {
+                await store.setIncludeConversation(false)
+                await store.refresh()
+            }
+            return .result(makeResult(prs))
+        })
+        let store = InboxStore(fetcher: fetcher)
+        holder.store = store
+        await store.refresh()
+        let requests = await fetcher.requests
+        #expect(requests.count == 2)
+        #expect(requests[1].previous == nil)
+        #expect(requests[1].includeConversation == false)
+        await store.refresh()
+        #expect(await fetcher.requests.last?.previous != nil)
+    }
+
     @Test func rateLimitPausesRefreshesUntilReset() async {
         let clock = TestClock(start)
         let reset = start.addingTimeInterval(600)

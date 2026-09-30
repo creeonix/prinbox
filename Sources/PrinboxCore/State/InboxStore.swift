@@ -142,7 +142,8 @@ public final class InboxStore {
 
     private func fetchOnce() async {
         do {
-            switch try await fetcher.fetch(nextRequest()) {
+            let request = nextRequest()
+            switch try await fetcher.fetch(request) {
             case .unchanged:
                 error = nil
                 lastSuccess = clock()
@@ -154,7 +155,8 @@ public final class InboxStore {
                 arrivals = arrived
                 known = Self.baseline(after: result, extending: known)
                 lastResult = result
-                fingerprint = result.fingerprint
+                // A toggle during the fetch already cleared the fingerprint; this result answers the old question.
+                fingerprint = request.includeConversation == includeConversation ? result.fingerprint : nil
                 lastFullFetch = clock()
                 inbox = built
                 error = nil
