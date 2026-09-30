@@ -49,6 +49,9 @@ public final class PopoverState {
 
     public var showsSeparators: Bool { spansMultipleOrgs && display.groupByOrganization }
 
+    /// Compact rows outside Waiting on others carry the age, since the compact layout drops the meta line.
+    public func showsCompactAge(_ kind: SectionKind) -> Bool { display.compactRows && !kind.usesCompactRows }
+
     public func setGroupByOrganization(_ on: Bool) {
         display.setGroupByOrganization(on)
         reconcileSelection()

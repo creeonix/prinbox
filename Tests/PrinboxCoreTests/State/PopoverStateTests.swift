@@ -267,6 +267,16 @@ import Testing
         #expect(!state.isRecordingShortcut)
         #expect(ended.value == 1)
     }
+
+    @Test func compactAgeShowsOutsideWaitingOnOthersWhenCompactRowsIsOn() async {
+        let prs = [a]
+        let state = await makeState { _ in makeResult(prs) }
+        #expect(!state.showsCompactAge(.needsReview))
+        state.display.setCompactRows(true)
+        #expect(state.showsCompactAge(.needsReview))
+        #expect(state.showsCompactAge(.yourPRs))
+        #expect(!state.showsCompactAge(.waitingOnOthers))
+    }
 }
 
 @MainActor

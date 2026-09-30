@@ -26,12 +26,19 @@ public enum RowText {
         return [repoLabel(pr, showOrg: showOrg), age, "+\(pr.additions) −\(pr.deletions)"].joined(separator: " · ")
     }
 
-    /// The fixed tail of a compact row, after the truncating title: "· web", "· web · Draft", or
-    /// "· web · Snoozed" (a snoozed draft says Snoozed; the row is dimmed either way).
-    public static func compactTrailer(_ row: InboxRow, showOrg: Bool = false) -> String {
+    /// The fixed tail of a compact row, after the truncating title: "· web", "· web · Draft" or
+    /// "· web · Snoozed" (a snoozed draft says Snoozed; the row is dimmed either way), then "· 8h" when the
+    /// compact layout shows an age.
+    public static func compactTrailer(_ row: InboxRow, showOrg: Bool = false, age: String? = nil) -> String {
         let repo = "· \(repoLabel(row.pullRequest, showOrg: showOrg))"
-        if row.classification.reason == .snoozed { return "\(repo) · Snoozed" }
-        return row.pullRequest.isDraft ? "\(repo) · Draft" : repo
+        let status = row.classification.reason == .snoozed ? " · Snoozed" : row.pullRequest.isDraft ? " · Draft" : ""
+        return repo + status + (age.map { " · \($0)" } ?? "")
+    }
+
+    /// The age for a compact row outside Waiting on others: "8h" waiting, or "1h ago" since the last update.
+    public static func compactAge(_ row: InboxRow, now: Date) -> String {
+        row.classification.waitingSince.map { RelativeAge.format(from: $0, to: now) }
+            ?? "\(RelativeAge.format(from: row.pullRequest.updatedAt, to: now)) ago"
     }
 
     static func repoLabel(_ pr: PullRequest, showOrg: Bool) -> String {
