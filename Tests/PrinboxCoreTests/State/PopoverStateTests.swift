@@ -277,6 +277,30 @@ import Testing
         #expect(state.showsCompactAge(.yourPRs))
         #expect(!state.showsCompactAge(.waitingOnOthers))
     }
+
+    @Test func snoozeKeepsThePositionWithGroupingOn() async {
+        let prs = [
+            makePR(id: "a1", number: 1, repository: "acme/web", reviewRequestedAt: date("2026-08-02T10:00:00Z")),
+            makePR(id: "g", number: 2, repository: "globex/x", reviewRequestedAt: date("2026-08-03T10:00:00Z")),
+            makePR(id: "a2", number: 3, repository: "acme/web", reviewRequestedAt: date("2026-08-04T10:00:00Z")),
+        ]
+        let state = await makeState(grouped: true) { _ in makeResult(prs) }
+        #expect(state.items == [.header(.needsReview), .row("a1"), .row("a2"), .row("g")])
+        state.select(.row("a2"))
+        #expect(state.handle(.snooze) == .handled)
+        #expect(state.items == [.header(.needsReview), .row("a1"), .row("g"), .header(.waitingOnOthers), .row("a2")])
+        #expect(state.selection.current == .row("g"))
+    }
+
+    @Test func snoozeKeysIgnoreAMoreRow() async {
+        let prs = (1...9).map { makePR(id: "p\($0)", number: $0) }
+        let state = await makeState { _ in makeResult(prs) }
+        state.select(.more(.needsReview))
+        #expect(state.handle(.snooze) == .handled)
+        #expect(state.handle(.unsnooze) == .handled)
+        #expect(state.store.state.snoozedIDs.isEmpty)
+        #expect(state.selection.current == .more(.needsReview))
+    }
 }
 
 @MainActor

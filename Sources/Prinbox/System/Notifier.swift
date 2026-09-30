@@ -2,6 +2,7 @@ import AppKit
 import Observation
 import PrinboxCore
 import UserNotifications
+import os
 
 /// macOS notifications for arrivals. `UNUserNotificationCenter` aborts in a process without a bundle, so
 /// everything here is a no-op when the app runs from the build directory (`swift run`, `--print`, tests).
@@ -9,6 +10,7 @@ import UserNotifications
 @Observable
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let isAvailable = Bundle.main.bundleURL.pathExtension == "app"
+    nonisolated private static let log = Logger(subsystem: "io.github.creeonix.prinbox", category: "notifications")
 
     private(set) var status: NotificationStatus = Notifier.isAvailable ? .notDetermined : .unavailable
     /// A click: the PR to open, or nil to show the popover.
@@ -40,7 +42,11 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         content.title = notice.title
         content.body = notice.body
         if let url = notice.url { content.userInfo = ["url": url.absoluteString] }
-        center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+        center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)) { error in
+            if let error {
+                Self.log.error("notification not delivered: \(String(describing: error), privacy: .public)")
+            }
+        }
     }
 
     private static func status(_ status: UNAuthorizationStatus) -> NotificationStatus {

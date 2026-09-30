@@ -102,7 +102,10 @@ final class AppCoordinator {
         PopoverActions(
             open: { [weak self] url in self?.open(url) },
             refresh: { [weak self] in self?.refreshNow() },
-            quit: { NSApp.terminate(nil) },
+            quit: { [weak self] in
+                self?.state.popoverDidClose()
+                NSApp.terminate(nil)
+            },
             toggleShortcutRecording: { [weak self] in self?.toggleShortcutRecording() },
             setShortcut: { [weak self] spec in self?.setShortcut(spec) },
             setLaunchAtLogin: { [weak self] enabled in self?.loginItem.setEnabled(enabled) },
@@ -146,11 +149,16 @@ final class AppCoordinator {
     }
 
     /// One banner per refresh, only while the popover is closed: an open popover already shows the dots.
+    /// The permission is re-read each time, so one granted later in System Settings takes effect at once.
     private func notify(_ rows: [InboxRow]) {
-        guard notifications.isEnabled, notifier.status == .authorized, !(popover?.isShown ?? false),
-            let notice = ArrivalNotice.make(rows)
-        else { return }
-        notifier.deliver(notice)
+        guard notifications.isEnabled, !(popover?.isShown ?? false), let notice = ArrivalNotice.make(rows) else {
+            return
+        }
+        Task {
+            await notifier.refresh()
+            guard notifier.status == .authorized else { return }
+            notifier.deliver(notice)
+        }
     }
 
     private func showPopover() {
@@ -161,6 +169,7 @@ final class AppCoordinator {
     /// Turning the setting on asks macOS; a refusal keeps the setting on and Settings shows what to fix.
     private func setNotifications(_ enabled: Bool) {
         notifications.setEnabled(enabled)
+        // A refusal is not an error here: refresh() surfaces the status as the Settings note.
         if enabled { Task { await notifier.requestAuthorization() } }
     }
 
