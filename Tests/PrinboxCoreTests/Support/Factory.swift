@@ -29,7 +29,8 @@ func makePR(
     viewerReview: ViewerReview? = nil,
     reviewRequestedAt: Date? = nil,
     readyForReviewAt: Date? = nil,
-    source: SearchSource = .review
+    source: SearchSource = .review,
+    commentCount: Int = 0
 ) -> PullRequest {
     PullRequest(
         id: id,
@@ -51,7 +52,8 @@ func makePR(
         viewerReview: viewerReview,
         reviewRequestedAt: reviewRequestedAt,
         readyForReviewAt: readyForReviewAt,
-        source: source
+        source: source,
+        commentCount: commentCount
     )
 }
 
