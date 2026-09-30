@@ -67,7 +67,7 @@ final class QueryLog: @unchecked Sendable {
         let result = try await twoPhase(search: hits23, log: log).fetch()
         #expect(log.queries.count == 4)
         #expect(log.queries[0].hasPrefix("query InboxIDs"))
-        #expect(log.detailsQueries.map { TwoPhaseJSON.requestedIDs(in: $0).count } == [10, 10, 3])
+        #expect(log.detailsQueries.map { TwoPhaseJSON.requestedIDs(in: $0).count }.sorted() == [3, 10, 10])
         let expected = (1...3).map { "r\($0)" } + (1...5).map { "m\($0)" } + (1...15).map { "o\($0)" }
         #expect(result.pullRequests.map(\.id) == expected)
         #expect(result.pullRequests.first?.source == .review)
@@ -116,7 +116,7 @@ final class QueryLog: @unchecked Sendable {
             if call == 2 { return Self.ok(Data(), stderr: "gh: HTTP 502", exitCode: 1) }
             return Self.nodes(ids)
         }.fetch()
-        #expect(log.detailsQueries.map { TwoPhaseJSON.requestedIDs(in: $0).count } == [10, 5, 5])
+        #expect(log.detailsQueries.map { TwoPhaseJSON.requestedIDs(in: $0).count }.sorted() == [5, 5, 10])
         #expect(result.pullRequests.count == 10)
         #expect(result.pullRequests.map(\.id) == (1...10).map { "o\($0)" })
     }

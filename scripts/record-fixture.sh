@@ -15,7 +15,9 @@ template=$(swift run --package-path "$root" -q Prinbox --print-details-query)
 search=$(gh api graphql -f query="$query") || true
 [ -n "$search" ] || { echo "gh returned nothing for the search" >&2; exit 1; }
 
-details='[]'
+dir=$(mktemp -d)
+trap 'rm -rf "$dir"' EXIT
+count=0
 ids=$(jq -r '[.data | (.review, .mentions, .mine, .involved) | .nodes[]? | select(. != null and .id != null) | .id] | unique | .[]' <<<"$search")
 while read -r -a batch; do
     [ "${#batch[@]}" -gt 0 ] || continue
@@ -23,9 +25,12 @@ while read -r -a batch; do
     list=${list%, }
     part=$(gh api graphql -f query="${template//__IDS__/$list}") || true
     [ -n "$part" ] || { echo "gh returned nothing for a details batch" >&2; exit 1; }
-    details=$(jq -c --argjson part "$part" '. + [$part]' <<<"$details")
+    count=$((count + 1))
+    printf '%s\n' "$part" > "$(printf '%s/part-%03d.json' "$dir" "$count")"
 done < <(printf '%s\n' $ids | xargs -n 10)
 
-jq -n --argjson search "$search" --argjson details "$details" '{search: $search, details: $details}' \
+if [ "$count" -gt 0 ]; then jq -s '.' "$dir"/part-*.json > "$dir/details.json"; else echo '[]' > "$dir/details.json"; fi
+
+jq -n --argjson search "$search" --slurpfile details "$dir/details.json" '{search: $search, details: $details[0]}' \
     | jq -f "$root/scripts/anonymize.jq" > "$out"
 echo "wrote $out"

@@ -55,6 +55,7 @@ import Testing
             ids: ["PR_1", "bad\"id", "new\nline", "", "with space", "PR_2=="], includeConversation: false)
         #expect(text.contains("nodes(ids: [\"PR_1\", \"PR_2==\"])"))
         #expect(!text.contains("bad"))
+        #expect(DetailsQuery.text(ids: ["PR_9", "x y"], includeConversation: true).contains("nodes(ids: [\"PR_9\"])"))
         #expect(!DetailsQuery.isValidID("é"))
         #expect(DetailsQuery.isValidID("PR_kwDOABCD-5M6xyz="))
     }

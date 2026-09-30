@@ -64,6 +64,7 @@ struct WarningLinesView: View {
                     HStack(spacing: 6) {
                         Label(line, systemImage: "exclamationmark.triangle")
                             .lineLimit(1)
+                            .foregroundStyle(.orange)
                             .help(line)
                         if index == 0, let link, let open {
                             Button("Status page") { open(link) }
@@ -72,7 +73,6 @@ struct WarningLinesView: View {
                         }
                     }
                     .font(.system(size: 11))
-                    .foregroundStyle(.orange)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -95,7 +95,7 @@ public struct GhClient: InboxFetching {
         let result = try PullRequestMapper.merge(search: search, details: details)
         let elapsed = (ContinuousClock.now - started) / .milliseconds(1)
         Self.log.info(
-            "fetch: \(1 + details.count) requests, \(result.cost) points, \(result.pullRequests.count) PRs, \(Int(elapsed)) ms"
+            "fetch: \(1 + details.count) requests, \(result.cost) points, remaining \(search.data?.rateLimit?.remaining ?? -1), \(result.pullRequests.count) PRs, \(Int(elapsed)) ms"
         )
         let truncated = PullRequestMapper.truncatedPages(details)
         if truncated > 0 { Self.log.debug("fetch: \(truncated) thread pages truncated at the page size") }
@@ -112,10 +112,11 @@ public struct GhClient: InboxFetching {
             return [try Self.interpretDetails(output)]
         } catch let error as FetchError where maySplit && Self.isRetryable(error) {
             Self.log.notice(
-                "details batch of \(ids.count) failed: \(String(describing: error), privacy: .public); retrying split")
+                "details batch of \(ids.count) failed: \(String(describing: error), privacy: .private); retrying split")
             if ids.count == 1 {
                 return try await fetchDetails(gh, ids: ids, includeConversation: includeConversation, maySplit: false)
             }
+            try Task.checkCancellation()
             let half = (ids.count + 1) / 2
             async let first = fetchDetails(
                 gh, ids: Array(ids[..<half]), includeConversation: includeConversation, maySplit: false)
