@@ -9,6 +9,11 @@ final class StoreHolder {
 }
 
 @MainActor
+final class ReceivedRows {
+    var ids: [String] = []
+}
+
+@MainActor
 @Suite struct InboxStoreTests {
     let start = date("2026-08-10T12:00:00Z")
 
@@ -280,5 +285,101 @@ final class StoreHolder {
         #expect(store.arrivals.isEmpty)
         await store.refresh()
         #expect(store.arrivals.map(\.id) == ["c"])
+    }
+
+    @Test func unchangedKeepsTheInboxAndRefreshesTheClock() async {
+        let clock = TestClock(start)
+        let prs = [makePR(id: "a")]
+        let fetcher = ScriptedFetcher(outcomes: { call, _ in call == 1 ? .result(makeResult(prs)) : .unchanged })
+        let store = InboxStore(fetcher: fetcher, clock: { clock.now })
+        let changes = Counter()
+        store.onInboxChange = { changes.bump() }
+        await store.refresh()
+        clock.advance(300)
+        await store.refresh()
+        #expect(store.inbox?.badgeCount == 1)
+        #expect(store.lastSuccess == start.addingTimeInterval(300))
+        #expect(store.error == nil)
+        #expect(changes.value == 1)
+        #expect(store.arrivals.isEmpty)
+        #expect(store.isRefreshing == false)
+    }
+
+    @Test func thePreviousFingerprintRidesAlongWhileTheLastFullFetchIsFresh() async {
+        let clock = TestClock(start)
+        let prs = [makePR(id: "a")]
+        let fetcher = ScriptedFetcher(outcomes: { _, _ in .result(makeResult(prs)) })
+        let store = InboxStore(fetcher: fetcher, clock: { clock.now })
+        await store.refresh()
+        clock.advance(300)
+        await store.refresh()
+        let requests = await fetcher.requests
+        #expect(requests.count == 2)
+        #expect(requests[0].previous == nil)
+        #expect(requests[1].previous == ["a": prs[0].updatedAt])
+        let allFollowing = requests.allSatisfy(\.includeConversation)
+        #expect(allFollowing)
+    }
+
+    @Test func firstFetchAndToggleAndCeilingForceAFullFetch() async {
+        let clock = TestClock(start)
+        let prs = [makePR(id: "a")]
+        let fetcher = ScriptedFetcher(outcomes: { _, _ in .result(makeResult(prs)) })
+        let store = InboxStore(fetcher: fetcher, clock: { clock.now })
+        await store.refresh()
+        store.setIncludeConversation(false)
+        clock.advance(60)
+        await store.refresh()
+        clock.advance(60)
+        await store.refresh()
+        clock.advance(15 * 60)
+        await store.refresh()
+        let requests = await fetcher.requests
+        #expect(requests.map { $0.previous == nil } == [true, true, false, true])
+        #expect(requests.map(\.includeConversation) == [true, false, false, false])
+        #expect(store.includeConversation == false)
+        store.setIncludeConversation(false)
+        clock.advance(60)
+        await store.refresh()
+        #expect(await fetcher.requests.last?.previous != nil)
+    }
+
+    @Test func unchangedClearsAnEarlierErrorAndExposesTheStatusLink() async {
+        let clock = TestClock(start)
+        let fetcher = ScriptedFetcher(outcomes: { call, _ in
+            switch call {
+            case 1: return .result(makeResult([]))
+            case 2: throw FetchError.githubUnavailable(status: 502)
+            default: return .unchanged
+            }
+        })
+        let store = InboxStore(fetcher: fetcher, clock: { clock.now })
+        await store.refresh()
+        await store.refresh()
+        #expect(store.error == .githubUnavailable(status: 502))
+        #expect(store.warningLink == FetchError.statusPage)
+        #expect(store.warningLines.first?.hasPrefix("GitHub is having trouble (HTTP 502), showing data from") == true)
+        await store.refresh()
+        #expect(store.error == nil)
+        #expect(store.warningLink == nil)
+    }
+
+    @Test func arrivalsReachTheHandlerEvenWhenTheInboxHookSnoozes() async {
+        let holder = StoreHolder()
+        let received = ReceivedRows()
+        let old = date("2026-08-01T10:00:00Z")
+        let fetcher = ScriptedFetcher { call in
+            call == 1
+                ? makeResult([makePR(id: "a", updatedAt: old)])
+                : makeResult([makePR(id: "a", updatedAt: old), makePR(id: "b", number: 2)])
+        }
+        let store = InboxStore(fetcher: fetcher)
+        holder.store = store
+        store.onInboxChange = { holder.store?.snooze("b") }
+        store.onArrivals = { rows in received.ids = rows.map(\.id) }
+        await store.refresh()
+        await store.refresh()
+        #expect(received.ids == ["b"])
+        #expect(store.state.isSnoozed("b"))
     }
 }
