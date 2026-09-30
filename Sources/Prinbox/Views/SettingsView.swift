@@ -11,7 +11,7 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Button(action: { state.showingSettings = false }) { Label("Inbox", systemImage: "chevron.left") }
+            Button(action: { state.leaveSettings() }) { Label("Inbox", systemImage: "chevron.left") }
                 .buttonStyle(.borderless)
             SettingRow(title: "Global shortcut") {
                 ShortcutRecorderView(state: state, hotKeys: hotKeys, actions: actions)
@@ -26,6 +26,26 @@ struct SettingsView: View {
             }
             if let note = loginItem.note {
                 Text(note).font(.caption).foregroundStyle(.secondary)
+            }
+            SettingRow(title: "Group by organization") {
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { state.display.groupByOrganization },
+                        set: { state.setGroupByOrganization($0) })
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
+            }
+            SettingRow(title: "Show organization avatars") {
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { state.display.showOrganizationAvatars },
+                        set: { state.display.setShowOrganizationAvatars($0) })
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
             }
             Divider()
             InfoLine(label: "gh", value: info.ghPath ?? "not found")

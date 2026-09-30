@@ -4,7 +4,7 @@ import SwiftUI
 /// Root of the popover. All state lives in `PopoverState`; there is no view-local state, because the
 /// SwiftUI state macro plugin ships only with Xcode.
 struct InboxView: View {
-    static let width: CGFloat = 420
+    static let width: CGFloat = 460
     static let maxHeight: CGFloat = 600
 
     let state: PopoverState
@@ -12,6 +12,7 @@ struct InboxView: View {
     let hotKeys: HotKeySettings
     let loginItem: LoginItem
     let info: AppInfo
+    let updates: UpdateStore
     let actions: PopoverActions
 
     var body: some View {
@@ -21,6 +22,7 @@ struct InboxView: View {
             } else {
                 HeaderView(state: state, actions: actions)
                 WarningLinesView(lines: state.store.warningLines)
+                UpdateLineView(updates: updates, actions: actions)
                 Divider()
                 content
             }

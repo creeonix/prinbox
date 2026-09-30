@@ -8,13 +8,15 @@ public enum InboxItemID: Hashable, Sendable {
 }
 
 public enum InboxLayout {
-    /// Focusable items in display order. Rows and "more" rows of folded sections are skipped.
-    public static func visibleItems(_ inbox: Inbox, folded: Set<SectionKind>) -> [InboxItemID] {
+    /// Focusable items in display order. Rows and "more" rows of folded sections are skipped. With
+    /// `grouped`, rows follow the org groups, matching the grouped view.
+    public static func visibleItems(_ inbox: Inbox, folded: Set<SectionKind>, grouped: Bool = false) -> [InboxItemID] {
         inbox.sections.flatMap { section -> [InboxItemID] in
             let header = InboxItemID.header(section.kind)
             guard !folded.contains(section.kind) else { return [header] }
+            let rows = grouped ? section.groups.flatMap(\.rows) : section.rows
             let more: [InboxItemID] = section.moreCount > 0 ? [.more(section.kind)] : []
-            return [header] + section.rows.map { .row($0.id) } + more
+            return [header] + rows.map { .row($0.id) } + more
         }
     }
 }

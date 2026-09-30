@@ -16,12 +16,25 @@ import Testing
     }
 
     @Test func badgeCountsTheNonDraftReviewAndMentionRows() async throws {
-        #expect(try await inbox().badgeCount == 4)
+        #expect(try await inbox().badgeCount == 5)
     }
 
-    @Test func usesOnlyFictionalRepositories() async throws {
-        let rows = try await inbox().sections.flatMap(\.rows)
-        #expect(rows.allSatisfy { $0.pullRequest.repository.hasPrefix("acme/") })
+    @Test func spansThreeFictionalOrganizations() async throws {
+        let box = try await inbox()
+        let owners = Set(box.sections.flatMap(\.rows).map(\.pullRequest.ownerLogin))
+        #expect(owners == ["acme", "globex", "initech"])
+        #expect(box.spansMultipleOrgs)
+        #expect(box.sections.flatMap(\.rows).allSatisfy { $0.pullRequest.ownerIsOrganization })
+    }
+
+    @Test func coversEveryMarkState() async throws {
+        let marks = try await inbox().sections.flatMap(\.rows).map { RowMarks.marks(for: $0.pullRequest) }
+        #expect(Set(marks.compactMap(\.ci)) == [.passed, .failed, .running])
+        #expect(marks.contains { $0.ci == nil })
+        #expect(Set(marks.compactMap(\.review)) == [.approved, .changesRequested])
+        #expect(Set(marks.compactMap(\.merge)) == [.ready, .conflicts])
+        #expect(marks.contains { $0.comments == nil })
+        #expect(marks.contains { ($0.comments ?? 0) >= 10 })
     }
 
     @Test func agesAreRelativeToNow() async throws {

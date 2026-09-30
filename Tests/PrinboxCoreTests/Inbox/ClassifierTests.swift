@@ -65,6 +65,13 @@ import Testing
         #expect(result.reason == .waitingForReview)
     }
 
+    @Test func approvedWithRunningCIIsNotReadyToMerge() {
+        let result = classify(makePR(reviewDecision: .approved, ci: .pending, source: .mine))
+        #expect(result.section == .waitingOnOthers)
+        #expect(result.reason == .waitingForReview)
+        #expect(classify(makePR(reviewDecision: .approved, ci: .none, source: .mine)).reason == .readyToMerge)
+    }
+
     @Test func ownSectionsHaveNoWaitingSince() {
         #expect(classify(makePR(reviewDecision: .approved, source: .mine)).waitingSince == nil)
         #expect(classify(makePR(source: .mine)).waitingSince == nil)

@@ -11,6 +11,23 @@ import Testing
         InboxRow(pullRequest: pr, classification: Classifier.classify(pr))
     }
 
+    @Test func metaShowsTheOwnerOnlyWhenAsked() {
+        let pr = makePR(
+            repository: "globex/billing", additions: 1, deletions: 0,
+            reviewRequestedAt: date("2026-08-10T06:00:00Z"))
+        #expect(RowText.meta(row(pr), now: now) == "billing · waiting 6h · +1 −0")
+        #expect(RowText.meta(row(pr), now: now, showOrg: true) == "globex/billing · waiting 6h · +1 −0")
+        #expect(RowText.detail(row(pr), now: now) == "billing · waiting 6h · +1 −0 · Review requested")
+    }
+
+    @Test func compactTrailerNamesTheRepositoryAndDraft() {
+        let pr = makePR(repository: "globex/billing", source: .mine)
+        #expect(RowText.compactTrailer(row(pr)) == "· billing")
+        #expect(RowText.compactTrailer(row(pr), showOrg: true) == "· globex/billing")
+        let draft = makePR(repository: "globex/billing", isDraft: true, source: .mine)
+        #expect(RowText.compactTrailer(row(draft), showOrg: true) == "· globex/billing · Draft")
+    }
+
     @Test func titleShowsNumberAndTitle() {
         #expect(RowText.title(makePR(number: 12, title: "Fix it")) == "#12 Fix it")
     }

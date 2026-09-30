@@ -69,6 +69,8 @@ struct InboxResponse: Decodable {
         let viewerLatestReview: Review?
         let commits: Connection<CommitNode>?
         let timelineItems: Connection<TimelineNode>?
+        let totalCommentsCount: Int?
+        let latestOpinionatedReviews: Connection<ReviewState>?
     }
 
     struct Author: Decodable {
@@ -79,7 +81,22 @@ struct InboxResponse: Decodable {
     struct Repository: Decodable {
         let nameWithOwner: String
         let isArchived: Bool
+        let owner: Owner?
     }
+
+    struct Owner: Decodable {
+        let typename: String
+        let login: String
+        let avatarUrl: URL?
+
+        enum CodingKeys: String, CodingKey {
+            case typename = "__typename"
+            case login
+            case avatarUrl
+        }
+    }
+
+    struct ReviewState: Decodable { let state: String }
 
     struct Review: Decodable {
         let state: String

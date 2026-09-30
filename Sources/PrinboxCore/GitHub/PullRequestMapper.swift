@@ -52,13 +52,18 @@ enum PullRequestMapper {
             deletions: node.deletions,
             createdAt: node.createdAt,
             updatedAt: node.updatedAt,
-            reviewDecision: reviewDecision(node.reviewDecision),
+            reviewDecision: reviewDecision(
+                node.reviewDecision,
+                latestReviews: (node.latestOpinionatedReviews?.nodes ?? []).compactMap { $0?.state }),
             mergeable: mergeable(node.mergeable),
             ci: ciState(rollup),
             viewerReview: viewerReview(node.viewerLatestReview),
             reviewRequestedAt: reviewRequestedAt(events, viewer: viewer),
             readyForReviewAt: events.filter { $0.typename == "ReadyForReviewEvent" }.compactMap(\.createdAt).max(),
-            source: source
+            source: source,
+            commentCount: node.totalCommentsCount ?? 0,
+            ownerAvatarURL: node.repository.owner?.avatarUrl,
+            ownerIsOrganization: node.repository.owner?.typename == "Organization"
         )
     }
 
@@ -74,11 +79,15 @@ enum PullRequestMapper {
         return direct.compactMap(\.createdAt).max() ?? indirect.compactMap(\.createdAt).max()
     }
 
-    static func reviewDecision(_ raw: String?) -> ReviewDecision {
+    /// GitHub reports no decision for repositories that require no reviews; the latest opinionated
+    /// reviews stand in then: any request for changes blocks, otherwise any approval approves.
+    static func reviewDecision(_ raw: String?, latestReviews: [String]) -> ReviewDecision {
         switch raw {
         case "APPROVED": .approved
         case "CHANGES_REQUESTED": .changesRequested
         case "REVIEW_REQUIRED": .reviewRequired
+        case nil where latestReviews.contains("CHANGES_REQUESTED"): .changesRequested
+        case nil where latestReviews.contains("APPROVED"): .approved
         default: .none
         }
     }
@@ -101,8 +110,9 @@ enum PullRequestMapper {
         }
     }
 
+    /// Pending reviews are unsubmitted and dismissed ones no longer count, so neither is a review.
     static func viewerReview(_ review: InboxResponse.Review?) -> ViewerReview? {
-        guard let review, review.state != "PENDING" else { return nil }
+        guard let review, review.state != "PENDING", review.state != "DISMISSED" else { return nil }
         return ViewerReview(state: review.state, submittedAt: review.submittedAt)
     }
 }

@@ -22,6 +22,9 @@ final class LoginItem {
         return nil
     }
 
+    /// Re-reads the status, which System Settings can change behind the app's back.
+    func refresh() { status = SMAppService.mainApp.status }
+
     func setEnabled(_ enabled: Bool) {
         guard isInstalled else {
             lastError = "Install to /Applications (make install) first."

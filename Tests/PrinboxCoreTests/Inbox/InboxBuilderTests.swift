@@ -76,4 +76,39 @@ import Testing
         #expect(inbox.isEmpty)
         #expect(inbox.badgeCount == 0)
     }
+
+    @Test func groupsRowsByOwnerInOrderOfFirstAppearance() throws {
+        let prs = [
+            makePR(id: "a", number: 1, repository: "acme/web", reviewRequestedAt: date("2026-08-01T10:00:00Z")),
+            makePR(id: "g", number: 2, repository: "globex/billing", reviewRequestedAt: date("2026-08-02T10:00:00Z")),
+            makePR(id: "b", number: 3, repository: "acme/api", reviewRequestedAt: date("2026-08-03T10:00:00Z")),
+        ]
+        let section = try #require(InboxBuilder.build(makeResult(prs)).section(.needsReview))
+        #expect(section.groups.map(\.org) == ["acme", "globex"])
+        #expect(section.groups[0].rows.map(\.id) == ["a", "b"])
+        #expect(section.groups[1].rows.map(\.id) == ["g"])
+        #expect(section.rows.map(\.id) == ["a", "g", "b"])
+    }
+
+    @Test func spansMultipleOrgsLooksAtEveryRow() {
+        let one = InboxBuilder.build(
+            makeResult([makePR(id: "a", repository: "acme/web"), makePR(id: "b", repository: "acme/api")]))
+        #expect(one.spansMultipleOrgs == false)
+        #expect(one.sections[0].groups.count == 1)
+        let two = InboxBuilder.build(
+            makeResult([
+                makePR(id: "a", repository: "acme/web"),
+                makePR(id: "b", repository: "globex/api", source: .mine),
+            ]))
+        #expect(two.spansMultipleOrgs)
+        #expect(Inbox.empty.spansMultipleOrgs == false)
+    }
+
+    @Test func spansMultipleOrgsCountsRowsBeyondTheCap() {
+        let acme = (1...9).map { makePR(id: "a\($0)", number: $0, repository: "acme/web") }
+        let globex = [makePR(id: "g", number: 10, repository: "globex/api")]
+        let inbox = InboxBuilder.build(makeResult(acme + globex))
+        #expect(inbox.spansMultipleOrgs)
+        #expect(inbox.section(.needsReview)?.rows.count == 8)
+    }
 }

@@ -47,7 +47,7 @@ public struct GhClient: InboxFetching {
             throw FetchError.other("Could not run gh: \(error.localizedDescription)")
         }
         if output.exitCode != 0 {
-            Self.log.error("gh exited \(output.exitCode): \(String(output.stderr.prefix(500)), privacy: .public)")
+            Self.log.error("gh exited \(output.exitCode): \(String(output.stderr.prefix(500)), privacy: .private)")
         }
         return try Self.interpret(output)
     }

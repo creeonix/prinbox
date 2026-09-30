@@ -19,3 +19,12 @@ Run them before a release.
 - [ ] Signed out (`GH_CONFIG_DIR=$(mktemp -d) /Applications/PRInbox.app/Contents/MacOS/Prinbox`): red `!`, and the popover shows "Sign in to the GitHub CLI" with a working Copy button.
 - [ ] gh missing (`/Applications/PRInbox.app/Contents/MacOS/Prinbox -ghPath /nonexistent`): the popover shows the "gh not found" steps.
 - [ ] After fixing gh (for example `gh auth login`), the popover returns to the inbox within about 10 seconds without a click.
+- [ ] `make install VERSION=0.0.1`: after the first refresh the icon shows the up-arrow badge, the popover shows "PRInbox x.y.z is available", the right-click menu has "Download PRInbox x.y.z…", and all open the release page. `make install` (real version) clears them.
+- [ ] The popover is 460 pt wide, still opens under the icon, and the tiling window manager leaves it alone.
+- [ ] On the live account, org badges show the organization's real avatar after the first refresh; author avatars still load.
+- [ ] Hovering a mark shows its meaning (for example "CI running", "4 comments").
+- [ ] Settings > Group by organization: rows regroup under separators with a color dot, name and count; ↑/↓ walk the rows in the displayed order; turning it off restores the flat order.
+- [ ] Settings > Show organization avatars off hides the badges; on shows them again.
+- [ ] Start recording a shortcut, leave Settings with the back button: the old shortcut opens the popover again at once.
+- [ ] Change the login item in System Settings > General > Login Items, reopen Settings: the toggle shows the new state.
+- [ ] With the network off, open the popover (initials show); turn the network on, wait five minutes, reopen: avatars load.

@@ -18,10 +18,15 @@ struct SectionView: View {
             .id(InboxItemID.header(section.kind))
             .onHover { inside in if inside { state.select(.header(section.kind)) } }
             if !state.folds.isFolded(section.kind) {
-                ForEach(section.rows) { row in
-                    rowView(row)
-                        .id(InboxItemID.row(row.id))
-                        .onHover { inside in if inside { state.select(.row(row.id)) } }
+                if state.showsSeparators {
+                    ForEach(section.groups) { group in
+                        OrgSeparatorView(group: group, color: Theme.orgColor(state.colors.index(for: group.org)))
+                        ForEach(group.rows) { row in rowView(row) }
+                    }
+                } else if state.display.groupByOrganization {
+                    ForEach(section.groups.flatMap(\.rows)) { row in rowView(row) }
+                } else {
+                    ForEach(section.rows) { row in rowView(row) }
                 }
                 if section.moreCount > 0 {
                     MoreRowView(count: section.moreCount, isSelected: state.isSelected(.more(section.kind))) {
@@ -36,11 +41,17 @@ struct SectionView: View {
 
     @ViewBuilder private func rowView(_ row: InboxRow) -> some View {
         let selected = state.isSelected(.row(row.id))
-        if section.kind.usesCompactRows {
-            CompactRowView(row: row, isSelected: selected) { actions.open(row.pullRequest.url) }
-        } else {
-            PullRequestRowView(row: row, avatars: avatars, isSelected: selected) { actions.open(row.pullRequest.url) }
+        Group {
+            if section.kind.usesCompactRows {
+                CompactRowView(row: row, state: state, isSelected: selected) { actions.open(row.pullRequest.url) }
+            } else {
+                PullRequestRowView(row: row, state: state, avatars: avatars, isSelected: selected) {
+                    actions.open(row.pullRequest.url)
+                }
+            }
         }
+        .id(InboxItemID.row(row.id))
+        .onHover { inside in if inside { state.select(.row(row.id)) } }
     }
 }
 

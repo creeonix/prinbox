@@ -13,6 +13,8 @@ final class AppCoordinator {
     private let hotKeys: HotKeySettings
     private let loginItem = LoginItem()
     private let avatars: AvatarImages
+    private let info: AppInfo
+    private let updates: UpdateStore
     private let triggers = RefreshTriggers()
     private var statusItem: StatusItemController?
     private var popover: PopoverController?
@@ -28,19 +30,32 @@ final class AppCoordinator {
         let store = InboxStore(fetcher: demo ? DemoFetcher() : client)
         isDemo = demo
         self.client = client
+        info = AppInfo(client: client)
+        // Demo builds report "dev", so the store never checks there.
+        updates = UpdateStore(
+            currentVersion: demo ? "dev" : info.version, checker: GhReleaseChecker(locator: GhLocator()),
+            defaults: defaults)
         self.store = store
-        state = PopoverState(store: store, folds: FoldStore(defaults: defaults))
+        let display = DisplaySettings(defaults: defaults)
+        let colors = OrgColorStore(defaults: defaults)
+        state = PopoverState(store: store, folds: FoldStore(defaults: defaults), display: display, colors: colors)
         hotKeys = HotKeySettings(defaults: defaults)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.defaultDirectory(bundleID: Self.bundleID)))
     }
 
     func start() {
+        state.onRecordingEnded = { [weak self] in self?.applyHotKey() }
+        state.onSettingsOpened = { [weak self] in
+            self?.info.refresh()
+            self?.loginItem.refresh()
+        }
         statusItem = StatusItemController(
             onLeftClick: { [weak self] in self?.togglePopover() },
-            onRefresh: { [weak self] in self?.refreshNow() })
+            onRefresh: { [weak self] in self?.refreshNow() },
+            onOpenUpdate: { [weak self] in self?.openUpdate() })
         let root = InboxView(
             state: state, avatars: avatars, hotKeys: hotKeys, loginItem: loginItem,
-            info: AppInfo.current(client: client), actions: makeActions())
+            info: info, updates: updates, actions: makeActions())
         popover = PopoverController(
             rootView: root,
             keyHandler: { [weak self] event in self?.handleKey(event) ?? false },
@@ -52,7 +67,7 @@ final class AppCoordinator {
         }
         observeBadge()
         triggers.start(
-            { [weak self] in await self?.state.refresh() },
+            { [weak self] in await self?.refreshAll() },
             retrySetup: { [weak self] in await self?.store.retryIfSetupNeeded() })
         refreshNow()
     }
@@ -87,20 +102,33 @@ final class AppCoordinator {
 
     private func popoverWillShow() {
         state.popoverWillShow()
-        Task { await state.refreshIfStale() }
+        Task {
+            await state.refreshIfStale()
+            await updates.checkIfDue()
+        }
     }
 
-    /// Closing mid-recording cancels it, which re-registers the shortcut that recording suspended.
+    /// Closing mid-recording ends it; the hook re-registers the shortcut that recording suspended.
     /// Showing the popover activated prinbox; when it closes by Esc or the shortcut, hiding hands focus back
     /// to the previous app. A close for an opened PR leaves activation to the browser.
     private func popoverDidClose() {
-        if state.isRecordingShortcut { toggleShortcutRecording() }
+        if state.isRecordingShortcut { state.stopRecording() }
         if !closingForBrowser && NSApp.isActive { NSApp.hide(nil) }
         closingForBrowser = false
     }
 
     private func refreshNow() {
-        Task { await state.refresh() }
+        Task { await refreshAll() }
+    }
+
+    /// Every inbox refresh is also the moment to see whether a newer PRInbox exists (at most once a day).
+    private func refreshAll() async {
+        await state.refresh()
+        await updates.checkIfDue()
+    }
+
+    private func openUpdate() {
+        NSWorkspace.shared.open(updates.available?.url ?? GhReleaseChecker.releasesPage)
     }
 
     private func open(_ url: URL) {
@@ -136,23 +164,22 @@ final class AppCoordinator {
     /// could never be re-recorded.
     private func toggleShortcutRecording() {
         if state.isRecordingShortcut {
-            state.isRecordingShortcut = false
-            applyHotKey()
+            state.stopRecording()
         } else {
             hotKeyCenter?.unregister()
-            state.isRecordingShortcut = true
+            state.startRecording()
         }
     }
 
     /// Esc cancels. Keys without ⌃, ⌥ or ⌘ are swallowed and recording continues.
     private func recordShortcut(keyCode: UInt16, modifiers: HotKeyModifiers) -> Bool {
         if keyCode == 53 {
-            toggleShortcutRecording()
+            state.stopRecording()
             return true
         }
         guard let spec = HotKeySpec.recorded(keyCode: keyCode, modifiers: modifiers) else { return true }
-        state.isRecordingShortcut = false
-        setShortcut(spec)
+        hotKeys.update(spec)
+        state.stopRecording()
         return true
     }
 
@@ -168,7 +195,7 @@ final class AppCoordinator {
     /// Re-renders the status item whenever anything the badge depends on changes.
     private func observeBadge() {
         withObservationTracking {
-            statusItem?.render(store.badge)
+            statusItem?.render(store.badge, update: updates.available)
         } onChange: { [weak self] in
             Task { @MainActor in self?.observeBadge() }
         }
