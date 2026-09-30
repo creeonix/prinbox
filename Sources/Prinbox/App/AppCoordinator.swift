@@ -16,6 +16,7 @@ final class AppCoordinator {
     private let loginItem = LoginItem()
     private let avatars: AvatarImages
     private let info: AppInfo
+    private let updates: UpdateStore
     private let triggers = RefreshTriggers()
     private var statusItem: StatusItemController?
     private var popover: PopoverController?
@@ -32,6 +33,10 @@ final class AppCoordinator {
         isDemo = demo
         self.client = client
         info = AppInfo(client: client)
+        // Demo builds report "dev", so the store never checks there.
+        updates = UpdateStore(
+            currentVersion: demo ? "dev" : info.version, checker: GhReleaseChecker(locator: GhLocator()),
+            defaults: defaults)
         self.store = store
         display = DisplaySettings(defaults: defaults)
         colors = OrgColorStore(defaults: defaults)
@@ -48,10 +53,11 @@ final class AppCoordinator {
         }
         statusItem = StatusItemController(
             onLeftClick: { [weak self] in self?.togglePopover() },
-            onRefresh: { [weak self] in self?.refreshNow() })
+            onRefresh: { [weak self] in self?.refreshNow() },
+            onOpenUpdate: { [weak self] in self?.openUpdate() })
         let root = InboxView(
             state: state, avatars: avatars, hotKeys: hotKeys, loginItem: loginItem,
-            info: info, actions: makeActions())
+            info: info, updates: updates, actions: makeActions())
         popover = PopoverController(
             rootView: root,
             keyHandler: { [weak self] event in self?.handleKey(event) ?? false },
@@ -63,7 +69,7 @@ final class AppCoordinator {
         }
         observeBadge()
         triggers.start(
-            { [weak self] in await self?.state.refresh() },
+            { [weak self] in await self?.refreshAll() },
             retrySetup: { [weak self] in await self?.store.retryIfSetupNeeded() })
         refreshNow()
     }
@@ -111,7 +117,18 @@ final class AppCoordinator {
     }
 
     private func refreshNow() {
-        Task { await state.refresh() }
+        Task { await refreshAll() }
+    }
+
+    /// Every inbox refresh is also the moment to see whether a newer PRInbox exists (at most once a day).
+    private func refreshAll() async {
+        await state.refresh()
+        await updates.checkIfDue()
+    }
+
+    private func openUpdate() {
+        NSWorkspace.shared.open(
+            updates.available?.url ?? URL(string: "https://github.com/creeonix/prinbox/releases/latest")!)
     }
 
     private func open(_ url: URL) {
@@ -178,7 +195,7 @@ final class AppCoordinator {
     /// Re-renders the status item whenever anything the badge depends on changes.
     private func observeBadge() {
         withObservationTracking {
-            statusItem?.render(store.badge)
+            statusItem?.render(store.badge, update: updates.available)
         } onChange: { [weak self] in
             Task { @MainActor in self?.observeBadge() }
         }

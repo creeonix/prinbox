@@ -19,3 +19,4 @@ Run them before a release.
 - [ ] Signed out (`GH_CONFIG_DIR=$(mktemp -d) /Applications/PRInbox.app/Contents/MacOS/Prinbox`): red `!`, and the popover shows "Sign in to the GitHub CLI" with a working Copy button.
 - [ ] gh missing (`/Applications/PRInbox.app/Contents/MacOS/Prinbox -ghPath /nonexistent`): the popover shows the "gh not found" steps.
 - [ ] After fixing gh (for example `gh auth login`), the popover returns to the inbox within about 10 seconds without a click.
+- [ ] `make install VERSION=0.0.1`: after the first refresh the icon shows the up-arrow badge, the popover shows "PRInbox x.y.z is available", the right-click menu has "Download PRInbox x.y.z…", and all open the release page. `make install` (real version) clears them.

@@ -49,6 +49,9 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
 - **Stays fresh:** refreshes every 5 minutes, after wake and when opened; it keeps the last data while
   offline, and archived repositories are excluded.
 - **Launch at login**, from Settings in the popover.
+- **Update notice:** once a day PRInbox asks GitHub (through gh) for its latest release. When a newer one
+  exists, a line in the popover, a Download item in the icon's menu and a small badge on the icon link to
+  it. Dev builds never check.
 
 ## Install
 
@@ -132,7 +135,8 @@ tiling window manager to grab.
 - **No token handling:** GitHub access goes only through `gh api graphql`. PRInbox has no OAuth app,
   and never reads, stores or sends a token.
 - **Nothing leaves your Mac:** there is no telemetry and no server. The only network traffic is gh's
-  GitHub API call and avatar downloads from `avatars.githubusercontent.com`.
+  GitHub API calls (your inbox every five minutes, the latest PRInbox release once a day) and avatar
+  downloads from `avatars.githubusercontent.com`.
 - **Local data:** avatars are cached in `~/Library/Caches/io.github.creeonix.prinbox`. Settings live in
   the app's user defaults.
 

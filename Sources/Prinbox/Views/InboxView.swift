@@ -12,6 +12,7 @@ struct InboxView: View {
     let hotKeys: HotKeySettings
     let loginItem: LoginItem
     let info: AppInfo
+    let updates: UpdateStore
     let actions: PopoverActions
 
     var body: some View {
@@ -21,6 +22,7 @@ struct InboxView: View {
             } else {
                 HeaderView(state: state, actions: actions)
                 WarningLinesView(lines: state.store.warningLines)
+                UpdateLineView(updates: updates, actions: actions)
                 Divider()
                 content
             }
