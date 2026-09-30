@@ -57,9 +57,9 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
   `~/Library/Application Support/prinbox/state.json`.
 - **New since your last look:** rows that appeared or changed since you last closed the popover carry an accent
   bar at their left edge, and the header counts them.
-- **Notifications** (off by default): one banner per refresh when new review requests or replies arrive; a newer
-  banner replaces the previous unread one. Clicking it opens the PR (or the popover, when several arrived
-  at once).
+- **Notifications** (off by default): one banner per refresh when new review requests or replies arrive;
+  a newer banner replaces the previous unread one. Clicking it opens the PR (or the popover, when several
+  arrived at once).
 - **Compact rows** (off by default): every section as one-line rows, with the waiting time.
 - **Follow review threads** (on by default): reads who commented in review threads and reviews, and when,
   for Replies to you, open threads and the snooze wake above. Off makes every refresh lighter and a snooze
@@ -151,10 +151,10 @@ When this override is set, PRInbox uses only that path. Remove it with
 ### Settings
 
 Open Settings with the gear in the popover. It holds the global shortcut, launch at login, **Group by
-organization**, **Show organization avatars**, **Compact rows**, **Follow review threads**, **Notify about new review requests and
-replies**, the detected `gh` path, the version and Quit. Turning notifications on asks macOS for
-permission once; if you decline, Settings says where to turn them on. Settings stay inside the popover,
-so there is never a window for a tiling window manager to grab.
+organization**, **Show organization avatars**, **Compact rows**, **Follow review threads**, **Notify about
+new review requests and replies**, the detected `gh` path, the version and Quit. Turning notifications on
+asks macOS for permission once; if you decline, Settings says where to turn them on. Settings stay inside
+the popover, so there is never a window for a tiling window manager to grab.
 
 <p align="center">
   <img src="docs/images/popover-compact.png" width="460" alt="The same inbox with Compact rows on">
@@ -212,9 +212,10 @@ Other targets:
   - `Sources/PrinboxCore` holds all the logic (gh access, classification, formatting, state) and is
     unit tested. It has no AppKit.
   - `Sources/Prinbox` is the thin AppKit and SwiftUI shell.
-- **Fixtures:** `scripts/record-fixture.sh <name>` records the live inbox as a two-phase fixture (the search and
-  the detail batches). It rebuilds the response from an allowlist of fields and replaces repositories,
-  logins, titles, URLs and ids with placeholders, and a test checks every string in every fixture.
+- **Fixtures:** `scripts/record-fixture.sh <name>` records the live inbox as a two-phase fixture (the
+  search and the detail batches). It rebuilds the response from an allowlist of fields and replaces
+  repositories, logins, titles, URLs and ids with placeholders, and a test checks every string in every
+  fixture.
 - **State file:** [docs/state-file.md](docs/state-file.md) is the contract for
   `~/Library/Application Support/prinbox/state.json`.
 - **UI checks:** things the tests cannot cover are listed in
