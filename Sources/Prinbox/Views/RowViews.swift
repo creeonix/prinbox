@@ -41,9 +41,8 @@ struct PullRequestRowView: View {
             .padding(.vertical, 6)
             .contentShape(Rectangle())
             .background(RowHighlight(isSelected: isSelected))
-            // The gutter dot sits on the title line, 3 pt in; nothing in the row moves for it.
-            .overlay(alignment: .topLeading) {
-                if state.isNew(row) { NewDot().padding(.top, 13).padding(.leading, 3) }
+            .overlay(alignment: .leading) {
+                if state.isNew(row) { NewBar() }
             }
             .opacity(pr.isDraft ? 0.5 : 1)
         }
@@ -92,7 +91,7 @@ struct CompactRowView: View {
             .contentShape(Rectangle())
             .background(RowHighlight(isSelected: isSelected))
             .overlay(alignment: .leading) {
-                if state.isNew(row) { NewDot().padding(.leading, 3) }
+                if state.isNew(row) { NewBar() }
                 if snoozed { SnoozeGlyph().padding(.leading, 12) }
             }
             .opacity(row.pullRequest.isDraft || snoozed ? 0.6 : 1)
@@ -130,12 +129,13 @@ struct MoreRowView: View {
     }
 }
 
-/// The "new since last look" mark: a small accent dot in the left gutter.
-struct NewDot: View {
+/// The "new since last look" mark: a thin accent bar at the row's leading edge, the same in both row styles.
+struct NewBar: View {
     var body: some View {
-        Circle()
+        RoundedRectangle(cornerRadius: 1.5)
             .fill(Color.accentColor)
-            .frame(width: 6, height: 6)
+            .frame(width: 3)
+            .padding(.vertical, 4)
             .accessibilityLabel("New since last look")
     }
 }

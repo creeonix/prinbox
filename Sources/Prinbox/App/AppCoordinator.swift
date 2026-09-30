@@ -148,7 +148,7 @@ final class AppCoordinator {
         closingForBrowser = false
     }
 
-    /// One banner per refresh, only while the popover is closed: an open popover already shows the dots.
+    /// One banner per refresh, only while the popover is closed: an open popover already shows the marks.
     /// The permission is re-read each time, so one granted later in System Settings takes effect at once.
     private func notify(_ rows: [InboxRow]) {
         guard notifications.isEnabled, !(popover?.isShown ?? false), let notice = ArrivalNotice.make(rows) else {
