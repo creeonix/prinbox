@@ -43,4 +43,26 @@ import Testing
         let long = String(repeating: "x", count: 300)
         #expect(GhErrorClassifier.classify(exitCode: 1, stderr: long) == .other(String(repeating: "x", count: 120)))
     }
+
+    @Test func serverErrorsAreGitHubUnavailable() {
+        #expect(GhErrorClassifier.classify(exitCode: 1, stderr: "gh: HTTP 502\n") == .githubUnavailable(status: 502))
+        #expect(
+            GhErrorClassifier.classify(exitCode: 1, stderr: "gh: Service Unavailable (HTTP 503)\n")
+                == .githubUnavailable(status: 503))
+        #expect(
+            GhErrorClassifier.classify(exitCode: 1, stderr: "gh: HTTP 504: gateway timeout")
+                == .githubUnavailable(status: 504))
+        #expect(GhErrorClassifier.serverErrorStatus("gh: http 404") == nil)
+    }
+
+    @Test func serverErrorPrecedence() {
+        #expect(
+            GhErrorClassifier.classify(exitCode: 1, stderr: "gh: Bad credentials (HTTP 401) then HTTP 502")
+                == .loggedOut)
+        #expect(
+            GhErrorClassifier.classify(exitCode: 1, stderr: "gh: API rate limit exceeded (HTTP 503)")
+                == .rateLimited(resetAt: nil))
+        #expect(
+            GhErrorClassifier.classify(exitCode: 1, stderr: "dial tcp: i/o timeout (HTTP 502)") == .offline)
+    }
 }

@@ -38,5 +38,6 @@ public enum FetchError: Error, Sendable, Equatable {
     case timedOut
     case rateLimited(resetAt: Date?)
     case badResponse
+    case githubUnavailable(status: Int)
     case other(String)
 }
