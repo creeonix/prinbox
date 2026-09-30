@@ -143,6 +143,10 @@ detected `gh` path, the version and Quit. Turning notifications on asks macOS fo
 decline, Settings says where to turn them on. Settings stay inside the popover, so there is never a window
 for a tiling window manager to grab.
 
+<p align="center">
+  <img src="docs/images/popover-compact.png" width="460" alt="The same inbox with Compact rows on">
+</p>
+
 ### Command line
 
 ```sh

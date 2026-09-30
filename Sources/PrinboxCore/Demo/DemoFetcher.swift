@@ -23,8 +23,8 @@ public struct DemoFetcher: InboxFetching {
 }
 
 enum DemoData {
-    /// The longest-waiting review request is parked; every section still has rows.
-    static let snoozedID = "DEMO_1290"
+    /// The re-requested review is parked; a second Take-another-look PR keeps that section populated.
+    static let snoozedID = "DEMO_1284"
     /// Two review requests and the mention are new since the last look.
     static let newIDs: Set<String> = ["DEMO_2104", "DEMO_482", "DEMO_58"]
 
@@ -72,6 +72,9 @@ enum DemoData {
             pr(
                 1284, "Cache avatar images on disk", repo: "acme/web", author: "dave",
                 96, 12, updated: 3, source: .review, decision: .approved, comments: 12, reviewed: 50, requested: 3),
+            pr(
+                917, "Add a retry budget to the sync worker", repo: "globex/sync", author: "grace",
+                210, 44, updated: 5, source: .review, comments: 6, reviewed: 30, requested: 5),
             pr(
                 58, "Document the release process", repo: "initech/docs", author: "erin",
                 140, 6, updated: 0.5, source: .mentions, ci: .none, comments: 4),
