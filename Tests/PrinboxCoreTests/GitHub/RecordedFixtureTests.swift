@@ -7,17 +7,22 @@ import Testing
     let result: FetchResult
 
     init() throws {
-        result = try PullRequestMapper.map(InboxResponse.decode(Fixture.data("live-2026-09-29")))
+        result = try PullRequestMapper.map(InboxResponse.decode(Fixture.data("live-2026-09-30")))
     }
 
     @Test func containsOnlyAnonymizedValues() {
         #expect(result.viewerLogin == "me")
         #expect(!result.pullRequests.isEmpty)
         for pr in result.pullRequests {
-            #expect(pr.repository.hasPrefix("acme/repo-"))
+            #expect(pr.repository.hasPrefix("org-"))
             #expect(pr.title.hasPrefix("PR title "))
-            #expect(pr.url.absoluteString.hasPrefix("https://github.com/acme/repo-"))
+            #expect(pr.url.absoluteString.hasPrefix("https://github.com/org-"))
         }
+    }
+
+    @Test func carriesTheFieldsAddedInV02() {
+        #expect(result.pullRequests.contains { $0.ownerAvatarURL != nil })
+        #expect(result.pullRequests.allSatisfy { $0.ownerLogin.hasPrefix("org-") })
     }
 
     @Test func ownPullRequestsLandInOwnSections() {
