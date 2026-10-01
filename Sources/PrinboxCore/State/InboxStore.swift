@@ -33,9 +33,9 @@ public final class InboxStore {
     @ObservationIgnored private var followUpRequested = false
     @ObservationIgnored private var pausedUntil: Date?
     @ObservationIgnored private var lastResult: FetchResult?
-    /// The arrivals baseline: `updatedAt` per PR id. A complete fetch replaces it; an incomplete one only
-    /// adds to it, so PRs a partial response left out do not come back as arrivals.
-    @ObservationIgnored private var known: [String: Date]?
+    /// The arrivals baseline: the attention ids of the last inbox. A complete fetch replaces it; an incomplete
+    /// one only adds to it, so PRs a partial response left out do not come back as arrivals.
+    @ObservationIgnored private var known: Set<String>?
     /// `id -> updatedAt` of the last full fetch; sent back so an unchanged inbox costs one request.
     @ObservationIgnored private var fingerprint: [String: Date]?
     @ObservationIgnored private var lastFullFetch: Date?
@@ -130,10 +130,9 @@ public final class InboxStore {
         onInboxChange?()
     }
 
-    private static func baseline(after result: FetchResult, extending previous: [String: Date]?) -> [String: Date] {
-        let fetched = Dictionary(
-            result.pullRequests.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { _, new in new })
-        return result.isComplete ? fetched : (previous ?? [:]).merging(fetched) { _, new in new }
+    private static func baseline(after inbox: Inbox, complete: Bool, extending previous: Set<String>?) -> Set<String> {
+        let current = Arrivals.attentionIDs(inbox)
+        return complete ? current : (previous ?? []).union(current)
     }
 
     private var isPaused: Bool {
@@ -153,7 +152,7 @@ public final class InboxStore {
                 let built = InboxBuilder.build(result, snoozed: state.snoozedIDs)
                 let arrived = Arrivals.compute(previous: known, current: built)
                 arrivals = arrived
-                known = Self.baseline(after: result, extending: known)
+                known = Self.baseline(after: built, complete: result.isComplete, extending: known)
                 lastResult = result
                 // A toggle during the fetch already cleared the fingerprint; this result answers the old question.
                 fingerprint = request.includeConversation == includeConversation ? result.fingerprint : nil

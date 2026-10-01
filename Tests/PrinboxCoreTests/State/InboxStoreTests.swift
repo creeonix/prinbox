@@ -224,7 +224,7 @@ final class ReceivedRows {
         #expect(!store.state.isSnoozed("a"))
     }
 
-    @Test func arrivalsAreTheDiffAgainstThePreviousFetch() async {
+    @Test func arrivalsAreThePullRequestsThatEnterAnAttentionSection() async {
         let old = date("2026-08-01T10:00:00Z")
         let newer = date("2026-08-02T10:00:00Z")
         let fetcher = ScriptedFetcher { call in
@@ -248,17 +248,33 @@ final class ReceivedRows {
         let seen = Counter()
         store.onArrivals = { rows in
             seen.bump()
-            #expect(rows.map(\.id) == ["a", "b"])
+            #expect(rows.map(\.id) == ["b"])
         }
         await store.refresh()
         #expect(store.arrivals.isEmpty)
         #expect(seen.value == 0)
         await store.refresh()
-        #expect(store.arrivals.map(\.id) == ["a", "b"])
+        #expect(store.arrivals.map(\.id) == ["b"])
         #expect(seen.value == 1)
         await store.refresh()
         #expect(store.arrivals.isEmpty)
         #expect(seen.value == 1)
+    }
+
+    @Test func aSnoozedReviewRequestThatWakesArrivesAgain() async {
+        let old = date("2026-08-01T10:00:00Z")
+        let newer = date("2026-08-02T10:00:00Z")
+        let fetcher = ScriptedFetcher { call in
+            makeResult([makePR(id: "a", updatedAt: call < 3 ? old : newer)])
+        }
+        let store = InboxStore(fetcher: fetcher)
+        await store.refresh()
+        store.snooze("a")
+        await store.refresh()
+        #expect(store.arrivals.isEmpty)
+        await store.refresh()
+        #expect(!store.state.isSnoozed("a"))
+        #expect(store.arrivals.map(\.id) == ["a"])
     }
 
     @Test func snoozeClearsTheArrivals() async {

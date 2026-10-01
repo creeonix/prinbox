@@ -12,6 +12,7 @@
 - When GitHub answers with a 5xx, the warning line says so and links to the GitHub status page.
 - The first right-click on a row opens its menu instead of closing the popover.
 - A newer notification replaces the previous unread one. Notifications now cover replies too.
+- A pull request that keeps changing while it waits for your review no longer raises a banner at every refresh.
 - The state file has a written contract (`docs/state-file.md`) and tolerates missing keys.
 
 ## What's new in 0.3.1

@@ -53,5 +53,6 @@ Run them before a release.
 - [ ] On a GitHub 5xx the warning line shows "Status page"; clicking it opens githubstatus.com and closes the popover.
 - [ ] Two review requests arriving in separate refreshes give one banner in Notification Center, the newer one replacing the older.
 - [ ] A banner for a reply says "Replies to you" and opens the PR.
+- [ ] A PR that keeps changing while it sits in Needs your review gives one banner when it arrives, not one per refresh.
 - [ ] `--print` prints a Replies to you row with "Awaiting your reply" and an own row with "Open threads".
 - [ ] After upgrading from 0.3.1, `~/Library/Application Support/prinbox/state.json` still lists the earlier snooze and the app reads it.

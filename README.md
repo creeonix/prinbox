@@ -57,9 +57,9 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
   `~/Library/Application Support/prinbox/state.json`.
 - **New since your last look:** rows that appeared or changed since you last closed the popover carry an accent
   bar at their left edge, and the header counts them.
-- **Notifications** (off by default): one banner per refresh when new review requests or replies arrive;
-  a newer banner replaces the previous unread one. Clicking it opens the PR (or the popover, when several
-  arrived at once).
+- **Notifications** (off by default): one banner per refresh when a PR enters Needs your review, Replies to
+  you or Take another look; a PR that keeps changing while it sits there does not notify again. A newer
+  banner replaces the previous one. Clicking it opens the PR (or the popover, when several arrived at once).
 - **Compact rows** (off by default): every section as one-line rows, with the waiting time.
 - **Follow review threads** (on by default): reads who commented in review threads and reviews, and when,
   for Replies to you, open threads and the snooze wake above. Off makes every refresh lighter and a snooze
