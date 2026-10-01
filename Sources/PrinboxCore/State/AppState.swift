@@ -26,4 +26,19 @@ public struct AppState: Codable, Equatable, Sendable {
         self.snoozed = snoozed
         self.seen = seen
     }
+
+    enum CodingKeys: String, CodingKey {
+        case version
+        case snoozed
+        case seen
+    }
+
+    /// Missing `version` and `snoozed` take their defaults, so a file written by another writer with only the
+    /// keys it knows still loads. Encoding stays synthesized and always writes all three (seen when present).
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? Self.currentVersion
+        snoozed = try container.decodeIfPresent([String: SnoozeEntry].self, forKey: .snoozed) ?? [:]
+        seen = try container.decodeIfPresent([String: Date].self, forKey: .seen)
+    }
 }

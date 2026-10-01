@@ -54,4 +54,18 @@ import Testing
         #expect(MergeMark.ready.help == "Ready to merge")
         #expect(MergeMark.conflicts.help == "Merge conflicts")
     }
+
+    @Test func commentsHelpNamesTheThreadsWaitingForMe() {
+        #expect(RowMarks.commentsHelp(9, pending: 2) == "9 comments, 2 waiting for your reply")
+        #expect(RowMarks.commentsHelp(1, pending: 1) == "1 comment, 1 waiting for your reply")
+        #expect(RowMarks.commentsHelp(4, pending: 0) == "4 comments")
+    }
+
+    @Test func onlyTheReplyReasonsHighlightComments() {
+        #expect(Reason.awaitingReply.highlightsComments)
+        #expect(Reason.openThreads.highlightsComments)
+        #expect(!Reason.reviewRequested.highlightsComments)
+        #expect(!Reason.changesRequested.highlightsComments)
+        #expect(!Reason.snoozed.highlightsComments)
+    }
 }

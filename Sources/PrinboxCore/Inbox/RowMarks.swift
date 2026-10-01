@@ -65,8 +65,10 @@ public struct RowMarks: Sendable, Equatable {
             && (pr.ci == .success || pr.ci == .none)
     }
 
-    public static func commentsHelp(_ count: Int) -> String {
-        count == 1 ? "1 comment" : "\(count) comments"
+    /// "4 comments", or "9 comments, 2 waiting for your reply" on a row whose reason highlights the bubble.
+    public static func commentsHelp(_ count: Int, pending: Int = 0) -> String {
+        let comments = count == 1 ? "1 comment" : "\(count) comments"
+        return pending > 0 ? "\(comments), \(pending) waiting for your reply" : comments
     }
 
     static func ciMark(_ ci: CIState) -> CIMark? {

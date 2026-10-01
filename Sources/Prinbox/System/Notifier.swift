@@ -10,6 +10,9 @@ import os
 @Observable
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let isAvailable = Bundle.main.bundleURL.pathExtension == "app"
+    /// One identifier for every arrivals banner, so a new one replaces any earlier arrivals banner still in
+    /// Notification Center instead of stacking.
+    static let arrivalsIdentifier = "io.github.creeonix.prinbox.arrivals"
     nonisolated private static let log = Logger(subsystem: "io.github.creeonix.prinbox", category: "notifications")
 
     private(set) var status: NotificationStatus = Notifier.isAvailable ? .notDetermined : .unavailable
@@ -42,7 +45,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         content.title = notice.title
         content.body = notice.body
         if let url = notice.url { content.userInfo = ["url": url.absoluteString] }
-        center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)) { error in
+        let request = UNNotificationRequest(identifier: Self.arrivalsIdentifier, content: content, trigger: nil)
+        center.add(request) { error in
             if let error {
                 Self.log.error("notification not delivered: \(String(describing: error), privacy: .public)")
             }

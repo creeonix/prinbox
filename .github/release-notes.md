@@ -1,3 +1,20 @@
+## What's new in 0.4.0
+
+- **Replies to you.** A new section for pull requests where someone answered in a review thread you took part
+  in, found even on PRs where you are no longer a requested reviewer. Your own PRs with a reviewer thread you
+  have not answered show up in Your PRs. On both, the comment bubble turns blue; hover it for the count.
+- **Snoozes wake for a reason.** A parked PR comes back when someone replies in your thread, pushes a commit,
+  requests your review again or, on your PRs, submits a review. Your own activity keeps it parked.
+- **A fetch that scales.** PRInbox now asks GitHub for the list first and the details in small batches, so a
+  full inbox no longer hits GitHub's time limit, and a refresh that finds nothing changed costs one request.
+- **Follow review threads** (Settings, on by default) switches the whole conversation layer; off is the
+  lighter refresh from 0.3.
+- When GitHub answers with a 5xx, the warning line says so and links to the GitHub status page.
+- The first right-click on a row opens its menu instead of closing the popover.
+- A newer notification replaces the previous unread one. Notifications now cover replies too.
+- A pull request that keeps changing while it waits for your review no longer raises a banner at every refresh.
+- The state file has a written contract (`docs/state-file.md`) and tolerates missing keys.
+
 ## What's new in 0.3.1
 
 - The "new since your last look" mark is now a thin bar at the row's left edge, in both row styles. The 0.3.0

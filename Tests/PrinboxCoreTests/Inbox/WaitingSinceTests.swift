@@ -6,7 +6,7 @@ import Testing
 @testable import PrinboxCore
 
 @Suite struct WaitingSinceTests {
-    func since(_ pr: PullRequest) -> Date? { Classifier.classify(pr).waitingSince }
+    func since(_ pr: PullRequest) -> Date? { Classifier.classify(pr, viewer: testViewer)?.waitingSince }
 
     @Test func needsReviewUsesTheRequestTime() {
         let pr = makePR(reviewRequestedAt: date("2026-08-03T10:00:00Z"), source: .review)

@@ -2,42 +2,86 @@
 // MIT License, Copyright (c) 2026 Vlad Shilov.
 import Foundation
 
-/// Turns a decoded `InboxResponse` into domain values.
+/// Turns the two decoded responses into domain values.
 enum PullRequestMapper {
-    static func map(_ response: InboxResponse) throws -> FetchResult {
-        let errors = response.errors ?? []
+    /// Phase 1 and the batches of phase 2 into one `FetchResult`. Ids come from the searches, first source wins;
+    /// a hit whose node no batch returned (deleted meanwhile, or null beside an error) is skipped, while its
+    /// search still counts it as fetched and the error becomes a warning, so nothing is pruned on its account.
+    static func merge(search: SearchResponse, details: [DetailsResponse]) throws -> FetchResult {
+        let errors = (search.errors ?? []) + details.flatMap { $0.errors ?? [] }
         if GraphQLErrors.isRateLimited(errors) {
-            throw FetchError.rateLimited(resetAt: response.data?.rateLimit?.resetAt)
+            throw FetchError.rateLimited(resetAt: search.data?.rateLimit?.resetAt)
         }
-        guard let data = response.data, let viewer = data.viewer?.login else {
+        guard let data = search.data, let viewer = data.viewer?.login else {
             throw errors.first.map { FetchError.other(String($0.message.prefix(120))) } ?? FetchError.badResponse
         }
-        let candidates = SearchSource.allCases.flatMap { source in
-            (data.search(for: source)?.nodes ?? [])
-                .compactMap { $0?.pullRequest }
-                .map { makePullRequest($0, source: source, viewer: viewer) }
+        let nodes = Dictionary(
+            details.flatMap { $0.data?.nodes ?? [] }.compactMap { $0 }.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first })
+        let pullRequests = orderedIDs(search).compactMap { entry in
+            nodes[entry.id].map { makePullRequest($0, source: entry.source, viewer: viewer) }
         }
-        let unique = candidates.reduce(into: [PullRequest]()) { kept, pr in
-            if !kept.contains(where: { $0.id == pr.id }) { kept.append(pr) }
-        }
+        let cost = (data.rateLimit?.cost ?? 0) + details.reduce(0) { $0 + ($1.data?.rateLimit?.cost ?? 0) }
         return FetchResult(
             viewerLogin: viewer,
-            pullRequests: unique,
+            pullRequests: pullRequests,
             totals: perSearch(data) { $0.issueCount },
             fetched: perSearch(data) { $0.nodes.count },
-            warnings: GraphQLErrors.warnings(errors)
+            warnings: GraphQLErrors.warnings(errors),
+            cost: cost,
+            fingerprint: fingerprint(search)
         )
     }
 
-    private static func perSearch(
-        _ data: InboxResponse.Payload, _ value: (InboxResponse.Search) -> Int
-    ) -> [SearchSource: Int] {
-        Dictionary(uniqueKeysWithValues: SearchSource.allCases.map { ($0, data.search(for: $0).map(value) ?? 0) })
+    /// Every hit in source order, deduplicated (the first search wins), with the search it came from.
+    static func orderedIDs(_ search: SearchResponse) -> [(id: String, source: SearchSource)] {
+        var seen = Set<String>()
+        var ordered: [(id: String, source: SearchSource)] = []
+        for source in SearchSource.allCases {
+            for node in search.data?.search(for: source)?.nodes ?? [] {
+                guard let id = node?.id, !seen.contains(id) else { continue }
+                seen.insert(id)
+                ordered.append((id, source))
+            }
+        }
+        return ordered
     }
 
-    static func makePullRequest(_ node: InboxResponse.PRNode, source: SearchSource, viewer: String) -> PullRequest {
+    /// `id -> updatedAt` over every hit. Two equal fingerprints mean nothing that moves `updatedAt` happened.
+    static func fingerprint(_ search: SearchResponse) -> [String: Date] {
+        var map: [String: Date] = [:]
+        for source in SearchSource.allCases {
+            for node in search.data?.search(for: source)?.nodes ?? [] {
+                if let id = node?.id, let updatedAt = node?.updatedAt { map[id] = updatedAt }
+            }
+        }
+        return map
+    }
+
+    /// Thread or comment pages that GitHub cut at the requested size, for the log.
+    static func truncatedPages(_ details: [DetailsResponse]) -> Int {
+        details.flatMap { $0.data?.nodes ?? [] }.compactMap { $0 }.reduce(0) { count, node in
+            guard let threads = node.reviewThreads else { return count }
+            let cut = (threads.totalCount ?? 0) > threads.nodes.count ? 1 : 0
+            let comments = threads.nodes.compactMap { $0?.comments }.filter { ($0.totalCount ?? 0) > $0.nodes.count }
+                .count
+            return count + cut + comments
+        }
+    }
+
+    /// Only searches the query asked for get an entry (`involved` is absent with the setting off).
+    private static func perSearch(
+        _ data: SearchResponse.Payload, _ value: (SearchResponse.Search) -> Int
+    ) -> [SearchSource: Int] {
+        Dictionary(
+            uniqueKeysWithValues: SearchSource.allCases.compactMap { source in
+                data.search(for: source).map { (source, value($0)) }
+            })
+    }
+
+    static func makePullRequest(_ node: PRNode, source: SearchSource, viewer: String) -> PullRequest {
         let events = (node.timelineItems?.nodes ?? []).compactMap { $0 }
-        let rollup = node.commits?.nodes.compactMap { $0 }.last?.commit.statusCheckRollup?.state
+        let lastCommit = node.commits?.nodes.compactMap { $0 }.last?.commit
         return PullRequest(
             id: node.id,
             number: node.number,
@@ -56,20 +100,43 @@ enum PullRequestMapper {
                 node.reviewDecision,
                 latestReviews: (node.latestOpinionatedReviews?.nodes ?? []).compactMap { $0?.state }),
             mergeable: mergeable(node.mergeable),
-            ci: ciState(rollup),
+            ci: ciState(lastCommit?.statusCheckRollup?.state),
             viewerReview: viewerReview(node.viewerLatestReview),
             reviewRequestedAt: reviewRequestedAt(events, viewer: viewer),
             readyForReviewAt: events.filter { $0.typename == "ReadyForReviewEvent" }.compactMap(\.createdAt).max(),
             source: source,
             commentCount: node.totalCommentsCount ?? 0,
             ownerAvatarURL: node.repository.owner?.avatarUrl,
-            ownerIsOrganization: node.repository.owner?.typename == "Organization"
+            ownerIsOrganization: node.repository.owner?.typename == "Organization",
+            headRef: node.headRefName,
+            baseRef: node.baseRefName,
+            lastCommitAt: lastCommit?.committedDate,
+            threads: node.reviewThreads.map(threads),
+            reviews: node.reviews.map(reviews)
         )
+    }
+
+    /// Comments keep GitHub's order (oldest first); a deleted author is "ghost", like a deleted PR author.
+    static func threads(_ connection: PRNode.Connection<PRNode.ThreadNode>) -> [ReviewThread] {
+        connection.nodes.compactMap { $0 }.map { thread in
+            ReviewThread(
+                isResolved: thread.isResolved,
+                comments: (thread.comments?.nodes ?? []).compactMap { $0 }.map {
+                    ThreadComment(authorLogin: $0.author?.login ?? "ghost", createdAt: $0.createdAt)
+                })
+        }
+    }
+
+    /// Pending reviews are unsubmitted drafts of the viewer and never count.
+    static func reviews(_ connection: PRNode.Connection<PRNode.ReviewNode>) -> [Review] {
+        connection.nodes.compactMap { $0 }.filter { $0.state != "PENDING" }.map {
+            Review(authorLogin: $0.author?.login ?? "ghost", state: $0.state, submittedAt: $0.submittedAt)
+        }
     }
 
     /// The latest request naming the viewer; otherwise the latest request for a team (or an unknown
     /// reviewer), which is how team review requests reach the viewer.
-    static func reviewRequestedAt(_ events: [InboxResponse.TimelineNode], viewer: String) -> Date? {
+    static func reviewRequestedAt(_ events: [PRNode.TimelineNode], viewer: String) -> Date? {
         let requests = events.filter { $0.typename == "ReviewRequestedEvent" }
         let direct = requests.filter {
             $0.requestedReviewer?.typename == "User"
@@ -111,7 +178,7 @@ enum PullRequestMapper {
     }
 
     /// Pending reviews are unsubmitted and dismissed ones no longer count, so neither is a review.
-    static func viewerReview(_ review: InboxResponse.Review?) -> ViewerReview? {
+    static func viewerReview(_ review: PRNode.ViewerReviewNode?) -> ViewerReview? {
         guard let review, review.state != "PENDING", review.state != "DISMISSED" else { return nil }
         return ViewerReview(state: review.state, submittedAt: review.submittedAt)
     }

@@ -3,7 +3,15 @@ import Foundation
 public struct InboxRow: Sendable, Equatable, Identifiable {
     public let pullRequest: PullRequest
     public let classification: Classification
+    /// Threads waiting for the viewer's answer (Awaiting your reply, Open threads); 0 otherwise.
+    public let pendingReplies: Int
     public var id: String { pullRequest.id }
+
+    public init(pullRequest: PullRequest, classification: Classification, pendingReplies: Int = 0) {
+        self.pullRequest = pullRequest
+        self.classification = classification
+        self.pendingReplies = pendingReplies
+    }
 }
 
 /// Rows of one section that share a repository owner, for the "Group by organization" view.

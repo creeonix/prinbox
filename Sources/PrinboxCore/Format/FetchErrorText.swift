@@ -16,8 +16,20 @@ extension FetchError {
             resetAt.map { "Rate limited until \(ClockText.hhmm($0, timeZone: timeZone))" } ?? "Rate limited by GitHub"
         case .badResponse:
             "Unexpected response from gh"
+        case .githubUnavailable(let status):
+            lastSuccess.map {
+                "GitHub is having trouble (HTTP \(status)), showing data from \(ClockText.hhmm($0, timeZone: timeZone))"
+            } ?? "GitHub is having trouble (HTTP \(status))"
         case .other(let message):
             message
         }
+    }
+
+    public static let statusPage = URL(string: "https://www.githubstatus.com")!
+
+    /// Where to look when GitHub itself is the problem; nil for every other error.
+    public var helpURL: URL? {
+        if case .githubUnavailable = self { return Self.statusPage }
+        return nil
     }
 }

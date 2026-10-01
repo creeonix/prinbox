@@ -5,7 +5,7 @@ import Testing
 
 @Suite struct GraphQLErrorsTests {
     func map(_ json: String) throws -> FetchResult {
-        try PullRequestMapper.map(InboxResponse.decode(Data(json.utf8)))
+        try PullRequestMapper.merge(search: SearchResponse.decode(Data(json.utf8)), details: [])
     }
 
     let emptySearches =

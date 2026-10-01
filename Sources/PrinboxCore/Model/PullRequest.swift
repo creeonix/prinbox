@@ -1,10 +1,15 @@
 import Foundation
 
-/// Which search in `InboxQuery` returned a pull request. Declaration order is the dedupe priority.
+/// Which search in `SearchQuery` returned a pull request. Declaration order is the dedupe priority.
 public enum SearchSource: String, Sendable, CaseIterable {
     case review
     case mentions
     case mine
+    case involved
+
+    /// The `involved` search is best effort: most of its PRs are hidden, so its truncation must not stop the
+    /// completeness checks that prune snoozes and the seen ledger.
+    public var boundsCompleteness: Bool { self != .involved }
 }
 
 public enum ReviewDecision: Sendable, Equatable {
@@ -65,13 +70,23 @@ public struct PullRequest: Sendable, Equatable, Identifiable {
     public let ownerAvatarURL: URL?
     /// The repository owner is an organization (false for a user's personal repository).
     public let ownerIsOrganization: Bool
+    /// Branch names, for stacked PRs later; nil when phase 2 did not run for this PR.
+    public let headRef: String?
+    public let baseRef: String?
+    /// `committedDate` of the last commit; the snooze rule's commit date.
+    public let lastCommitAt: Date?
+    /// Review threads and reviews; nil when the conversation was not fetched (setting off, demo without them).
+    public let threads: [ReviewThread]?
+    public let reviews: [Review]?
 
     public init(
         id: String, number: Int, title: String, url: URL, repository: String, isArchived: Bool,
         authorLogin: String, avatarURL: URL?, isDraft: Bool, additions: Int, deletions: Int,
         createdAt: Date, updatedAt: Date, reviewDecision: ReviewDecision, mergeable: Mergeable,
         ci: CIState, viewerReview: ViewerReview?, reviewRequestedAt: Date?, readyForReviewAt: Date?,
-        source: SearchSource, commentCount: Int = 0, ownerAvatarURL: URL? = nil, ownerIsOrganization: Bool = false
+        source: SearchSource, commentCount: Int = 0, ownerAvatarURL: URL? = nil, ownerIsOrganization: Bool = false,
+        headRef: String? = nil, baseRef: String? = nil, lastCommitAt: Date? = nil, threads: [ReviewThread]? = nil,
+        reviews: [Review]? = nil
     ) {
         self.id = id
         self.number = number
@@ -96,6 +111,11 @@ public struct PullRequest: Sendable, Equatable, Identifiable {
         self.commentCount = commentCount
         self.ownerAvatarURL = ownerAvatarURL
         self.ownerIsOrganization = ownerIsOrganization
+        self.headRef = headRef
+        self.baseRef = baseRef
+        self.lastCommitAt = lastCommitAt
+        self.threads = threads
+        self.reviews = reviews
     }
 
     /// Repository owner: "acme" for "acme/web". Shown as the org name.

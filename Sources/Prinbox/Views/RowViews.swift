@@ -21,7 +21,9 @@ struct PullRequestRowView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
                         Spacer(minLength: 4)
-                        MarksLineView(marks: marks, top: true)
+                        MarksLineView(
+                            marks: marks, top: true, pending: row.pendingReplies,
+                            highlighted: row.classification.reason.highlightsComments)
                     }
                     // The schedule only triggers a redraw each minute. Its entry date is the start of the minute,
                     // up to 59 s in the past, which would floor "5h" to "4h", so ages use the current time.
@@ -82,7 +84,9 @@ struct CompactRowView: View {
                     trailer(age: nil)
                 }
                 Spacer(minLength: 4)
-                MarksInlineView(marks: RowMarks.marks(for: row.pullRequest))
+                MarksInlineView(
+                    marks: RowMarks.marks(for: row.pullRequest), pending: row.pendingReplies,
+                    highlighted: row.classification.reason.highlightsComments)
             }
             .font(.system(size: 12))
             .padding(.leading, 30)

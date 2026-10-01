@@ -22,4 +22,21 @@ import Testing
         #expect(text(.badResponse) == "Unexpected response from gh")
         #expect(text(.other("boom")) == "boom")
     }
+
+    @Test func githubUnavailableNamesTheStatusAndTheLastData() {
+        let at = date("2026-08-10T17:13:00Z")
+        #expect(
+            FetchError.githubUnavailable(status: 502).message(lastSuccess: at, timeZone: utc)
+                == "GitHub is having trouble (HTTP 502), showing data from 17:13")
+        #expect(
+            FetchError.githubUnavailable(status: 503).message(lastSuccess: nil, timeZone: utc)
+                == "GitHub is having trouble (HTTP 503)")
+    }
+
+    @Test func onlyGithubUnavailableHasAHelpLink() {
+        #expect(FetchError.githubUnavailable(status: 502).helpURL == URL(string: "https://www.githubstatus.com"))
+        #expect(FetchError.offline.helpURL == nil)
+        #expect(FetchError.timedOut.helpURL == nil)
+        #expect(FetchError.githubUnavailable(status: 502).needsSetup == false)
+    }
 }

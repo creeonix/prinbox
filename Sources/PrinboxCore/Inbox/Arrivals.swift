@@ -1,21 +1,27 @@
 import Foundation
 
-/// What a refresh brought into the review sections, for the notification. The baseline is the previous
-/// fetch (extended, not replaced, by an incomplete fetch), not the seen ledger: a PR the user has not looked
-/// at must not notify again five minutes later.
+/// What a refresh brought into the attention sections, for the notification. A row arrives when its PR was
+/// not in those sections at the previous fetch; a PR that changes while it already sits there is not an
+/// arrival, or an active PR would notify every five minutes. The baseline is the previous inbox's attention
+/// ids (extended, not replaced, by an incomplete fetch), not the seen ledger: a PR the user has not looked at
+/// must not notify again five minutes later.
 public enum Arrivals {
-    static let sections: Set<SectionKind> = [.needsReview, .takeAnotherLook]
+    static let sections: [SectionKind] = [.needsReview, .repliesToYou, .takeAnotherLook]
 
-    /// Non-draft rows of Needs your review and Take another look whose PR the baseline lacks, or has with
-    /// an older `updatedAt`. Nil `previous` (the first fetch after launch) gives nothing.
-    public static func compute(previous: [String: Date]?, current: Inbox) -> [InboxRow] {
+    /// Non-draft row ids of the attention sections. A draft is left out, so it arrives when it becomes ready.
+    public static func attentionIDs(_ inbox: Inbox) -> Set<String> {
+        Set(attentionRows(inbox).map(\.id))
+    }
+
+    /// Non-draft rows of the attention sections whose PR was not there at the previous fetch. Nil `previous`
+    /// (the first fetch after launch) gives nothing.
+    public static func compute(previous: Set<String>?, current: Inbox) -> [InboxRow] {
         guard let previous else { return [] }
-        return current.sections
-            .filter { sections.contains($0.kind) }
-            .flatMap(\.rows)
-            .filter { row in
-                !row.pullRequest.isDraft && (previous[row.id].map { row.pullRequest.updatedAt > $0 } ?? true)
-            }
+        return attentionRows(current).filter { !previous.contains($0.id) }
+    }
+
+    private static func attentionRows(_ inbox: Inbox) -> [InboxRow] {
+        inbox.sections.filter { sections.contains($0.kind) }.flatMap(\.rows).filter { !$0.pullRequest.isDraft }
     }
 }
 
@@ -40,9 +46,23 @@ public struct ArrivalNotice: Equatable, Sendable {
                 title: RowText.title(pr), body: "\(pr.repository) · \(first.classification.section.title)",
                 url: pr.url)
         }
+        let replies = rows.filter { $0.classification.section == .repliesToYou }.count
+        let requests = rows.count - replies
+        let title: String
+        switch (requests, replies) {
+        case (_, 0): title = "\(rows.count) new review requests"
+        case (0, _): title = "\(rows.count) new replies"
+        default:
+            title =
+                "\(rows.count) new: \(counted(requests, "review request")), \(counted(replies, "reply", plural: "replies"))"
+        }
         let titles = rows.prefix(3).map { RowText.title($0.pullRequest) }
         let rest = rows.count - titles.count
         let lines = titles + (rest > 0 ? ["and \(rest) more"] : [])
-        return ArrivalNotice(title: "\(rows.count) new review requests", body: lines.joined(separator: "\n"), url: nil)
+        return ArrivalNotice(title: title, body: lines.joined(separator: "\n"), url: nil)
+    }
+
+    static func counted(_ n: Int, _ singular: String, plural: String? = nil) -> String {
+        "\(n) \(n == 1 ? singular : (plural ?? singular + "s"))"
     }
 }

@@ -4,6 +4,7 @@ import Foundation
 /// login is fictional (three orgs: acme, globex, initech), every mark state appears at least once, and
 /// every time is relative to the moment the fetcher was created, so ages read naturally and refreshes
 /// return identical PRs: nothing "changes", the demo snooze stays asleep and the new marks stay put.
+/// Includes two replies to you (waiting 4h and 1h) and one unanswered open thread on an approved PR.
 public struct DemoFetcher: InboxFetching {
     private let base: Date
 
@@ -11,22 +12,24 @@ public struct DemoFetcher: InboxFetching {
         base = now()
     }
 
-    public func fetch() async throws -> FetchResult {
+    /// The demo never answers `.unchanged`: its data is frozen anyway, and the inbox is built once.
+    public func fetch(_ request: FetchRequest) async throws -> FetchOutcome {
         let prs = DemoData.pullRequests(now: base)
         let counts = Dictionary(grouping: prs, by: \.source).mapValues(\.count)
         let fetched = Dictionary(uniqueKeysWithValues: SearchSource.allCases.map { ($0, counts[$0] ?? 0) })
-        return FetchResult(viewerLogin: "me", pullRequests: prs, totals: fetched, fetched: fetched, warnings: [])
+        return .result(
+            FetchResult(viewerLogin: "me", pullRequests: prs, totals: fetched, fetched: fetched, warnings: []))
     }
 
-    /// One snoozed review request and three rows that are new since the last look, for screenshots.
+    /// One snoozed review request and four rows that are new since the last look, for screenshots.
     public var initialState: AppState { DemoData.initialState(now: base) }
 }
 
 enum DemoData {
     /// The re-requested review is parked; a second Take-another-look PR keeps that section populated.
     static let snoozedID = "DEMO_1284"
-    /// Two review requests and the mention are new since the last look.
-    static let newIDs: Set<String> = ["DEMO_2104", "DEMO_482", "DEMO_58"]
+    /// Two review requests, the mention and a reply are new since the last look.
+    static let newIDs: Set<String> = ["DEMO_2104", "DEMO_482", "DEMO_58", "DEMO_145"]
 
     static func initialState(now: Date) -> AppState {
         let prs = pullRequests(now: now)
@@ -40,11 +43,17 @@ enum DemoData {
 
     static func pullRequests(now: Date) -> [PullRequest] {
         func ago(_ hours: Double) -> Date { now.addingTimeInterval(-hours * 3600) }
+        func comment(_ login: String, _ hoursAgo: Double) -> ThreadComment {
+            ThreadComment(authorLogin: login, createdAt: ago(hoursAgo))
+        }
+        func thread(_ comments: ThreadComment..., resolved: Bool = false) -> ReviewThread {
+            ReviewThread(isResolved: resolved, comments: comments)
+        }
         func pr(
             _ number: Int, _ title: String, repo: String, author: String, _ additions: Int, _ deletions: Int,
             updated: Double, source: SearchSource, isDraft: Bool = false, decision: ReviewDecision = .reviewRequired,
             ci: CIState = .success, mergeable: Mergeable = .mergeable, comments: Int = 0,
-            reviewed: Double? = nil, requested: Double? = nil
+            reviewed: Double? = nil, requested: Double? = nil, threads: [ReviewThread]? = nil
         ) -> PullRequest {
             PullRequest(
                 id: "DEMO_\(number)", number: number, title: title,
@@ -53,7 +62,7 @@ enum DemoData {
                 createdAt: ago(24 * 5), updatedAt: ago(updated), reviewDecision: decision, mergeable: mergeable,
                 ci: ci, viewerReview: reviewed.map { ViewerReview(state: "COMMENTED", submittedAt: ago($0)) },
                 reviewRequestedAt: requested.map(ago), readyForReviewAt: nil, source: source,
-                commentCount: comments, ownerAvatarURL: nil, ownerIsOrganization: true)
+                commentCount: comments, ownerAvatarURL: nil, ownerIsOrganization: true, threads: threads)
         }
         return [
             pr(
@@ -75,6 +84,21 @@ enum DemoData {
             pr(
                 917, "Add a retry budget to the sync worker", repo: "globex/sync", author: "grace",
                 210, 44, updated: 5, source: .review, comments: 6, reviewed: 30, requested: 5),
+            // Replies to you: alice answered two of your threads; you are no longer a requested reviewer, so the
+            // involved search is what finds this PR.
+            pr(
+                2077, "Stream large uploads instead of buffering them", repo: "acme/api", author: "alice",
+                188, 41, updated: 3, source: .involved, comments: 9, reviewed: 26,
+                threads: [
+                    thread(comment("alice", 30), comment("me", 26), comment("alice", 4)),
+                    thread(comment("alice", 28), comment("me", 26), comment("alice", 3)),
+                    thread(comment("me", 27), comment("alice", 25), resolved: true),
+                ]),
+            // Re-requested and answered by another reviewer: the answer owed wins over Take another look.
+            pr(
+                145, "Rotate the signing keys quarterly", repo: "globex/billing", author: "frank",
+                64, 12, updated: 1, source: .review, comments: 5, reviewed: 20, requested: 1,
+                threads: [thread(comment("frank", 22), comment("me", 20), comment("heidi", 1))]),
             pr(
                 58, "Document the release process", repo: "initech/docs", author: "erin",
                 140, 6, updated: 0.5, source: .mentions, ci: .none, comments: 4),
@@ -83,7 +107,8 @@ enum DemoData {
                 388, 120, updated: 1, source: .mine, ci: .failure, comments: 2),
             pr(
                 489, "Retry webhook deliveries with backoff", repo: "acme/api", author: "me",
-                75, 20, updated: 6, source: .mine, decision: .approved, comments: 5),
+                75, 20, updated: 6, source: .mine, decision: .approved, comments: 5,
+                threads: [thread(comment("bob", 5))]),
             pr(
                 310, "Reconcile invoices nightly", repo: "globex/billing", author: "me",
                 142, 61, updated: 4, source: .mine, decision: .approved, mergeable: .conflicting),

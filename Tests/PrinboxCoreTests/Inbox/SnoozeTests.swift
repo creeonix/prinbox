@@ -38,4 +38,13 @@ import Testing
         #expect(!makeResult([makePR()], totals: [.review: 2, .mentions: 0, .mine: 0]).isComplete)
         #expect(makeResult([], totals: [:]).isComplete)
     }
+
+    @Test func involvedTruncationDoesNotMakeAFetchIncomplete() {
+        #expect(
+            makeResult([makePR(source: .involved)], totals: [.review: 0, .mentions: 0, .mine: 0, .involved: 40])
+                .isComplete)
+        #expect(
+            !makeResult([makePR(source: .review)], totals: [.review: 40, .mentions: 0, .mine: 0, .involved: 0])
+                .isComplete)
+    }
 }

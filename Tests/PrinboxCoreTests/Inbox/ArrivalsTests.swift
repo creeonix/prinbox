@@ -13,36 +13,46 @@ import Testing
         #expect(Arrivals.compute(previous: nil, current: inbox([makePR(id: "a")])).isEmpty)
     }
 
-    @Test func newAndUpdatedReviewRequestsArrive() {
-        let previous = ["a": old, "b": old]
+    @Test func onlyPullRequestsThatEnterAnAttentionSectionArrive() {
+        let previous: Set<String> = ["a", "b"]
         let current = inbox([
             makePR(id: "a", number: 1, updatedAt: newer),
             makePR(id: "b", number: 2, updatedAt: old),
             makePR(id: "c", number: 3, updatedAt: old),
         ])
-        #expect(Arrivals.compute(previous: previous, current: current).map(\.id) == ["a", "c"])
+        #expect(Arrivals.compute(previous: previous, current: current).map(\.id) == ["c"])
     }
 
-    @Test func onlyReviewSectionsCountAndDraftsDoNot() {
+    @Test func attentionIDsCoverTheThreeSectionsWithoutDrafts() {
         let reviewed = ViewerReview(state: "COMMENTED", submittedAt: old)
+        let owed = thread(comment("alice", old), comment(testViewer, old), comment("alice", newer))
         let current = inbox([
-            makePR(id: "again", viewerReview: reviewed, reviewRequestedAt: newer, source: .review),
-            makePR(id: "mention", source: .mentions),
-            makePR(id: "mine", reviewDecision: .changesRequested, source: .mine),
-            makePR(id: "draft", isDraft: true, source: .review),
+            makePR(id: "request", number: 1),
+            makePR(id: "again", number: 2, viewerReview: reviewed, reviewRequestedAt: newer, source: .review),
+            makePR(id: "reply", number: 3, source: .involved, threads: [owed]),
+            makePR(id: "mention", number: 4, source: .mentions),
+            makePR(id: "mine", number: 5, reviewDecision: .changesRequested, source: .mine),
+            makePR(id: "draft", number: 6, isDraft: true, source: .review),
         ])
-        #expect(Arrivals.compute(previous: [:], current: current).map(\.id) == ["again"])
+        #expect(Arrivals.attentionIDs(current) == ["request", "again", "reply"])
+        #expect(Arrivals.compute(previous: [], current: current).map(\.id) == ["request", "reply", "again"])
     }
 
-    @Test func aMoveBetweenSectionsWithTheSameUpdatedAtIsNotAnArrival() {
-        let previous = ["a": old]
-        let current = inbox([makePR(id: "a", updatedAt: old, source: .review)])
-        #expect(Arrivals.compute(previous: previous, current: current).isEmpty)
+    @Test func aMoveIntoAnAttentionSectionAndADraftBecomingReadyArrive() {
+        let wasAMention = inbox([makePR(id: "a", source: .mentions)])
+        #expect(Arrivals.attentionIDs(wasAMention).isEmpty)
+        let nowRequested = inbox([makePR(id: "a", source: .review)])
+        #expect(
+            Arrivals.compute(previous: Arrivals.attentionIDs(wasAMention), current: nowRequested).map(\.id) == ["a"])
+        let wasADraft = inbox([makePR(id: "d", isDraft: true, source: .review)])
+        let nowReady = inbox([makePR(id: "d", source: .review)])
+        #expect(Arrivals.compute(previous: Arrivals.attentionIDs(wasADraft), current: nowReady).map(\.id) == ["d"])
+        #expect(Arrivals.compute(previous: ["a"], current: nowRequested).isEmpty)
     }
 
     @Test func noticeForOnePullRequestOpensIt() {
         let pr = makePR(id: "a", number: 42, title: "Ship it", repository: "acme/web")
-        let rows = Arrivals.compute(previous: [:], current: inbox([pr]))
+        let rows = Arrivals.compute(previous: [], current: inbox([pr]))
         #expect(
             ArrivalNotice.make(rows)
                 == ArrivalNotice(
@@ -51,15 +61,55 @@ import Testing
 
     @Test func noticeForSeveralListsUpToThreeTitles() {
         let three = (1...3).map { makePR(id: "p\($0)", number: $0, title: "T\($0)") }
-        let notice = ArrivalNotice.make(Arrivals.compute(previous: [:], current: inbox(three)))
+        let notice = ArrivalNotice.make(Arrivals.compute(previous: [], current: inbox(three)))
         #expect(
             notice
                 == ArrivalNotice(
                     title: "3 new review requests", body: "#1 T1\n#2 T2\n#3 T3", url: nil))
         let five = (1...5).map { makePR(id: "p\($0)", number: $0, title: "T\($0)") }
-        let more = ArrivalNotice.make(Arrivals.compute(previous: [:], current: inbox(five)))
+        let more = ArrivalNotice.make(Arrivals.compute(previous: [], current: inbox(five)))
         #expect(more?.title == "5 new review requests")
         #expect(more?.body == "#1 T1\n#2 T2\n#3 T3\nand 2 more")
         #expect(ArrivalNotice.make([]) == nil)
+    }
+
+    @Test func repliesArriveLikeReviewRequests() {
+        let owed = thread(comment("alice", old), comment(testViewer, old), comment("alice", newer))
+        let current = inbox([makePR(id: "reply", source: .involved, threads: [owed])])
+        #expect(Arrivals.compute(previous: [], current: current).map(\.id) == ["reply"])
+        #expect(Arrivals.sections == [.needsReview, .repliesToYou, .takeAnotherLook])
+    }
+
+    @Test func noticeForSeveralNamesRequestsAndReplies() {
+        let owed = thread(comment("alice", old), comment(testViewer, old), comment("alice", newer))
+        let mixed = Arrivals.compute(
+            previous: [],
+            current: inbox([
+                makePR(id: "r1", number: 1, title: "R1"), makePR(id: "r2", number: 2, title: "R2"),
+                makePR(id: "p1", number: 3, title: "P1", source: .involved, threads: [owed]),
+            ]))
+        #expect(ArrivalNotice.make(mixed)?.title == "3 new: 2 review requests, 1 reply")
+        let moreReplies = Arrivals.compute(
+            previous: [],
+            current: inbox([
+                makePR(id: "r1", number: 1, title: "R1"),
+                makePR(id: "p1", number: 2, title: "P1", source: .involved, threads: [owed]),
+                makePR(id: "p2", number: 3, title: "P2", source: .involved, threads: [owed]),
+            ]))
+        #expect(ArrivalNotice.make(moreReplies)?.title == "3 new: 1 review request, 2 replies")
+        let replies = Arrivals.compute(
+            previous: [],
+            current: inbox([
+                makePR(id: "p1", number: 1, source: .involved, threads: [owed]),
+                makePR(id: "p2", number: 2, source: .involved, threads: [owed]),
+            ]))
+        #expect(ArrivalNotice.make(replies)?.title == "2 new replies")
+        let one = Arrivals.compute(
+            previous: [],
+            current: inbox([
+                makePR(
+                    id: "p1", number: 7, title: "Answer me", repository: "acme/api", source: .involved, threads: [owed])
+            ]))
+        #expect(ArrivalNotice.make(one)?.body == "acme/api · Replies to you")
     }
 }

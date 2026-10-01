@@ -45,4 +45,30 @@ import Testing
             """
         #expect(InboxPrinter.render(inbox, now: now) == expected)
     }
+
+    @Test func rendersRepliesAndOpenThreads() {
+        let owed = thread(
+            comment("alice", date("2026-08-10T05:00:00Z")), comment(testViewer, date("2026-08-10T05:30:00Z")),
+            comment("alice", date("2026-08-10T06:00:00Z")))
+        let inbox = InboxBuilder.build(
+            makeResult([
+                makePR(
+                    id: "a", number: 12, title: "Answer me", repository: "acme/api", source: .involved, threads: [owed]),
+                makePR(
+                    id: "b", number: 9, title: "Mine", repository: "acme/api", updatedAt: date("2026-08-10T11:00:00Z"),
+                    source: .mine, threads: [thread(comment("bob", date("2026-08-10T10:00:00Z")))]),
+            ]))
+        let expected = """
+            waiting on you: 1
+
+            Replies to you (1)
+              #12 Answer me  [acme/api]
+                  api · waiting 6h · +10 −2 · Awaiting your reply
+
+            Your PRs (1)
+              #9 Mine  [acme/api]
+                  api · updated 1h ago · +10 −2 · Open threads
+            """
+        #expect(InboxPrinter.render(inbox, now: now) == expected)
+    }
 }

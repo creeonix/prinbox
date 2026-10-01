@@ -14,6 +14,7 @@ struct InboxView: View {
     let info: AppInfo
     let updates: UpdateStore
     let notifications: NotificationSettings
+    let fetchSettings: FetchSettings
     let notifier: Notifier
     let actions: PopoverActions
 
@@ -22,10 +23,10 @@ struct InboxView: View {
             if state.showingSettings {
                 SettingsView(
                     state: state, hotKeys: hotKeys, loginItem: loginItem, info: info, notifications: notifications,
-                    notifier: notifier, actions: actions)
+                    fetchSettings: fetchSettings, notifier: notifier, actions: actions)
             } else {
                 HeaderView(state: state, actions: actions)
-                WarningLinesView(lines: state.store.warningLines)
+                WarningLinesView(lines: state.store.warningLines, link: state.store.warningLink, open: actions.open)
                 UpdateLineView(updates: updates, actions: actions)
                 Divider()
                 content
@@ -52,16 +53,26 @@ struct InboxView: View {
 
 struct WarningLinesView: View {
     let lines: [String]
+    /// A link that explains the first line (GitHub's status page for a 5xx), shown as a trailing button.
+    var link: URL? = nil
+    var open: (@MainActor (URL) -> Void)? = nil
 
     var body: some View {
         if !lines.isEmpty {
             VStack(alignment: .leading, spacing: 2) {
-                ForEach(lines, id: \.self) { line in
-                    Label(line, systemImage: "exclamationmark.triangle")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.orange)
-                        .lineLimit(1)
-                        .help(line)
+                ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                    HStack(spacing: 6) {
+                        Label(line, systemImage: "exclamationmark.triangle")
+                            .lineLimit(1)
+                            .foregroundStyle(.orange)
+                            .help(line)
+                        if index == 0, let link, let open {
+                            Button("Status page") { open(link) }
+                                .buttonStyle(.link)
+                                .help(link.absoluteString)
+                        }
+                    }
+                    .font(.system(size: 11))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

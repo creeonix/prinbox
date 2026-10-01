@@ -4,12 +4,15 @@ import Observation
 /// Owns the inbox and serializes refreshes: one fetch at a time, a refresh requested meanwhile runs
 /// exactly once afterwards, rate limiting pauses refreshes until GitHub's reset time, and a failure keeps
 /// the last good inbox. It also owns the `StateStore`: snoozes shape the inbox it builds, and consecutive
-/// fetches are diffed for arrivals.
+/// fetches are diffed for arrivals, and a refresh whose ids and updatedAt did not change skips the batches.
 @MainActor
 @Observable
 public final class InboxStore {
     public static let staleAfter: TimeInterval = 60
     public static let rateLimitFallbackPause: TimeInterval = 15 * 60
+    /// A refresh that finds nothing changed skips phase 2, but CI results and merge conflicts do not move a PR's
+    /// `updatedAt`, so a full fetch runs at least this often.
+    public static let fullFetchInterval: TimeInterval = 15 * 60
 
     public private(set) var inbox: Inbox?
     public private(set) var error: FetchError?
@@ -20,6 +23,8 @@ public final class InboxStore {
     public private(set) var arrivals: [InboxRow] = []
     /// Snoozes and the seen ledger; the popover reads and writes it through this store.
     public let state: StateStore
+    /// Follow review threads: threads, reviews and the `involved` search. Off is the lighter refresh.
+    public private(set) var includeConversation = true
 
     /// Called after every inbox change, whoever triggered the refresh (timer, wake, popover, R key).
     @ObservationIgnored public var onInboxChange: (@MainActor () -> Void)?
@@ -28,9 +33,12 @@ public final class InboxStore {
     @ObservationIgnored private var followUpRequested = false
     @ObservationIgnored private var pausedUntil: Date?
     @ObservationIgnored private var lastResult: FetchResult?
-    /// The arrivals baseline: `updatedAt` per PR id. A complete fetch replaces it; an incomplete one only
-    /// adds to it, so PRs a partial response left out do not come back as arrivals.
-    @ObservationIgnored private var known: [String: Date]?
+    /// The arrivals baseline: the attention ids of the last inbox. A complete fetch replaces it; an incomplete
+    /// one only adds to it, so PRs a partial response left out do not come back as arrivals.
+    @ObservationIgnored private var known: Set<String>?
+    /// `id -> updatedAt` of the last full fetch; sent back so an unchanged inbox costs one request.
+    @ObservationIgnored private var fingerprint: [String: Date]?
+    @ObservationIgnored private var lastFullFetch: Date?
     @ObservationIgnored private let fetcher: InboxFetching
     @ObservationIgnored private let clock: @Sendable () -> Date
 
@@ -53,6 +61,9 @@ public final class InboxStore {
         let errorLine = error.flatMap { $0.needsSetup ? nil : $0.message(lastSuccess: lastSuccess) }
         return (errorLine.map { [$0] } ?? []) + (inbox?.warnings ?? [])
     }
+
+    /// The current error's help link (GitHub's status page for a 5xx), nil otherwise.
+    public var warningLink: URL? { error?.helpURL }
 
     public func refresh() async {
         guard !isPaused else { return }
@@ -86,6 +97,16 @@ public final class InboxStore {
         await refresh()
     }
 
+    // MARK: Conversation
+
+    /// Changing what a fetch asks for invalidates the fingerprint, so the next refresh is a full one. The caller
+    /// triggers that refresh.
+    public func setIncludeConversation(_ on: Bool) {
+        guard on != includeConversation else { return }
+        includeConversation = on
+        fingerprint = nil
+    }
+
     // MARK: Snooze
 
     /// Parks a PR of the last fetch and rebuilds; unknown or already snoozed ids do nothing.
@@ -109,10 +130,9 @@ public final class InboxStore {
         onInboxChange?()
     }
 
-    private static func baseline(after result: FetchResult, extending previous: [String: Date]?) -> [String: Date] {
-        let fetched = Dictionary(
-            result.pullRequests.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { first, _ in first })
-        return result.isComplete ? fetched : (previous ?? [:]).merging(fetched) { _, new in new }
+    private static func baseline(after inbox: Inbox, complete: Bool, extending previous: Set<String>?) -> Set<String> {
+        let current = Arrivals.attentionIDs(inbox)
+        return complete ? current : (previous ?? []).union(current)
     }
 
     private var isPaused: Bool {
@@ -121,18 +141,30 @@ public final class InboxStore {
 
     private func fetchOnce() async {
         do {
-            let result = try await fetcher.fetch()
-            state.didFetch(result)
-            let built = InboxBuilder.build(result, snoozed: state.snoozedIDs)
-            arrivals = Arrivals.compute(previous: known, current: built)
-            known = Self.baseline(after: result, extending: known)
-            lastResult = result
-            inbox = built
-            error = nil
-            lastSuccess = clock()
-            pausedUntil = nil
-            onInboxChange?()
-            if !arrivals.isEmpty { onArrivals?(arrivals) }
+            let request = nextRequest()
+            switch try await fetcher.fetch(request) {
+            case .unchanged:
+                error = nil
+                lastSuccess = clock()
+                pausedUntil = nil
+            case .result(let result):
+                state.didFetch(result)
+                let built = InboxBuilder.build(result, snoozed: state.snoozedIDs)
+                let arrived = Arrivals.compute(previous: known, current: built)
+                arrivals = arrived
+                known = Self.baseline(after: built, complete: result.isComplete, extending: known)
+                lastResult = result
+                // A toggle during the fetch already cleared the fingerprint; this result answers the old question.
+                fingerprint = request.includeConversation == includeConversation ? result.fingerprint : nil
+                lastFullFetch = clock()
+                inbox = built
+                error = nil
+                lastSuccess = clock()
+                pausedUntil = nil
+                onInboxChange?()
+                // `arrived`, not `arrivals`: a hook that snoozes synchronously rebuilds and clears the latter.
+                if !arrived.isEmpty { onArrivals?(arrived) }
+            }
         } catch let failure as FetchError {
             error = failure
             if case .rateLimited(let resetAt) = failure {
@@ -141,5 +173,11 @@ public final class InboxStore {
         } catch {
             self.error = .other(String(String(describing: error).prefix(120)))
         }
+    }
+
+    /// The previous fingerprint rides along while the last full fetch is younger than `fullFetchInterval`.
+    private func nextRequest() -> FetchRequest {
+        let fresh = lastFullFetch.map { clock().timeIntervalSince($0) < Self.fullFetchInterval } ?? false
+        return FetchRequest(previous: fresh ? fingerprint : nil, includeConversation: includeConversation)
     }
 }

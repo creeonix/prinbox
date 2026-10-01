@@ -35,7 +35,7 @@ Run them before a release.
 - [ ] Pushing a commit (or commenting) on a snoozed PR wakes it on the next refresh, marked with the bar.
 - [ ] `Prinbox --print` shows the snoozed PR under Waiting on others as "· Snoozed".
 - [ ] After a change on GitHub, the row shows the bar at its edge and the header says "· 1 new"; closing and reopening the popover clears both.
-- [ ] Settings > Notify about new review requests: turning it on shows the macOS permission prompt; declining shows the note under the toggle.
+- [ ] Settings > Notify about new review requests and replies: turning it on shows the macOS permission prompt; declining shows the note under the toggle.
 - [ ] With the popover closed, a new review request gives one banner (title, org/repo); clicking it opens the PR. Two at once give one banner that opens the popover.
 - [ ] Nothing fires while the popover is open; the rows get the bar instead.
 - [ ] Settings > Compact rows: the new-row bar sits at the row's left edge, not floating beside the indent.
@@ -43,3 +43,18 @@ Run them before a release.
 - [ ] Settings > Compact rows: every section shows one-line rows with the age; ↑/↓ and Enter still work; turning it off restores the full rows.
 - [ ] VoiceOver reads an organization separator as "acme, 3 pull requests".
 - [ ] Clicking an older banner while the popover is open opens that PR; the popover closes on its own when the browser comes to the front.
+- [ ] Replies to you appears for a PR where someone answered your review thread, sits between Needs your review and Take another look, and its row shows the blue comment bubble with the total count; hovering the bubble names the threads waiting for you.
+- [ ] Replying in that thread (or the author resolving it) removes the PR from Replies to you on the next full refresh (within 15 minutes).
+- [ ] A PR of yours with an unanswered reviewer thread sits in Your PRs with the blue bubble; answering the thread moves it back.
+- [ ] S on a Replies row parks it; a new reply in your thread wakes it, marked with the bar. Your own reply while it is snoozed does not wake it.
+- [ ] A snoozed PR of yours wakes when someone approves or requests changes; a snoozed review request wakes when the author re-requests your review.
+- [ ] Settings > Follow review threads off: Replies to you disappears after one refresh and the unified log shows a cheaper fetch (fewer points); on brings it back.
+- [ ] The unified log (`log stream --predicate 'subsystem == "io.github.creeonix.prinbox"'`) shows "fetch unchanged: 1 request" on a quiet refresh and a full fetch at most every 15 minutes.
+- [ ] On a GitHub 5xx the warning line shows "Status page"; clicking it opens githubstatus.com and closes the popover.
+- [ ] Two review requests arriving in separate refreshes give one banner in Notification Center, the newer one replacing the older.
+- [ ] A banner for a reply says "Replies to you" and opens the PR.
+- [ ] A PR that keeps changing while it sits in Needs your review gives one banner when it arrives, not one per refresh.
+- [ ] `--print` prints a Replies to you row with "Awaiting your reply" and an own row with "Open threads".
+- [ ] After upgrading from 0.3.1, `~/Library/Application Support/prinbox/state.json` still lists the earlier snooze and the app reads it.
+- [ ] The first right-click on a row after the popover opens shows the row menu; the popover stays open.
+- [ ] Dismissing a row menu by clicking in another app closes the popover; choosing Copy link keeps it open.

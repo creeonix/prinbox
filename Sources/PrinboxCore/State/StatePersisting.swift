@@ -21,11 +21,18 @@ public struct JSONStateFile: StatePersisting {
             .appendingPathComponent("state.json")
     }
 
+    /// Nil for a missing file; the read itself decides, so a file created between a check and the read is
+    /// still loaded.
     public func load() throws -> AppState? {
-        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        let data: Data
+        do {
+            data = try Data(contentsOf: url)
+        } catch let error as CocoaError where error.code == .fileReadNoSuchFile {
+            return nil
+        }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(AppState.self, from: Data(contentsOf: url))
+        return try decoder.decode(AppState.self, from: data)
     }
 
     public func save(_ state: AppState) throws {

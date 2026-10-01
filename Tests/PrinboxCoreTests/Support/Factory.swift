@@ -30,7 +30,12 @@ func makePR(
     reviewRequestedAt: Date? = nil,
     readyForReviewAt: Date? = nil,
     source: SearchSource = .review,
-    commentCount: Int = 0
+    commentCount: Int = 0,
+    headRef: String? = nil,
+    baseRef: String? = nil,
+    lastCommitAt: Date? = nil,
+    threads: [ReviewThread]? = nil,
+    reviews: [Review]? = nil
 ) -> PullRequest {
     PullRequest(
         id: id,
@@ -53,7 +58,12 @@ func makePR(
         reviewRequestedAt: reviewRequestedAt,
         readyForReviewAt: readyForReviewAt,
         source: source,
-        commentCount: commentCount
+        commentCount: commentCount,
+        headRef: headRef,
+        baseRef: baseRef,
+        lastCommitAt: lastCommitAt,
+        threads: threads,
+        reviews: reviews
     )
 }
 
@@ -61,5 +71,14 @@ func makeResult(_ prs: [PullRequest], totals: [SearchSource: Int]? = nil, warnin
     let counts = Dictionary(grouping: prs, by: \.source).mapValues(\.count)
     let fetched = Dictionary(uniqueKeysWithValues: SearchSource.allCases.map { ($0, counts[$0] ?? 0) })
     return FetchResult(
-        viewerLogin: testViewer, pullRequests: prs, totals: totals ?? fetched, fetched: fetched, warnings: warnings)
+        viewerLogin: testViewer, pullRequests: prs, totals: totals ?? fetched, fetched: fetched, warnings: warnings,
+        fingerprint: Dictionary(prs.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { _, new in new }))
+}
+
+func comment(_ login: String, _ at: Date) -> ThreadComment {
+    ThreadComment(authorLogin: login, createdAt: at)
+}
+
+func thread(_ comments: ThreadComment..., resolved: Bool = false) -> ReviewThread {
+    ReviewThread(isResolved: resolved, comments: comments)
 }

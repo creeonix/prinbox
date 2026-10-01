@@ -32,36 +32,46 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
 ## Features
 
 - **A count in the menu bar.** It is dimmed when nothing waits on you and red when gh needs attention.
-- **Five sections**, each foldable, with the fold state remembered:
+- **Six sections**, each foldable, with the fold state remembered:
   - **Needs your review:** you or one of your teams was asked, and you have not reviewed yet.
+  - **Replies to you:** someone answered in a review thread you took part in, and the next word is yours.
+    Found even on PRs where you are no longer a requested reviewer.
   - **Take another look:** your review was requested again after you already reviewed.
   - **Mentions:** someone mentioned you on their PR.
-  - **Your PRs:** yours that need you: changes requested, merge conflicts, CI is red, or approved and
-    ready to merge.
+  - **Your PRs:** yours that need you: changes requested, merge conflicts, review threads you have not
+    answered, CI is red, or approved and ready to merge.
   - **Waiting on others:** the rest of yours, one quiet line each, plus anything you snoozed.
 - **Rows that answer "what, where and how long":** author avatar (with the organization's avatar in its
   corner when your inbox spans more than one organization), `org/repo` (same condition), time waiting (counted from when
   your review was requested), and lines added and removed.
 - **Status at a glance:** four marks at the right edge of each row: comment count, review state
   (approved or changes requested), CI (passed, failed, running) and merge state (ready to merge or
-  conflicts). Hover a mark for its meaning.
+  conflicts). Hover a mark for its meaning. On Replies to you rows and on your PRs with open threads, the
+  comment bubble and its count turn blue; hover it for how many threads wait for you.
 - **Group by organization** (off by default): each section groups its rows under a thin separator with
   the organization's color, name and count.
-- **Snooze:** `S` (or right-click) parks a PR until something changes on it. It moves to Waiting on others,
-  leaves the count, and comes back by itself when the PR is updated (any change counts, including your own
-  comment or push); `U` brings it back sooner. Snoozes are kept in
+- **Snooze:** `S` (or right-click) parks a PR until someone replies to you, pushes a commit or asks for your
+  review again. It moves to Waiting on others, leaves the count, and comes back by itself when someone
+  replies in a thread that concerns you, pushes a commit, requests your review again or (on your PRs)
+  submits a review; your own activity keeps it parked. `U` brings it back sooner. Snoozes are kept in
   `~/Library/Application Support/prinbox/state.json`.
 - **New since your last look:** rows that appeared or changed since you last closed the popover carry an accent
   bar at their left edge, and the header counts them.
-- **Notifications** (off by default): one banner per refresh when new review requests arrive; clicking it
-  opens the PR (or the popover, when several arrived at once).
+- **Notifications** (off by default): one banner per refresh when a PR enters Needs your review, Replies to
+  you or Take another look; a PR that keeps changing while it sits there does not notify again. A newer
+  banner replaces the previous one. Clicking it opens the PR (or the popover, when several arrived at once).
 - **Compact rows** (off by default): every section as one-line rows, with the waiting time.
-- **Keyboard first:** ↑/↓, Enter to open, S to snooze, U to unsnooze, R to refresh, Esc to close, and a global shortcut (⌃⌥P by default).
+- **Follow review threads** (on by default): reads who commented in review threads and reviews, and when,
+  for Replies to you, open threads and the snooze wake above. Off makes every refresh lighter and a snooze
+  wakes on any change.
+- **Keyboard first:** ↑/↓, Enter to open, S to snooze, U to unsnooze, R to refresh, Esc to close, and a
+  global shortcut (⌃⌥P by default).
 - **A real menu-bar popover:** tiling window managers such as OmniWM, AeroSpace and yabai leave it alone.
 - **Clear setup help:** when gh is missing or signed out, the popover shows the exact commands, and
   PRInbox recovers by itself once they are done.
 - **Stays fresh:** refreshes every 5 minutes, after wake and when opened; it keeps the last data while
-  offline, and archived repositories are excluded.
+  offline, and archived repositories are excluded. A refresh finds out first whether anything changed at
+  all; when nothing did, it costs GitHub one request.
 - **Launch at login**, from Settings in the popover.
 - **Update notice:** once a day PRInbox asks GitHub (through gh) for its latest release. When a newer one
   exists, a line in the popover, a Download item in the icon's menu and a small badge on the icon link to
@@ -93,9 +103,12 @@ To build from source instead, see [Build from source](#build-from-source).
 
 | Icon | Meaning |
 |---|---|
-| pull-request symbol + number | PRs waiting on you: Needs your review, Take another look and Mentions (drafts not counted) |
+| pull-request symbol + number | PRs waiting on you: Needs your review, Replies to you, Take another look and Mentions (drafts not counted) |
 | dimmed symbol | nothing is waiting on you |
 | red symbol + `!` | gh is missing, signed out, offline or rate limited; hover for the reason |
+
+When GitHub itself is having trouble (an HTTP 502 and friends), the warning line says so, keeps the last
+data and links to the [GitHub status page](https://www.githubstatus.com).
 
 Left-click opens the popover. Right-click offers Refresh now and Quit.
 
@@ -105,7 +118,7 @@ Left-click opens the popover. Right-click offers Refresh now and Quit.
 |---|---|
 | ↑ / ↓ | move the selection (wraps) |
 | Enter | open the selected PR in your browser, or fold/unfold a section header |
-| S | snooze the selected PR until it changes |
+| S | snooze the selected PR until someone replies, pushes or re-requests |
 | U | unsnooze the selected PR |
 | R | refresh now |
 | Esc | close the popover, or leave Settings |
@@ -138,10 +151,10 @@ When this override is set, PRInbox uses only that path. Remove it with
 ### Settings
 
 Open Settings with the gear in the popover. It holds the global shortcut, launch at login, **Group by
-organization**, **Show organization avatars**, **Compact rows**, **Notify about new review requests**, the
-detected `gh` path, the version and Quit. Turning notifications on asks macOS for permission once; if you
-decline, Settings says where to turn them on. Settings stay inside the popover, so there is never a window
-for a tiling window manager to grab.
+organization**, **Show organization avatars**, **Compact rows**, **Follow review threads**, **Notify about
+new review requests and replies**, the detected `gh` path, the version and Quit. Turning notifications on
+asks macOS for permission once; if you decline, Settings says where to turn them on. Settings stay inside
+the popover, so there is never a window for a tiling window manager to grab.
 
 <p align="center">
   <img src="docs/images/popover-compact.png" width="460" alt="The same inbox with Compact rows on">
@@ -159,12 +172,15 @@ for a tiling window manager to grab.
 - **No token handling:** GitHub access goes only through `gh api graphql`. PRInbox has no OAuth app,
   and never reads, stores or sends a token.
 - **Nothing leaves your Mac:** there is no telemetry and no server. The only network traffic is gh's
-  GitHub API calls (your inbox every five minutes, the latest PRInbox release once a day) and avatar
-  downloads from `avatars.githubusercontent.com` (authors and repository owners).
+  GitHub API calls (the pull requests waiting on you in two steps, an ids-only search and the details in
+  small batches, every five minutes or when something changed; the latest PRInbox release once a day) and
+  avatar downloads from `avatars.githubusercontent.com` (authors and repository owners).
 - **Local data:** avatars are cached in `~/Library/Caches/io.github.creeonix.prinbox`. Settings live in
   the app's user defaults. Snoozes and the "seen" ledger live in
   `~/Library/Application Support/prinbox/state.json`, a small JSON file keyed by PR id; `make uninstall`
-  removes all three.
+  removes all three. [docs/state-file.md](docs/state-file.md) describes `state.json`.
+- **What it reads:** PRInbox reads who commented in review threads and who reviewed, and when. It never
+  fetches, stores or logs the text of a comment, a review or a description.
 
 ## Build from source
 
@@ -196,9 +212,12 @@ Other targets:
   - `Sources/PrinboxCore` holds all the logic (gh access, classification, formatting, state) and is
     unit tested. It has no AppKit.
   - `Sources/Prinbox` is the thin AppKit and SwiftUI shell.
-- **Fixtures:** `scripts/record-fixture.sh <name>` records the live query as a test fixture. It
-  rebuilds the response from an allowlist of fields and replaces repositories, logins, titles, URLs and
-  ids with placeholders, and a test checks every string in every fixture.
+- **Fixtures:** `scripts/record-fixture.sh <name>` records the live inbox as a two-phase fixture (the
+  search and the detail batches). It rebuilds the response from an allowlist of fields and replaces
+  repositories, logins, titles, URLs and ids with placeholders, and a test checks every string in every
+  fixture.
+- **State file:** [docs/state-file.md](docs/state-file.md) is the contract for
+  `~/Library/Application Support/prinbox/state.json`.
 - **UI checks:** things the tests cannot cover are listed in
   [docs/manual-checklist.md](docs/manual-checklist.md).
 - **Releases:** see [RELEASING.md](RELEASING.md).
@@ -210,9 +229,7 @@ Other targets:
 
 ## Roadmap
 
-- "Replies to you" from review threads.
 - Stacked PR chains.
-- A smarter wake for snoozed PRs (a reply or a new commit, not any change).
 - An MCP server, so AI agents can read your review queue.
 
 ## Credits

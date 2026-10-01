@@ -7,7 +7,7 @@ import Testing
     let result: FetchResult
 
     init() throws {
-        result = try PullRequestMapper.map(InboxResponse.decode(Fixture.data("live-2026-09-30")))
+        result = try Fixture.twoPhase(Fixture.liveName)
     }
 
     @Test func containsOnlyAnonymizedValues() {
@@ -35,5 +35,15 @@ import Testing
 
     @Test func archivedRepositoriesAreExcludedByTheQuery() {
         #expect(result.pullRequests.allSatisfy { !$0.isArchived })
+    }
+
+    @Test func carriesTheConversationFieldsAddedInV04() {
+        #expect(result.pullRequests.allSatisfy { $0.headRef != nil && $0.baseRef != nil })
+        #expect(result.pullRequests.allSatisfy { $0.threads != nil && $0.reviews != nil })
+        #expect(result.pullRequests.contains { !($0.threads ?? []).isEmpty })
+        #expect(result.pullRequests.allSatisfy { $0.headRef?.hasPrefix("ref-") ?? false })
+        #expect(result.pullRequests.contains { $0.source == .involved })
+        #expect(result.fingerprint.count > 0)
+        #expect(result.cost > 0)
     }
 }
