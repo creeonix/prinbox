@@ -56,3 +56,5 @@ Run them before a release.
 - [ ] A PR that keeps changing while it sits in Needs your review gives one banner when it arrives, not one per refresh.
 - [ ] `--print` prints a Replies to you row with "Awaiting your reply" and an own row with "Open threads".
 - [ ] After upgrading from 0.3.1, `~/Library/Application Support/prinbox/state.json` still lists the earlier snooze and the app reads it.
+- [ ] The first right-click on a row after the popover opens shows the row menu; the popover stays open.
+- [ ] Dismissing a row menu by clicking in another app closes the popover; choosing Copy link keeps it open.
