@@ -27,3 +27,14 @@ jobs:
         run: scripts/release-notes.sh
       - name: Test with coverage
         run: make coverage
+  linux:
+    runs-on: ubuntu-latest
+    container: swift:6.4
+    steps:
+      - uses: actions/checkout@v4
+      - name: jq for the anonymizer tests
+        run: apt-get update -qq && apt-get install -y -qq jq
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test

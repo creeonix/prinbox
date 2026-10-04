@@ -226,6 +226,7 @@ Other targets:
     `@Observable` models instead.
   - XCTest, so the tests use Swift Testing.
   - A reliably found swift-testing macro plugin; `make test` passes its path explicitly.
+- **Linux:** CI builds the library and runs the whole test suite in a `swift:6.4` container; the command runs there too, the app does not.
 
 ## Roadmap
 
