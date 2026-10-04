@@ -114,14 +114,18 @@ final class QueryLog: @unchecked Sendable {
 
     @Test func aFailingBatchIsRetriedAsTwoHalves() async throws {
         let log = QueryLog()
+        let logger = MemoryLogging()
         let search = TwoPhaseJSON.search(mine: (1...10).map { TwoPhaseJSON.hit("o\($0)") })
-        let result = try await twoPhase(search: search, log: log) { ids, call in
+        let result = try await twoPhase(search: search, log: log, logger: logger) { ids, call in
             if call == 2 { return Self.ok(Data(), stderr: "gh: HTTP 502", exitCode: 1) }
             return Self.nodes(ids)
         }.fetch()
         #expect(log.detailsQueries.map { TwoPhaseJSON.requestedIDs(in: $0).count }.sorted() == [5, 5, 10])
         #expect(result.pullRequests.count == 10)
         #expect(result.pullRequests.map(\.id) == (1...10).map { "o\($0)" })
+        let notice = logger.lines.first { $0.level == .notice }
+        #expect(notice?.message == "details batch of 10 failed; retrying split")
+        #expect(notice?.detail != nil)
     }
 
     @Test func aLoneIDIsRetriedOnceAsIs() async throws {

@@ -31,6 +31,24 @@ struct FailingPersistence: StatePersisting {
         return (StateStore(persistence: memory, clock: { clock.now }), memory)
     }
 
+    @Test func persistenceFailuresLogAFixedMessageWithTheErrorAsThePrivateDetail() {
+        let logger = MemoryLogging()
+        let store = StateStore(persistence: FailingPersistence(loadFails: true, saveFails: true), logger: logger)
+        let first = logger.lines
+        #expect(first.count == 1)
+        #expect(first.first?.level == .error)
+        #expect(first.first?.category == .state)
+        #expect(first.first?.message == "state.json unreadable, starting empty")
+        #expect(first.first?.detail != nil)
+        store.snooze(makePR())
+        let lines = logger.lines
+        #expect(lines.count == 2)
+        #expect(lines.last?.level == .error)
+        #expect(lines.last?.category == .state)
+        #expect(lines.last?.message == "state.json not saved")
+        #expect(lines.last?.detail != nil)
+    }
+
     @Test func snoozeRecordsTheClockAndTheUpdatedAtAndSaves() {
         let (store, memory) = makeStore()
         let pr = makePR(id: "a", updatedAt: old)

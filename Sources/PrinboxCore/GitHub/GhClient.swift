@@ -38,7 +38,8 @@ extension InboxFetching {
 
 /// Fetches the inbox in two phases through `gh api graphql`: one ids-only request (`SearchQuery`), then rows
 /// and conversation for every hit in concurrent batches of 10 (`DetailsQuery`). gh owns authentication;
-/// prinbox never sees the token. Failures log gh's stderr (truncated) to the unified log. stdout is never logged.
+/// prinbox never sees the token. A failure logs an error line on the injected logger with gh's stderr (truncated)
+/// as its private detail. stdout is never logged.
 public struct GhClient: InboxFetching {
     public static let defaultTimeout: Duration = .seconds(30)
     /// Ids per details request. GitHub terminates a request after 10 s; ten heavy PRs with threads measured 3.6 s.
@@ -147,10 +148,10 @@ public struct GhClient: InboxFetching {
             log.error(.gh, "gh timed out")
             throw FetchError.timedOut
         } catch CommandRunnerError.launchFailed(let reason) {
-            log.error(.gh, "gh could not be launched: \(reason)")
+            log.error(.gh, "gh could not be launched", private: reason)
             throw FetchError.other("Could not run gh: \(reason)")
         } catch {
-            log.error(.gh, "gh failed to run: \(String(describing: error))")
+            log.error(.gh, "gh failed to run", private: String(describing: error))
             throw FetchError.other("Could not run gh: \(error.localizedDescription)")
         }
         if output.exitCode != 0 {

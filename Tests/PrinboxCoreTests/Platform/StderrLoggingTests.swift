@@ -36,8 +36,4 @@ import Testing
         #expect(LogLevel.info < .notice)
         #expect(LogLevel.notice < .error)
     }
-
-    @Test func nullLoggingAcceptsEverything() {
-        NullLogging().error(.state, "ignored", private: "also ignored")
-    }
 }

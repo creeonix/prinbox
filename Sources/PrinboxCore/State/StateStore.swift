@@ -22,7 +22,7 @@ public final class StateStore {
         do {
             state = try persistence.load() ?? AppState()
         } catch {
-            logger.error(.state, "state.json unreadable, starting empty: \(String(describing: error))")
+            logger.error(.state, "state.json unreadable, starting empty", private: String(describing: error))
             state = AppState()
         }
     }
@@ -84,7 +84,7 @@ public final class StateStore {
         do {
             try persistence.save(next)
         } catch {
-            logger.error(.state, "state.json not saved: \(String(describing: error))")
+            logger.error(.state, "state.json not saved", private: String(describing: error))
         }
     }
 }
