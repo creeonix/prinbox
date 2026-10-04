@@ -9,8 +9,8 @@ name=${1:?usage: scripts/record-fixture.sh <name>}
 root=$(cd "$(dirname "$0")/.." && pwd)
 out="$root/Tests/PrinboxCoreTests/Fixtures/$name.json"
 
-query=$(swift run --package-path "$root" -q Prinbox --print-query)
-template=$(swift run --package-path "$root" -q Prinbox --print-details-query)
+query=$(swift run --package-path "$root" -q PrinboxApp --print-query)
+template=$(swift run --package-path "$root" -q PrinboxApp --print-details-query)
 # gh exits 1 when the response carries GraphQL errors but still prints the body, so keep it.
 search=$(gh api graphql -f query="$query") || true
 [ -n "$search" ] || { echo "gh returned nothing for the search" >&2; exit 1; }

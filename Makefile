@@ -1,11 +1,12 @@
-PRODUCT   := Prinbox
-APP_NAME  := PRInbox
-BUNDLE_ID := io.github.creeonix.prinbox
-VERSION   ?= 0.4.0
-BUILD_DIR := build
-APP       := $(BUILD_DIR)/$(APP_NAME).app
-DMG       := $(BUILD_DIR)/$(APP_NAME)-$(VERSION).dmg
-INSTALLED := /Applications/$(APP_NAME).app
+PRODUCT    := PrinboxApp
+EXECUTABLE := Prinbox
+APP_NAME   := PRInbox
+BUNDLE_ID  := io.github.creeonix.prinbox
+VERSION    ?= 0.4.0
+BUILD_DIR  := build
+APP        := $(BUILD_DIR)/$(APP_NAME).app
+DMG        := $(BUILD_DIR)/$(APP_NAME)-$(VERSION).dmg
+INSTALLED  := /Applications/$(APP_NAME).app
 
 # Universal by default, so local builds match the released DMG. Use ARCHS=arm64 for a faster local build.
 ARCHS         ?= arm64 x86_64
@@ -61,7 +62,7 @@ app: build
 	rm -rf "$(APP)"
 	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources"
 	cp "$$(swift build -c release --product $(PRODUCT) $(ARCH_FLAGS) --show-bin-path)/$(PRODUCT)" \
-		"$(APP)/Contents/MacOS/$(PRODUCT)"
+		"$(APP)/Contents/MacOS/$(EXECUTABLE)"
 	cp Resources/AppIcon.icns "$(APP)/Contents/Resources/AppIcon.icns"
 	sed 's/__VERSION__/$(VERSION)/g' Resources/Info.plist > "$(APP)/Contents/Info.plist"
 	codesign --force --sign "$(SIGN_IDENTITY)" $(SIGN_FLAGS) --identifier $(BUNDLE_ID) "$(APP)"
@@ -71,15 +72,15 @@ dmg: app
 	scripts/make-dmg.sh "$(APP)" "$(DMG)" "$(APP_NAME) $(VERSION)"
 
 install: app
-	-pkill -x $(PRODUCT)
-	@for i in $$(seq 50); do pgrep -xq $(PRODUCT) || break; sleep 0.1; done
+	-pkill -x $(EXECUTABLE)
+	@for i in $$(seq 50); do pgrep -xq $(EXECUTABLE) || break; sleep 0.1; done
 	rm -rf "$(INSTALLED)"
 	cp -R "$(APP)" /Applications/
 	open "$(INSTALLED)"
 
 uninstall:
-	-"$(INSTALLED)/Contents/MacOS/$(PRODUCT)" --unregister-login-item
-	-pkill -x $(PRODUCT)
+	-"$(INSTALLED)/Contents/MacOS/$(EXECUTABLE)" --unregister-login-item
+	-pkill -x $(EXECUTABLE)
 	rm -rf "$(INSTALLED)" "$(HOME)/Library/Caches/$(BUNDLE_ID)" "$(HOME)/Library/Application Support/prinbox"
 	-defaults delete $(BUNDLE_ID)
 
