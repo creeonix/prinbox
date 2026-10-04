@@ -229,8 +229,8 @@ Other targets:
 
 ## Roadmap
 
-- Stacked PR chains.
-- An MCP server, so AI agents can read your review queue.
+See [docs/roadmap.md](docs/roadmap.md): a shared core with a `prinbox` command and stacked PRs (0.5.0), an MCP server
+(0.6.0), editor and tmux adapters (0.7.0), and Linux support for Hyprland and KDE (1.0.0).
 
 ## Credits
 
