@@ -66,7 +66,7 @@ enum CommandLineMode {
     /// Snoozes from state.json, woken in memory as the app would; the file is never written here.
     private static func snoozedIDs(for result: FetchResult) -> Set<String> {
         do {
-            let state = try JSONStateFile(url: JSONStateFile.defaultURL()).load() ?? AppState()
+            let state = try JSONStateFile(url: JSONStateFile.url(in: MacDirectories())).load() ?? AppState()
             return Set(Snooze.reconcile(state.snoozed, with: result).keys)
         } catch {
             FileHandle.standardError.write(Data("warning: state.json unreadable, ignoring snoozes\n".utf8))

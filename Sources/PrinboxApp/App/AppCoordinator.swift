@@ -29,6 +29,7 @@ final class AppCoordinator {
     /// section open, the state (one snooze, four new rows) stays in memory, and no global shortcut is
     /// registered, so a demo never touches the real setup.
     init(demo: Bool = false) {
+        let directories = MacDirectories()
         let defaults = demo ? Self.demoDefaults() : UserDefaults.standard
         let client = GhClient(logger: OSLogging())
         let fetcher: InboxFetching
@@ -39,7 +40,7 @@ final class AppCoordinator {
             persistence = MemoryStatePersistence(demoFetcher.initialState)
         } else {
             fetcher = client
-            persistence = JSONStateFile(url: JSONStateFile.defaultURL())
+            persistence = JSONStateFile(url: JSONStateFile.url(in: directories))
         }
         let store = InboxStore(fetcher: fetcher, state: StateStore(persistence: persistence, logger: OSLogging()))
         isDemo = demo
@@ -57,7 +58,7 @@ final class AppCoordinator {
         notifications = NotificationSettings(defaults: defaults)
         fetchSettings = FetchSettings(defaults: defaults)
         store.setIncludeConversation(fetchSettings.followReviewThreads)
-        avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.defaultDirectory(bundleID: Self.bundleID)))
+        avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.directory(in: directories)))
     }
 
     func start() {

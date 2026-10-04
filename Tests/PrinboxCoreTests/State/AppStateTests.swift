@@ -108,13 +108,6 @@ import Testing
         }
     }
 
-    @Test func defaultURLIsUnderApplicationSupport() {
-        let url = JSONStateFile.defaultURL()
-        #expect(url.lastPathComponent == "state.json")
-        #expect(url.deletingLastPathComponent().lastPathComponent == "prinbox")
-        #expect(url.path.contains("/Library/Application Support/"))
-    }
-
     @Test func memoryPersistenceRemembersTheLastSave() throws {
         let memory = MemoryStatePersistence()
         #expect(try memory.load() == nil)
