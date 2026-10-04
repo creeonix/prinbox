@@ -81,8 +81,9 @@ install: app
 uninstall:
 	-"$(INSTALLED)/Contents/MacOS/$(EXECUTABLE)" --unregister-login-item
 	-pkill -x $(EXECUTABLE)
-	rm -rf "$(INSTALLED)" "$(HOME)/Library/Caches/$(BUNDLE_ID)" "$(HOME)/Library/Application Support/prinbox"
+	rm -rf "$(INSTALLED)" "$(HOME)/Library/Caches/$(BUNDLE_ID)" "$(HOME)/Library/Application Support/prinbox" "$(HOME)/.config/prinbox"
 	-defaults delete $(BUNDLE_ID)
+	-defaults delete $(BUNDLE_ID).demo
 
 run:
 	swift run $(PRODUCT)

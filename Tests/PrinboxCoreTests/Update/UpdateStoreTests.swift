@@ -19,6 +19,7 @@ actor ScriptedChecker: ReleaseChecking {
 
 @MainActor
 @Suite struct UpdateStoreTests {
+    let iso = ISO8601DateFormatter()
     let start = date("2026-08-10T12:00:00Z")
     let page = URL(string: "https://github.com/creeonix/prinbox/releases/tag/v0.3.0")!
 
@@ -46,7 +47,7 @@ actor ScriptedChecker: ReleaseChecking {
         #expect(store.available?.tag == "v0.3.0")
         let stored = defaults.object(forKey: UpdateStore.latestReleaseKey) as? [String: String]
         #expect(stored == ["tag": "v0.3.0", "url": page.absoluteString])
-        #expect(defaults.object(forKey: UpdateStore.checkedAtKey) as? Date == start)
+        #expect(defaults.object(forKey: UpdateStore.checkedAtKey) as? String == iso.string(from: start))
     }
 
     @Test func sameOrOlderReleaseIsNotAvailable() async {
@@ -86,7 +87,7 @@ actor ScriptedChecker: ReleaseChecking {
     @Test func storedReleaseSurvivesRelaunch() async {
         let defaults = MemoryDefaults()
         defaults.set(["tag": "v0.3.0", "url": page.absoluteString], forKey: UpdateStore.latestReleaseKey)
-        defaults.set(start, forKey: UpdateStore.checkedAtKey)
+        defaults.set(iso.string(from: start), forKey: UpdateStore.checkedAtKey)
         let (store, checker) = makeStore(release: Release(tag: "v9.9.9", url: page), defaults: defaults)
         #expect(store.available?.tag == "v0.3.0")
         await store.checkIfDue()
@@ -97,11 +98,11 @@ actor ScriptedChecker: ReleaseChecking {
 
     @Test func aCheckTimeInTheFutureCountsAsDue() async {
         let defaults = MemoryDefaults()
-        defaults.set(start + 3600, forKey: UpdateStore.checkedAtKey)
+        defaults.set(iso.string(from: start + 3600), forKey: UpdateStore.checkedAtKey)
         let (store, checker) = makeStore(release: Release(tag: "v0.3.0", url: page), defaults: defaults)
         await store.checkIfDue()
         #expect(await checker.calls == 1)
-        #expect(defaults.object(forKey: UpdateStore.checkedAtKey) as? Date == start)
+        #expect(defaults.object(forKey: UpdateStore.checkedAtKey) as? String == iso.string(from: start))
     }
 
     @Test func corruptedStoredReleaseBehavesLikeNothingStored() {
@@ -126,6 +127,6 @@ actor ScriptedChecker: ReleaseChecking {
         let (store, checker) = makeStore(release: Release(tag: "v0.3.0", url: page), defaults: defaults)
         await store.checkIfDue()
         #expect(await checker.calls == 1)
-        #expect(defaults.object(forKey: UpdateStore.checkedAtKey) as? Date == start)
+        #expect(defaults.object(forKey: UpdateStore.checkedAtKey) as? String == iso.string(from: start))
     }
 }

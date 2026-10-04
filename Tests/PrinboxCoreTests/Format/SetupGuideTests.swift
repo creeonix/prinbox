@@ -8,17 +8,20 @@ import Testing
         let guide = try #require(SetupGuide.for(.ghNotFound, ghOverride: nil))
         #expect(guide.title == "Install the GitHub CLI")
         #expect(guide.summary.hasPrefix("PRInbox reads your pull requests"))
-        #expect(guide.footnote?.text == "Installed gh somewhere else? Point PRInbox at it")
         #expect(guide.steps.map(\.command) == ["brew install gh", "gh auth login"])
         #expect(guide.link?.url == URL(string: "https://cli.github.com"))
-        #expect(guide.footnote?.command == "defaults write io.github.creeonix.prinbox ghPath /path/to/gh")
+        #expect(guide.footnote?.command == nil)
+        #expect(
+            guide.footnote?.text == "Installed gh somewhere else? Set ghPath in ~/.config/prinbox/settings.json")
     }
 
     @Test func missingGhAtAnOverrideNamesThePath() throws {
         let guide = try #require(SetupGuide.for(.ghNotFound, ghOverride: "/opt/tools/gh"))
         #expect(guide.title == "gh not found")
         #expect(guide.summary.contains("/opt/tools/gh"))
-        #expect(guide.steps.map(\.command) == ["defaults delete io.github.creeonix.prinbox ghPath", "brew install gh"])
+        #expect(guide.steps.map(\.command) == [nil, "brew install gh"])
+        #expect(
+            guide.steps[0].text == "Remove ghPath from ~/.config/prinbox/settings.json to use gh from Homebrew or PATH")
     }
 
     @Test func loggedOutExplainsSignIn() throws {

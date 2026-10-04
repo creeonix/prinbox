@@ -35,13 +35,13 @@ enum CommandLineMode {
             print(DetailsQuery.template(includeConversation: true))
             return 0
         case .printInbox:
+            let client = Self.makeClient()
             do {
-                let result = try await GhClient(logger: OSLogging()).fetch()
+                let result = try await client.fetch()
                 let inbox = InboxBuilder.build(result, snoozed: Self.snoozedIDs(for: result))
                 print(InboxPrinter.render(inbox, now: Date()))
                 return 0
             } catch let error as FetchError {
-                let client = GhClient()
                 let text =
                     SetupGuide.for(error, ghOverride: client.ghOverride)?.plainText
                     ?? error.message(lastSuccess: nil)
@@ -61,6 +61,13 @@ enum CommandLineMode {
                 return 1
             }
         }
+    }
+
+    /// The same gh as the app: the `ghPath` setting from settings.json, if any.
+    private static func makeClient() -> GhClient {
+        let settings = JSONKeyValueFile(url: MacDirectories().config.appendingPathComponent("settings.json"))
+        let locator = GhLocator(overridePath: settings.object(forKey: GhLocator.overrideKey) as? String)
+        return GhClient(locator: locator, logger: OSLogging())
     }
 
     /// Snoozes from state.json, woken in memory as the app would; the file is never written here.

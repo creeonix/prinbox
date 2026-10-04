@@ -7,7 +7,7 @@ import Observation
 @MainActor
 @Observable
 public final class FetchSettings {
-    public static let key = "followReviewThreads"
+    public nonisolated static let key = "followReviewThreads"
 
     public private(set) var followReviewThreads: Bool
     @ObservationIgnored private let defaults: KeyValueStoring

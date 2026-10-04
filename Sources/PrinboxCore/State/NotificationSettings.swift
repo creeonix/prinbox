@@ -7,7 +7,7 @@ import Observation
 @MainActor
 @Observable
 public final class NotificationSettings {
-    public static let key = "notifyOnNewReviewRequests"
+    public nonisolated static let key = "notifyOnNewReviewRequests"
 
     public private(set) var isEnabled: Bool
     @ObservationIgnored private let defaults: KeyValueStoring

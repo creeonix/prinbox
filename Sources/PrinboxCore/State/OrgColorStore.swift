@@ -6,7 +6,7 @@ import Observation
 @MainActor
 @Observable
 public final class OrgColorStore {
-    public static let key = "orgColors"
+    public nonisolated static let key = "orgColors"
     public static let paletteSize = 8
 
     public private(set) var indices: [String: Int]

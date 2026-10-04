@@ -42,13 +42,15 @@ public final class UpdateStore {
 
     public func checkIfDue() async {
         guard current != nil, !checking else { return }
-        if let last = defaults.object(forKey: Self.checkedAtKey) as? Date {
+        if let last = (defaults.object(forKey: Self.checkedAtKey) as? String).flatMap(
+            ISO8601DateFormatter().date(from:))
+        {
             let elapsed = clock().timeIntervalSince(last)
             if elapsed >= 0 && elapsed < Self.interval { return }
         }
         checking = true
         defer { checking = false }
-        defaults.set(clock(), forKey: Self.checkedAtKey)
+        defaults.set(ISO8601DateFormatter().string(from: clock()), forKey: Self.checkedAtKey)
         guard let release = try? await checker.latestRelease() else { return }
         latest = release
         defaults.set(["tag": release.tag, "url": release.url.absoluteString], forKey: Self.latestReleaseKey)
