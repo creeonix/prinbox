@@ -72,7 +72,11 @@ public struct GhClient: InboxFetching {
             try await run(gh, query: SearchQuery.text(includeInvolved: request.includeConversation)))
         let fingerprint = PullRequestMapper.fingerprint(search)
         if let previous = request.previous, previous == fingerprint {
-            log.info(.gh, "fetch unchanged: 1 request, \(search.data?.rateLimit?.cost ?? 0) points")
+            let elapsed = Int((ContinuousClock.now - started) / .milliseconds(1))
+            log.info(
+                .gh,
+                "fetch unchanged: 1 request, \(search.data?.rateLimit?.cost ?? 0) points, remaining \(Self.remainingText(search.data?.rateLimit?.remaining)), \(elapsed) ms"
+            )
             return .unchanged
         }
         let hits = PullRequestMapper.orderedIDs(search).map(\.id)
@@ -97,14 +101,22 @@ public struct GhClient: InboxFetching {
         }
         let result = try PullRequestMapper.merge(search: search, details: details)
         let elapsed = (ContinuousClock.now - started) / .milliseconds(1)
+        let remaining = Self.remaining(search: search, details: details)
         log.info(
             .gh,
-            "fetch: \(1 + details.count) requests, \(result.cost) points, remaining \(search.data?.rateLimit?.remaining ?? -1), \(result.pullRequests.count) PRs, \(Int(elapsed)) ms"
+            "fetch: \(1 + details.count) requests, \(result.cost) points, remaining \(Self.remainingText(remaining)), \(result.pullRequests.count) PRs, \(Int(elapsed)) ms"
         )
         let truncated = PullRequestMapper.truncatedPages(details)
-        if truncated > 0 { log.debug(.gh, "fetch: \(truncated) thread pages truncated at the page size") }
+        if truncated > 0 { log.debug(.gh, "fetch: \(truncated) conversation pages truncated at the page size") }
         return .result(result)
     }
+
+    /// The lowest `remaining` any response reported: the budget left after the whole fetch.
+    static func remaining(search: SearchResponse, details: [DetailsResponse]) -> Int? {
+        ([search.data?.rateLimit?.remaining] + details.map { $0.data?.rateLimit?.remaining }).compactMap { $0 }.min()
+    }
+
+    static func remainingText(_ remaining: Int?) -> String { remaining.map(String.init) ?? "?" }
 
     /// One batch. A failure that may be GitHub's time limit is retried once as two halves (a lone id once as
     /// is); a second failure fails the fetch. Rate limit, auth and network errors fail at once.
@@ -115,11 +127,11 @@ public struct GhClient: InboxFetching {
             let output = try await run(gh, query: DetailsQuery.text(ids: ids, includeConversation: includeConversation))
             return [try Self.interpretDetails(output)]
         } catch let error as FetchError where maySplit && Self.isRetryable(error) {
+            try Task.checkCancellation()
             log.notice(.gh, "details batch of \(ids.count) failed; retrying split", private: String(describing: error))
             if ids.count == 1 {
                 return try await fetchDetails(gh, ids: ids, includeConversation: includeConversation, maySplit: false)
             }
-            try Task.checkCancellation()
             let half = (ids.count + 1) / 2
             async let first = fetchDetails(
                 gh, ids: Array(ids[..<half]), includeConversation: includeConversation, maySplit: false)

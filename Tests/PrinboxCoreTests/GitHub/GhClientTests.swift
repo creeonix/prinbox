@@ -286,4 +286,55 @@ final class QueryLog: @unchecked Sendable {
         #expect(TwoPhaseJSON.requestedIDs(in: log.detailsQueries[0]) == ["PR_1"])
         #expect(logger.messages(.notice) == ["dropped 1 ids that are not node ids"])
     }
+
+    @Test func theFetchLineCarriesTheLowestRemainingAcrossEveryResponse() async throws {
+        let logger = MemoryLogging()
+        let hits = (1...12).map { TwoPhaseJSON.hit("PR_\($0)") }
+        let search = TwoPhaseJSON.search(review: hits)
+        let client = twoPhase(search: search, logger: logger) { ids, call in
+            // The search says 4900; the batches say 4890 and 4895. The lowest is the truth after the fetch.
+            var body =
+                try JSONSerialization.jsonObject(
+                    with: TwoPhaseJSON.details(ids.map { TwoPhaseJSON.node($0) })) as! [String: Any]
+            var data = body["data"] as! [String: Any]
+            data["rateLimit"] = ["cost": 5, "remaining": call == 2 ? 4890 : 4895, "resetAt": "2026-08-01T13:00:00Z"]
+            body["data"] = data
+            return Self.ok(try JSONSerialization.data(withJSONObject: body))
+        }
+        _ = try await client.fetch(.full)
+        let line = try #require(logger.messages(.info).first { $0.hasPrefix("fetch: ") })
+        #expect(line.contains("remaining 4890"))
+    }
+
+    @Test func theUnchangedLineCarriesRemainingAndElapsed() async throws {
+        let logger = MemoryLogging()
+        let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")])
+        let client = twoPhase(search: search, logger: logger)
+        _ = try await client.fetch(FetchRequest(previous: ["PR_1": date(TwoPhaseJSON.updatedAt)]))
+        let line = try #require(logger.messages(.info).first { $0.hasPrefix("fetch unchanged: ") })
+        #expect(line.contains("remaining 4900"))
+        #expect(line.hasSuffix(" ms"))
+    }
+
+    @Test func cancellationIsHonoredBeforeTheRetryNotice() async throws {
+        final class Box: @unchecked Sendable {
+            private let lock = NSLock()
+            private var task: Task<FetchOutcome, Error>?
+            func set(_ t: Task<FetchOutcome, Error>) { lock.withLock { task = t } }
+            func cancel() { lock.withLock { task?.cancel() } }
+        }
+        let box = Box()
+        let logger = MemoryLogging()
+        let log = QueryLog()
+        let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")])
+        let client = twoPhase(search: search, log: log, logger: logger) { _, _ in
+            box.cancel()
+            throw FetchError.timedOut
+        }
+        let task = Task { try await client.fetch(.full) }
+        box.set(task)
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(log.detailsQueries.count == 1)
+        #expect(logger.messages(.notice).isEmpty)
+    }
 }

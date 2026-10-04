@@ -58,14 +58,15 @@ enum PullRequestMapper {
         return map
     }
 
-    /// Thread or comment pages that GitHub cut at the requested size, for the log.
+    /// Thread, comment or review pages that GitHub cut at the requested size, for the log.
     static func truncatedPages(_ details: [DetailsResponse]) -> Int {
         details.flatMap { $0.data?.nodes ?? [] }.compactMap { $0 }.reduce(0) { count, node in
-            guard let threads = node.reviewThreads else { return count }
+            let reviews = node.reviews.map { ($0.totalCount ?? 0) > $0.nodes.count ? 1 : 0 } ?? 0
+            guard let threads = node.reviewThreads else { return count + reviews }
             let cut = (threads.totalCount ?? 0) > threads.nodes.count ? 1 : 0
             let comments = threads.nodes.compactMap { $0?.comments }.filter { ($0.totalCount ?? 0) > $0.nodes.count }
                 .count
-            return count + cut + comments
+            return count + cut + comments + reviews
         }
     }
 

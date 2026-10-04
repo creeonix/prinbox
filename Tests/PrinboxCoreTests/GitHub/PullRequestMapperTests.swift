@@ -91,4 +91,16 @@ import Testing
         #expect(result.fingerprint.count == 6)
         #expect(result.fingerprint["PR_C"] == date("2026-08-05T10:00:00Z"))
     }
+
+    @Test func truncatedPagesCountsReviewsToo() throws {
+        let review: [String: Any] = ["author": ["login": "a"], "state": "APPROVED", "submittedAt": NSNull()]
+        let node = TwoPhaseJSON.node(
+            "PR_1",
+            [
+                "reviewThreads": ["totalCount": 0, "nodes": []],
+                "reviews": ["totalCount": 60, "nodes": Array(repeating: review, count: 50)],
+            ])
+        let details = try DetailsResponse.decode(TwoPhaseJSON.details([node]))
+        #expect(PullRequestMapper.truncatedPages([details]) == 1)
+    }
 }
