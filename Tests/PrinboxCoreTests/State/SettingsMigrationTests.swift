@@ -21,6 +21,7 @@ import Testing
             source.set([35, 3], forKey: HotKeySettings.key)
             source.set("/x/gh", forKey: GhLocator.overrideKey)
             source.set("unrelated", forKey: "somethingElse")
+            source.set("2026-01-01T00:00:00Z", forKey: UpdateStore.checkedAtKey)
             let moved = SettingsMigration.migrate(from: source, to: file)
             #expect(
                 Set(moved) == [
@@ -32,6 +33,7 @@ import Testing
             #expect(file.object(forKey: FetchSettings.key) as? Bool == false)
             for key in moved { #expect(source.object(forKey: key) == nil) }
             #expect(source.object(forKey: "somethingElse") as? String == "unrelated")
+            #expect(source.object(forKey: UpdateStore.checkedAtKey) == nil)
         }
     }
 
@@ -44,6 +46,18 @@ import Testing
             #expect(file.object(forKey: DisplaySettings.compactKey) as? Bool == false)
             #expect(source.object(forKey: DisplaySettings.compactKey) as? Bool == true)
         }
+    }
+
+    @Test func aFailedWriteLeavesTheSourceUntouched() throws {
+        let blocker = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "prinbox-blocker-\(UUID().uuidString)")
+        try Data().write(to: blocker)
+        defer { try? FileManager.default.removeItem(at: blocker) }
+        let file = JSONKeyValueFile(url: blocker.appendingPathComponent("settings.json"))
+        let source = MemoryDefaults()
+        source.set(true, forKey: DisplaySettings.compactKey)
+        #expect(SettingsMigration.migrate(from: source, to: file) == [])
+        #expect(source.object(forKey: DisplaySettings.compactKey) as? Bool == true)
     }
 
     @Test func anEmptySourceCreatesNoFile() throws {

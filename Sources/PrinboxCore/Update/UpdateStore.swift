@@ -8,8 +8,8 @@ import Observation
 @Observable
 public final class UpdateStore {
     public static let interval: TimeInterval = 24 * 3600
-    public static let checkedAtKey = "updateCheckedAt"
-    public static let latestReleaseKey = "latestRelease"
+    public nonisolated static let checkedAtKey = "updateCheckedAt"
+    public nonisolated static let latestReleaseKey = "latestRelease"
 
     /// Nil for dev builds, which never check.
     public let current: AppVersion?

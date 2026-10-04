@@ -25,9 +25,7 @@ import Testing
             file.set("/x/gh", forKey: "ghPath")
             file.set(true, forKey: "compactRows")
             let text = try String(contentsOf: url, encoding: .utf8)
-            #expect(
-                text == "{\n  \"compactRows\" : true,\n  \"ghPath\" : \"\\/x\\/gh\"\n}"
-                    || text == "{\n  \"compactRows\" : true,\n  \"ghPath\" : \"/x/gh\"\n}")
+            #expect(text == "{\n  \"compactRows\" : true,\n  \"ghPath\" : \"/x/gh\"\n}")
             #expect(file.fileExists)
         }
     }
@@ -99,6 +97,15 @@ import Testing
             let text = try String(contentsOf: url, encoding: .utf8)
             #expect(text.contains("\"compactRows\" : true"))
             #expect(text.contains("\"foldedSections\" : 3"))
+        }
+    }
+
+    @Test func aValueJSONCannotHoldIsLoggedNotSavedAndNeverCrashes() throws {
+        let logger = MemoryLogging()
+        try withFile(logger: logger) { file, _ in
+            file.set(Date(), forKey: "bad")
+            #expect(logger.messages(.error) == ["settings.json not saved"])
+            #expect(!file.fileExists)
         }
     }
 

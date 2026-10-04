@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// How the inbox is shown, persisted in user defaults.
+/// How the inbox is shown, persisted through `KeyValueStoring` (settings.json in the app).
 @MainActor
 @Observable
 public final class DisplaySettings {

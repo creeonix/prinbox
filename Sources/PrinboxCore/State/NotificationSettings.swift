@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Whether new review requests raise a macOS notification, persisted in user defaults. The shell asks
+/// Whether new review requests raise a macOS notification, persisted through `KeyValueStoring` (settings.json in the app). The shell asks
 /// macOS for permission when this turns on; the setting stays on even when macOS says no, so Settings
 /// can explain what to fix.
 @MainActor

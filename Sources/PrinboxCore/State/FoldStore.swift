@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Which sections are folded, persisted in user defaults.
+/// Which sections are folded, persisted through `KeyValueStoring` (settings.json in the app).
 @MainActor
 @Observable
 public final class FoldStore {

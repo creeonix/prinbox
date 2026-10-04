@@ -31,7 +31,7 @@ public final class JSONKeyValueFile: KeyValueStoring, @unchecked Sendable {
             do {
                 try Self.write(next, to: url)
             } catch {
-                logger.error(.state, "\(url.lastPathComponent) not saved: \(String(describing: error))")
+                logger.error(.state, "\(url.lastPathComponent) not saved", private: String(describing: error))
             }
         }
     }
@@ -48,8 +48,10 @@ public final class JSONKeyValueFile: KeyValueStoring, @unchecked Sendable {
     }
 
     private static func write(_ values: [String: Any], to url: URL) throws {
+        guard JSONSerialization.isValidJSONObject(values) else { throw CocoaError(.propertyListWriteInvalid) }
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let data = try JSONSerialization.data(withJSONObject: values, options: [.prettyPrinted, .sortedKeys])
+        let data = try JSONSerialization.data(
+            withJSONObject: values, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
         try data.write(to: url, options: .atomic)
     }
 }
