@@ -1,26 +1,28 @@
 import Foundation
 import Observation
-import os
 
 /// Snoozes and the "seen" ledger, loaded from and saved to `state.json` through `StatePersisting`. Every
 /// change that alters the state is saved at once; the views observe `state`.
 @MainActor
 @Observable
 public final class StateStore {
-    private static let log = Logger(subsystem: "io.github.creeonix.prinbox", category: "state")
-
     public private(set) var state: AppState
     @ObservationIgnored private let persistence: StatePersisting
     @ObservationIgnored private let clock: @Sendable () -> Date
+    @ObservationIgnored private let logger: Logging
 
     /// A file that cannot be read is logged and replaced by an empty state at the next save.
-    public init(persistence: StatePersisting, clock: @escaping @Sendable () -> Date = { Date() }) {
+    public init(
+        persistence: StatePersisting, clock: @escaping @Sendable () -> Date = { Date() },
+        logger: Logging = NullLogging()
+    ) {
         self.persistence = persistence
         self.clock = clock
+        self.logger = logger
         do {
             state = try persistence.load() ?? AppState()
         } catch {
-            Self.log.error("state.json unreadable, starting empty: \(String(describing: error), privacy: .public)")
+            logger.error(.state, "state.json unreadable, starting empty: \(String(describing: error))")
             state = AppState()
         }
     }
@@ -82,7 +84,7 @@ public final class StateStore {
         do {
             try persistence.save(next)
         } catch {
-            Self.log.error("state.json not saved: \(String(describing: error), privacy: .public)")
+            logger.error(.state, "state.json not saved: \(String(describing: error))")
         }
     }
 }

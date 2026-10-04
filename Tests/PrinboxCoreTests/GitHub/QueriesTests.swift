@@ -59,4 +59,8 @@ import Testing
         #expect(!DetailsQuery.isValidID("é"))
         #expect(DetailsQuery.isValidID("PR_kwDOABCD-5M6xyz="))
     }
+
+    @Test func validIDsFiltersWhatTextWouldDrop() {
+        #expect(DetailsQuery.validIDs(["PR_1", "", "bad id", "PR_2=="]) == ["PR_1", "PR_2=="])
+    }
 }

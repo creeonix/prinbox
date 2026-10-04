@@ -36,7 +36,7 @@ enum CommandLineMode {
             return 0
         case .printInbox:
             do {
-                let result = try await GhClient().fetch()
+                let result = try await GhClient(logger: OSLogging()).fetch()
                 let inbox = InboxBuilder.build(result, snoozed: Self.snoozedIDs(for: result))
                 print(InboxPrinter.render(inbox, now: Date()))
                 return 0

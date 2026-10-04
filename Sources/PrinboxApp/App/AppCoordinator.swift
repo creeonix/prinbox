@@ -30,7 +30,7 @@ final class AppCoordinator {
     /// registered, so a demo never touches the real setup.
     init(demo: Bool = false) {
         let defaults = demo ? Self.demoDefaults() : UserDefaults.standard
-        let client = GhClient()
+        let client = GhClient(logger: OSLogging())
         let fetcher: InboxFetching
         let persistence: StatePersisting
         if demo {
@@ -41,7 +41,7 @@ final class AppCoordinator {
             fetcher = client
             persistence = JSONStateFile(url: JSONStateFile.defaultURL())
         }
-        let store = InboxStore(fetcher: fetcher, state: StateStore(persistence: persistence))
+        let store = InboxStore(fetcher: fetcher, state: StateStore(persistence: persistence, logger: OSLogging()))
         isDemo = demo
         self.client = client
         info = AppInfo(client: client)

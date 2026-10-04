@@ -1,11 +1,8 @@
 import Foundation
-import os
 
 /// Phase 2: rows and conversation for a batch of ids through `nodes(ids:)`. Ten ids per request keep each one
 /// far under GitHub's 10 s limit (3.6 s measured for the heaviest public PRs with every batch concurrent).
 public enum DetailsQuery {
-    private static let log = Logger(subsystem: "io.github.creeonix.prinbox", category: "gh")
-
     public static let placeholder = "__IDS__"
 
     static let rowFields = [
@@ -40,13 +37,14 @@ public enum DetailsQuery {
     }
 
     /// Ids inlined as a quoted list. Anything that is not a GitHub node id is dropped, so nothing that came
-    /// back in a response can change the shape of the next query.
+    /// back in a response can change the shape of the next query. The caller logs what was dropped.
     public static func text(ids: [String], includeConversation: Bool) -> String {
-        let valid = ids.filter(isValidID)
-        if valid.count < ids.count { log.notice("dropped \(ids.count - valid.count) ids that are not node ids") }
-        let list = valid.map { "\"\($0)\"" }.joined(separator: ", ")
+        let list = validIDs(ids).map { "\"\($0)\"" }.joined(separator: ", ")
         return template(includeConversation: includeConversation).replacingOccurrences(of: placeholder, with: list)
     }
+
+    /// The ids `text` would keep, in order.
+    public static func validIDs(_ ids: [String]) -> [String] { ids.filter(isValidID) }
 
     /// Node ids are base64url-like: ASCII letters and digits, `_`, `-` and `=`.
     static func isValidID(_ id: String) -> Bool {

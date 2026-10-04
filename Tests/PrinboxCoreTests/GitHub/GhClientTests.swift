@@ -32,8 +32,11 @@ final class QueryLog: @unchecked Sendable {
 @Suite struct GhClientTests {
     let gh = GhLocator(overridePath: "/fake/gh", environmentPath: nil, isExecutable: { $0 == "/fake/gh" })
 
-    func client(_ handler: @escaping @Sendable (URL, [String], [String: String]) throws -> CommandOutput) -> GhClient {
-        GhClient(locator: gh, runner: FakeRunner(handler: handler))
+    func client(
+        logger: Logging = NullLogging(),
+        _ handler: @escaping @Sendable (URL, [String], [String: String]) throws -> CommandOutput
+    ) -> GhClient {
+        GhClient(locator: gh, runner: FakeRunner(handler: handler), logger: logger)
     }
 
     static func ok(_ data: Data, stderr: String = "", exitCode: Int32 = 0) -> CommandOutput {
@@ -44,10 +47,10 @@ final class QueryLog: @unchecked Sendable {
 
     /// Answers the search with `search` and each details query through `details(ids, callNumber)`.
     func twoPhase(
-        search: Data, log: QueryLog = QueryLog(),
+        search: Data, log: QueryLog = QueryLog(), logger: Logging = NullLogging(),
         details: @escaping @Sendable ([String], Int) throws -> CommandOutput = { ids, _ in nodes(ids) }
     ) -> GhClient {
-        client { executable, arguments, environment in
+        client(logger: logger) { executable, arguments, environment in
             #expect(executable.path == "/fake/gh")
             #expect(arguments.prefix(3) == ["api", "graphql", "-f"])
             #expect(environment["GH_PROMPT_DISABLED"] == "1")
@@ -244,5 +247,39 @@ final class QueryLog: @unchecked Sendable {
         let result = try await twoPhase(search: TwoPhaseJSON.search(mine: [TwoPhaseJSON.hit("o1")]), log: log).fetch()
         #expect(result.pullRequests.count == 1)
         #expect(log.queries[0].contains("involved: search"))
+    }
+
+    @Test func aFetchLogsOneInfoLineAndAnUnchangedCheckAnother() async throws {
+        let logger = MemoryLogging()
+        let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")])
+        let client = twoPhase(search: search, logger: logger)
+        _ = try await client.fetch(.full)
+        let fetchLines = logger.messages(.info).filter { $0.hasPrefix("fetch: 2 requests") }
+        #expect(fetchLines.count == 1)
+        let previous = ["PR_1": date(TwoPhaseJSON.updatedAt)]
+        _ = try await client.fetch(FetchRequest(previous: previous))
+        #expect(logger.messages(.info).contains { $0.hasPrefix("fetch unchanged: 1 request") })
+        #expect(logger.lines.allSatisfy { $0.category == .gh })
+    }
+
+    @Test func aNonZeroExitLogsStderrAsThePrivateDetail() async {
+        let logger = MemoryLogging()
+        let client = client(logger: logger) { _, _, _ in
+            CommandOutput(exitCode: 1, stdout: Data(), stderr: "gh: Bad credentials (HTTP 401)\n")
+        }
+        await #expect(throws: FetchError.loggedOut) { try await client.fetch(.full) }
+        let line = logger.lines.first { $0.level == .error }
+        #expect(line?.message == "gh exited 1")
+        #expect(line?.detail == "gh: Bad credentials (HTTP 401)\n")
+    }
+
+    @Test func idsThatAreNotNodeIDsAreDroppedWithANoticeBeforePhaseTwo() async throws {
+        let logger = MemoryLogging()
+        let log = QueryLog()
+        let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1"), TwoPhaseJSON.hit("bad id\"")])
+        _ = try await twoPhase(search: search, log: log, logger: logger).fetch(.full)
+        #expect(log.detailsQueries.count == 1)
+        #expect(TwoPhaseJSON.requestedIDs(in: log.detailsQueries[0]) == ["PR_1"])
+        #expect(logger.messages(.notice) == ["dropped 1 ids that are not node ids"])
     }
 }
