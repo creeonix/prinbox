@@ -4,19 +4,18 @@ PRInbox remembers what it knows about individual pull requests in one JSON file:
 
 `~/Library/Application Support/prinbox/state.json`
 
-It is meant to be read and written by more than one program (the app, the `prinbox` command and
-`prinbox mcp`), so this
-page is the contract. `Sources/PrinboxCore/State/AppState.swift` is the reference implementation.
+It is meant to be read and written by more than one program (the app, the `prinbox` command and `prinbox mcp`),
+so this page is the contract. `Sources/PrinboxCore/State/AppState.swift` is the reference implementation.
 
 ## Files
 
-PRInbox keeps five files, written by the app and by the `prinbox` command:
+PRInbox keeps five files, written by the app, the command and the server:
 
 | File | Directory (macOS; Linux) | Holds | Writers |
 |---|---|---|---|
 | `settings.json` | `~/.config/prinbox` (`$XDG_CONFIG_HOME/prinbox`) | every setting (section "Settings") | the app |
-| `state.json` | `~/Library/Application Support/prinbox` (`$XDG_STATE_HOME/prinbox`) | snoozes and the seen ledger: the contract below | the app and the command |
-| `cache.json` | same directory | the last fetch and its bookkeeping (section "Cache") | the app and the command |
+| `state.json` | `~/Library/Application Support/prinbox` (`$XDG_STATE_HOME/prinbox`) | snoozes and the seen ledger: the contract below | the app, the command and the server |
+| `cache.json` | same directory | the last fetch and its bookkeeping (section "Cache") | the app, the command and the server |
 | `update.json` | same directory | the daily release check (`updateCheckedAt`, `latestRelease`) | the app |
 | `prinbox.lock` | same directory | nothing: an advisory lock (`flock`) | whoever writes `state.json` or `cache.json` |
 

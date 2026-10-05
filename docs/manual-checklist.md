@@ -67,7 +67,6 @@ Run them before a release.
 - [ ] With the network off: `prinbox inbox --format json` prints the cached rows with `"error"` set and exits 1; `--format waybar` exits 0 with the `error` class.
 - [ ] Signed out (`GH_CONFIG_DIR=$(mktemp -d) prinbox inbox`): exit 3 and the sign-in steps on stderr.
 - [ ] On the live account, a stacked pair (if one exists) shows `· stack 1/2` and `· stack 2/2` on adjacent rows, and the tooltip of the upper one says "stacked on #N".
-- [ ] After the release: `brew install --cask creeonix/tap/prinbox` and `brew install creeonix/tap/prinbox-cli` install, and `prinbox --version` prints 0.5.0.
 - [ ] `claude mcp add prinbox -- prinbox mcp`, then ask Claude Code what is waiting on you: the rows match the popover and `--verbose` (or the unified log) shows one request.
 - [ ] Ask twice within a minute: the second answer says `"source" : "cache"` and GitHub was not contacted.
 - [ ] With the popover open, ask the agent to snooze a PR: the row moves to Waiting on others and the count drops within a second; `U` on it in the popover shows `"snoozed" : false` in the agent's next `get_inbox`.
