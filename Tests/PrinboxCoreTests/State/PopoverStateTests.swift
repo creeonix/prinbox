@@ -338,4 +338,20 @@ import Testing
         #expect(state.store.inbox?.section(.waitingOnOthers)?.rows.first?.id == "a")
         #expect(state.store.inbox?.section(.needsReview)?.rows.map(\.id) == ["b"])
     }
+
+    @Test func openGoesThroughTheAdapterAndCallsTheHook() async {
+        let prs = [a]
+        let opener = FakeOpener()
+        let defaults = MemoryDefaults()
+        let state = PopoverState(
+            store: InboxStore(fetcher: ScriptedFetcher { _ in makeResult(prs) }), folds: FoldStore(defaults: defaults),
+            display: DisplaySettings(defaults: defaults), colors: OrgColorStore(defaults: defaults), opener: opener)
+        let counter = Counter()
+        state.onDidOpenURL = { counter.bump() }
+        state.open(a.url)
+        #expect(counter.value == 1)
+        var iterator = opener.stream.makeAsyncIterator()
+        let opened = await iterator.next()
+        #expect(opened == a.url)
+    }
 }

@@ -39,7 +39,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         await refresh()
     }
 
-    func deliver(_ notice: ArrivalNotice) {
+    func deliver(_ notice: ArrivalNotice) async {
         guard let center else { return }
         let content = UNMutableNotificationContent()
         content.title = notice.title
@@ -76,3 +76,5 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         .banner
     }
 }
+
+extension Notifier: NotificationDelivering {}

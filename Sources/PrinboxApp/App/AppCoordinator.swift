@@ -75,7 +75,9 @@ final class AppCoordinator {
         self.store = store
         let display = DisplaySettings(defaults: settings)
         let colors = OrgColorStore(defaults: settings)
-        state = PopoverState(store: store, folds: FoldStore(defaults: settings), display: display, colors: colors)
+        state = PopoverState(
+            store: store, folds: FoldStore(defaults: settings), display: display, colors: colors,
+            opener: WorkspaceURLOpener())
         hotKeys = HotKeySettings(defaults: settings)
         notifications = NotificationSettings(defaults: settings)
         fetchSettings = FetchSettings(defaults: settings)
@@ -90,8 +92,12 @@ final class AppCoordinator {
             self?.loginItem.refresh()
             Task { await self?.notifier.refresh() }
         }
+        state.onDidOpenURL = { [weak self] in
+            self?.closingForBrowser = true
+            self?.popover?.close()
+        }
         notifier.onOpen = { [weak self] url in
-            if let url { NSWorkspace.shared.open(url) } else { self?.showPopover() }
+            if let url { self?.state.open(url) } else { self?.showPopover() }
         }
         notifier.start()
         store.onArrivals = { [weak self] rows in self?.notify(rows) }
@@ -182,7 +188,7 @@ final class AppCoordinator {
             await notifier.refresh()
             // The popover may have opened during the round-trip.
             guard notifier.status == .authorized, !(self.popover?.isShown ?? false) else { return }
-            notifier.deliver(notice)
+            await notifier.deliver(notice)
         }
     }
 
@@ -216,13 +222,11 @@ final class AppCoordinator {
     }
 
     private func openUpdate() {
-        NSWorkspace.shared.open(updates.available?.url ?? GhReleaseChecker.releasesPage)
+        state.open(updates.available?.url ?? GhReleaseChecker.releasesPage)
     }
 
     private func open(_ url: URL) {
-        closingForBrowser = true
-        NSWorkspace.shared.open(url)
-        popover?.close()
+        state.open(url)
     }
 
     private func handleKey(_ event: NSEvent) -> Bool {
