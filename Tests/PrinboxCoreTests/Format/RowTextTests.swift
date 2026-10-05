@@ -20,6 +20,19 @@ import Testing
         #expect(RowText.detail(row(pr), now: now) == "billing · waiting 6h · +1 −0 · Review requested")
     }
 
+    @Test func compactRowCarriesItsStackPosition() throws {
+        let base = makePR(id: "base", number: 1, source: .mine, headRef: "f1", baseRef: "main")
+        let top = makePR(id: "top", number: 2, source: .mine, headRef: "f2", baseRef: "f1")
+        let lone = makePR(id: "lone", number: 3, source: .mine)
+        let stacked = InboxBuilder.build(makeResult([base, top]))
+        let rows = try #require(stacked.section(.waitingOnOthers)).rows
+        let baseRow = try #require(rows.first { $0.pullRequest.id == "base" })
+        let topRow = try #require(rows.first { $0.pullRequest.id == "top" })
+        #expect(RowText.compact(baseRow).hasSuffix(" · stack 1/2"))
+        #expect(RowText.compact(topRow).hasSuffix(" · stack 2/2"))
+        #expect(RowText.compact(row(lone)) == "#3 Add feature · Waiting for review")
+    }
+
     @Test func compactTrailerNamesTheRepositoryAndDraft() {
         let pr = makePR(repository: "globex/billing", source: .mine)
         #expect(RowText.compactTrailer(row(pr)) == "· billing")

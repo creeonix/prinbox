@@ -17,6 +17,10 @@ while [ $# -gt 0 ]; do
         *) echo "update-tap: unknown option $1" >&2; exit 2 ;;
     esac
 done
+[[ "$version" =~ ^[0-9]+(\.[0-9]+)*([-.][0-9A-Za-z.]+)?$ ]] || {
+    echo "update-tap: '$version' is not a version (no leading v, digits and dots)" >&2
+    exit 2
+}
 tap_dir=${TAP_DIR:-$root/../homebrew-tap}
 dmg="PRInbox-$version.dmg"
 tarball="prinbox-$version-macos.tar.gz"
@@ -47,6 +51,7 @@ mkdir -p "$tap_dir/Casks" "$tap_dir/Formula"
 render prinbox.rb > "$tap_dir/Casks/prinbox.rb"
 render prinbox-cli.rb > "$tap_dir/Formula/prinbox-cli.rb"
 git -C "$tap_dir" add Casks/prinbox.rb Formula/prinbox-cli.rb
+if git -C "$tap_dir" diff --cached --quiet; then echo "tap already at $version"; exit 0; fi
 git -C "$tap_dir" commit -m "prinbox $version"
 git -C "$tap_dir" push
 echo "tap updated to $version"

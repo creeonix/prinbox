@@ -3,7 +3,6 @@ class PrinboxCli < Formula
   homepage "https://github.com/creeonix/prinbox"
   url "https://github.com/creeonix/prinbox/releases/download/v@VERSION@/prinbox-@VERSION@-macos.tar.gz"
   sha256 "@CLI_SHA256@"
-  version "@VERSION@"
   license "MIT"
 
   depends_on :macos

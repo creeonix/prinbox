@@ -61,9 +61,9 @@ public enum RowText {
         "\(meta(row, now: now)) · \(row.classification.reason.rawValue)"
     }
 
-    /// One-line row for Waiting on others: "#9 Title · Waiting for review".
+    /// One-line row for Waiting on others: "#9 Title · Waiting for review", with " · stack 1/2" for a chain member.
     public static func compact(_ row: InboxRow) -> String {
-        "\(title(row.pullRequest)) · \(row.classification.reason.rawValue)"
+        "\(title(row.pullRequest)) · \(row.classification.reason.rawValue)" + stackSegment(row)
     }
 
     public static func more(_ count: Int) -> String { "+\(count) more on GitHub" }

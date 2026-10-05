@@ -49,6 +49,8 @@ final class PopoverController: NSObject, NSPopoverDelegate {
         keyMonitor.install()
         // A click in another app while a row menu is tracking is consumed by the menu, so the transient popover
         // never sees a click outside; the app still resigns active, and that is the moment to close.
+        // `show` while shown would otherwise leak the earlier observer (no caller does this today).
+        if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
         resignObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in

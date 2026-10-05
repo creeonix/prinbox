@@ -96,9 +96,10 @@ install-cli: cli
 cli-tarball: cli
 	rm -rf "$(BUILD_DIR)/cli" && mkdir -p "$(BUILD_DIR)/cli"
 	cp "$(CLI_BIN)" LICENSE "$(BUILD_DIR)/cli/"
-	tar -C "$(BUILD_DIR)/cli" -czf "$(CLI_TARBALL)" $(CLI_PRODUCT) LICENSE
+	COPYFILE_DISABLE=1 tar -C "$(BUILD_DIR)/cli" -czf "$(CLI_TARBALL)" $(CLI_PRODUCT) LICENSE
 	cd "$(BUILD_DIR)" && shasum -a 256 "$(notdir $(CLI_TARBALL))" > "$(notdir $(CLI_TARBALL)).sha256"
 
+# uninstall takes the same PREFIX as install-cli for the command.
 uninstall:
 	-"$(INSTALLED)/Contents/MacOS/$(EXECUTABLE)" --unregister-login-item
 	-pkill -x $(EXECUTABLE)

@@ -60,8 +60,9 @@ public struct ArrivalNotice: Equatable, Sendable {
         case (_, 0): title = "\(rows.count) new review requests"
         case (0, _): title = "\(rows.count) new replies"
         default:
-            title =
-                "\(rows.count) new: \(counted(requests, "review request")), \(counted(replies, "reply", plural: "replies"))"
+            let requestText = counted(requests, "review request")
+            let replyText = counted(replies, "reply", plural: "replies")
+            title = "\(rows.count) new: \(requestText), \(replyText)"
         }
         let titles = rows.prefix(3).map { RowText.title($0.pullRequest) }
         let rest = rows.count - titles.count
