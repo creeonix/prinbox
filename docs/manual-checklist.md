@@ -17,7 +17,7 @@ Run them before a release.
 - [ ] Offline (network off): the icon turns red with `!`, and the popover keeps the last data with an "Offline" line.
 - [ ] After sleep and wake with a working network, the icon does not turn red.
 - [ ] Signed out (`GH_CONFIG_DIR=$(mktemp -d) /Applications/PRInbox.app/Contents/MacOS/Prinbox`): red `!`, and the popover shows "Sign in to the GitHub CLI" with a working Copy button.
-- [ ] gh missing: with `"ghPath": "/nonexistent"` in a settings file passed through `--settings`, the popover shows the "gh not found" steps naming the settings file.
+- [ ] gh missing: with `"ghPath": "/nonexistent"` in a settings file passed through `--settings`, the popover shows the "gh not found" steps naming `~/.config/prinbox/settings.json`.
 - [ ] After fixing gh (for example `gh auth login`), the popover returns to the inbox within about 10 seconds without a click.
 - [ ] `make install VERSION=0.0.1`: after the first refresh the icon shows the up-arrow badge, the popover shows "PRInbox x.y.z is available", the right-click menu has "Download PRInbox x.y.z…", and all open the release page. `make install` (real version) clears them.
 - [ ] The popover is 460 pt wide, still opens under the icon, and the tiling window manager leaves it alone.

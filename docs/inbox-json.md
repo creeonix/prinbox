@@ -9,7 +9,7 @@ they do not know. Dates are ISO 8601 UTC with whole seconds and a `Z` suffix. Ev
 The other formats derive from it: `lines` (one tab-separated row per line: id, kind, number, title,
 repository, reasonText, age, flags, url; a `more:<kind>` line per capped section), `waybar` (Waybar's
 custom-module object: `text`, `alt`, `class`, `tooltip`, always exit 0) and `tmux` (the count, empty when
-idle, `!` when gh needs attention, `!N` when the fetch failed but N cached rows are known). `prinbox print`
+idle; `!` on any error, followed by the count of known rows (`!5`), and the count alone otherwise). `prinbox print`
 is the text rendering: the fact line and the compact line both show `stack i/n`.
 
 ## Exit codes

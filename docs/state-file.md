@@ -9,7 +9,7 @@ page is the contract. `Sources/PrinboxCore/State/AppState.swift` is the referenc
 
 ## Files
 
-PRInbox keeps four files, written by the app and by the `prinbox` command:
+PRInbox keeps five files, written by the app and by the `prinbox` command:
 
 | File | Directory (macOS; Linux) | Holds | Writers |
 |---|---|---|---|
@@ -87,7 +87,7 @@ place), so a reader never sees a partial file.
 ## Rules for readers
 
 - Ignore keys you do not know.
-- Treat a missing `version` as 1 and a missing `snoozed` as empty; `seen` may be absent.
+- Treat a missing `version` as the version this build writes (1 today) and a missing `snoozed` as empty; `seen` may be absent.
 - A file that is not a JSON object is unreadable. The app logs it, starts with an empty state in memory and
   overwrites the file on its next change; `--print` warns on stderr and ignores snoozes.
 - A `version` higher than you know: load the keys you know and keep that number when you write.

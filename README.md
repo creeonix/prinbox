@@ -195,7 +195,8 @@ notifier per machine. `--verbose` shows the fetch log on stderr; `--settings <pa
 file. In `prinbox print` the fact line and the compact line both show `stack i/n`.
 
 The app binary keeps two flags: `/Applications/PRInbox.app/Contents/MacOS/Prinbox --print` (the same as
-`prinbox print`) and `--demo` (sample data). `--settings <path>` works there too.
+`prinbox print`) and `--demo` (sample data). `--settings <path>` applies to the app itself (and to `--demo`); `prinbox print --settings <path>` is the
+command's equivalent.
 
 ## Privacy and security
 
