@@ -25,6 +25,12 @@ jobs:
         run: make lint
       - name: Release notes for the Makefile version
         run: scripts/release-notes.sh
+      - name: Tap templates render
+        run: |
+          dir=$(mktemp -d)
+          printf '%064d  PRInbox-0.0.0.dmg\n' 1 > "$dir/PRInbox-0.0.0.dmg.sha256"
+          printf '%064d  prinbox-0.0.0-macos.tar.gz\n' 2 > "$dir/prinbox-0.0.0-macos.tar.gz.sha256"
+          scripts/update-tap.sh 0.0.0 --from-dir "$dir" --dry-run | grep -q 'version "0.0.0"'
       - name: Test with coverage
         run: make coverage
   linux:

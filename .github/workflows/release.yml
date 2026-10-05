@@ -13,6 +13,8 @@ permissions:
 jobs:
   dmg:
     runs-on: macos-latest
+    env:
+      TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: Toolchain
@@ -36,3 +38,10 @@ jobs:
             "build/PRInbox-$version.dmg" "build/PRInbox-$version.dmg.sha256" \
             "build/prinbox-$version-macos.tar.gz" "build/prinbox-$version-macos.tar.gz.sha256" \
             --title "PRInbox $version" --notes-file build/release-notes.md --generate-notes
+      - name: Update the Homebrew tap
+        if: env.TAP_TOKEN != ''
+        run: |
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/creeonix/homebrew-tap.git" build/homebrew-tap
+          git -C build/homebrew-tap config user.name "github-actions[bot]"
+          git -C build/homebrew-tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          TAP_DIR=build/homebrew-tap scripts/update-tap.sh "${GITHUB_REF_NAME#v}" --from-dir build

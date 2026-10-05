@@ -5,7 +5,8 @@ Releases are built by `.github/workflows/release.yml` when a version tag is push
 ## Cut a release
 
 1. Write the `## What's new in <version>` section at the top of `.github/release-notes.md` (older
-   versions stay below it; the file is also the changelog) and set `VERSION` in the `Makefile`.
+   versions stay below it; the file is also the changelog) and set `VERSION` in the `Makefile`
+   and `static let number` in `Sources/PrinboxCLI/Version.swift` (the guard fails when they differ).
    `scripts/release-notes.sh` prints what the release will show and fails when the section is missing;
    CI runs it on every push.
 2. Make sure `main` is green in CI.
@@ -17,7 +18,19 @@ Releases are built by `.github/workflows/release.yml` when a version tag is push
    ```
 
 4. The workflow tests, runs `make dmg VERSION=0.3.0` and publishes a GitHub Release with
-   `PRInbox-0.3.0.dmg` and `PRInbox-0.3.0.dmg.sha256`. The DMG version comes from the tag.
+   `PRInbox-0.3.0.dmg` and `PRInbox-0.3.0.dmg.sha256`, plus `prinbox-0.3.0-macos.tar.gz` and its
+   `.sha256` beside the DMG. The version comes from the tag.
+5. Update the Homebrew tap. With a `TAP_TOKEN` repository secret (a fine-grained token with contents write
+   on `creeonix/homebrew-tap`) the workflow does it; without one, run it by hand once the release page
+   shows the assets:
+
+   ```sh
+   git clone git@github.com:creeonix/homebrew-tap.git ../homebrew-tap   # once
+   scripts/update-tap.sh 0.5.0
+   ```
+
+   `brew install --cask creeonix/tap/prinbox` and `brew install creeonix/tap/prinbox-cli` then serve the
+   new version.
 
 To build the same DMG locally: `make dmg VERSION=0.3.0` (output in `build/`).
 
