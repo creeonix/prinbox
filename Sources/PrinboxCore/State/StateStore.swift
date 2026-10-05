@@ -73,10 +73,16 @@ public final class StateStore {
         Dictionary(prs.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { _, new in new })
     }
 
-    /// Picks up what another writer, the command, put in the file; nothing happens when it is unchanged or
-    /// unreadable.
+    /// Picks up what another writer (the command, the server) put in the file. A missing file is the empty
+    /// state, the rule `update` applies; an unreadable one keeps the memory copy; an unchanged one does nothing.
     public func reload() {
-        guard let loaded = try? persistence.load(), loaded != state else { return }
+        let loaded: AppState
+        do {
+            loaded = try persistence.load() ?? AppState()
+        } catch {
+            return
+        }
+        guard loaded != state else { return }
         state = loaded
     }
 

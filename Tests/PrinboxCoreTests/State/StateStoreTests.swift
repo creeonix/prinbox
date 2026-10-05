@@ -171,6 +171,16 @@ struct FailingPersistence: StatePersisting {
         #expect(store.isSnoozed("PR_2"))
     }
 
+    @Test func reloadTreatsADeletedFileAsEmpty() {
+        let persistence = MemoryStatePersistence(AppState(snoozed: ["PR_1": entry]))
+        let store = StateStore(persistence: persistence)
+        #expect(store.isSnoozed("PR_1"))
+        persistence.clear()
+        store.reload()
+        #expect(store.state == AppState())
+        #expect(persistence.saveCount == 0)
+    }
+
     @Test func anUnreadableFileKeepsTheMemoryCopyOnWriteAndReload() {
         let logger = MemoryLogging()
         let store = StateStore(persistence: FailingPersistence(loadFails: true, saveFails: true), logger: logger)

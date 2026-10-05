@@ -24,6 +24,7 @@ final class AppCoordinator {
     private var hotKeyCenter: HotKeyCenter?
     private var closingForBrowser = false
     private let isDemo: Bool
+    private var stateWatcher: StateFileWatcher?
 
     /// In demo mode the inbox comes from `DemoFetcher`, settings live in memory with every section open, the
     /// state (one snooze, four new rows) stays in memory, and no global shortcut is registered, so a demo never
@@ -84,6 +85,9 @@ final class AppCoordinator {
         store.setIncludeConversation(fetchSettings.followReviewThreads)
         store.setScope(fetchSettings.scope)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.directory(in: directories)))
+        if !demo {
+            stateWatcher = StateFileWatcher(directory: directories.state) { [weak self] in self?.store.reloadState() }
+        }
     }
 
     func start() {
@@ -125,6 +129,7 @@ final class AppCoordinator {
         triggers.start(
             { [weak self] in await self?.refreshAll() },
             retrySetup: { [weak self] in await self?.store.retryIfSetupNeeded() })
+        stateWatcher?.start()
         store.adoptCache()
         refreshNow()
     }
