@@ -7,6 +7,10 @@ BUILD_DIR  := build
 APP        := $(BUILD_DIR)/$(APP_NAME).app
 DMG        := $(BUILD_DIR)/$(APP_NAME)-$(VERSION).dmg
 INSTALLED  := /Applications/$(APP_NAME).app
+CLI_PRODUCT := prinbox
+PREFIX      ?= $(HOME)/.local
+CLI_BIN      = $$(swift build -c release --product $(CLI_PRODUCT) $(ARCH_FLAGS) --show-bin-path)/$(CLI_PRODUCT)
+CLI_TARBALL := $(BUILD_DIR)/$(CLI_PRODUCT)-$(VERSION)-macos.tar.gz
 
 # Universal by default, so local builds match the released DMG. Use ARCHS=arm64 for a faster local build.
 ARCHS         ?= arm64 x86_64
@@ -22,7 +26,7 @@ SIGN_FLAGS    := $(if $(filter -,$(SIGN_IDENTITY)),,--options runtime --timestam
 TESTING_PLUGINS := $(shell d="$$(dirname "$$(dirname "$$(xcrun --find swift)")")/lib/swift/host/plugins/testing"; [ -d "$$d" ] && echo "$$d")
 SWIFT_TEST_FLAGS := $(if $(TESTING_PLUGINS),-Xswiftc -plugin-path -Xswiftc $(TESTING_PLUGINS))
 
-.PHONY: test lint format coverage build icon app dmg install uninstall run clean
+.PHONY: test lint format coverage build icon app dmg install uninstall run clean cli install-cli cli-tarball
 
 test:
 	swift test $(SWIFT_TEST_FLAGS)
@@ -78,9 +82,27 @@ install: app
 	cp -R "$(APP)" /Applications/
 	open "$(INSTALLED)"
 
+cli:
+	swift build -c release --product $(CLI_PRODUCT) $(ARCH_FLAGS)
+	codesign --force --sign "$(SIGN_IDENTITY)" $(SIGN_FLAGS) "$(CLI_BIN)"
+
+install-cli: cli
+	mkdir -p "$(PREFIX)/bin"
+	cp "$(CLI_BIN)" "$(PREFIX)/bin/$(CLI_PRODUCT)"
+	@echo "installed $(PREFIX)/bin/$(CLI_PRODUCT)"
+
+# The release asset for the Homebrew formula: the universal binary and the license, plus the checksum the
+# tap script reads.
+cli-tarball: cli
+	rm -rf "$(BUILD_DIR)/cli" && mkdir -p "$(BUILD_DIR)/cli"
+	cp "$(CLI_BIN)" LICENSE "$(BUILD_DIR)/cli/"
+	tar -C "$(BUILD_DIR)/cli" -czf "$(CLI_TARBALL)" $(CLI_PRODUCT) LICENSE
+	cd "$(BUILD_DIR)" && shasum -a 256 "$(notdir $(CLI_TARBALL))" > "$(notdir $(CLI_TARBALL)).sha256"
+
 uninstall:
 	-"$(INSTALLED)/Contents/MacOS/$(EXECUTABLE)" --unregister-login-item
 	-pkill -x $(EXECUTABLE)
+	rm -f "$(PREFIX)/bin/$(CLI_PRODUCT)"
 	rm -rf "$(INSTALLED)" "$(HOME)/Library/Caches/$(BUNDLE_ID)" "$(HOME)/Library/Application Support/prinbox" "$(HOME)/.config/prinbox"
 	-defaults delete $(BUNDLE_ID)
 	-defaults delete $(BUNDLE_ID).demo
