@@ -214,9 +214,10 @@ public final class InboxStore {
                 let arrived = Arrivals.compute(previous: known, current: built)
                 let baseline = Arrivals.baseline(after: built, complete: result.isComplete, extending: known)
                 arrivals = arrived
-                known = baseline
+                // A shape change during the fetch already cleared the fingerprint and the baseline; this result
+                // answers the old question, so neither is rebuilt from it.
+                known = request.shape == shape ? baseline : nil
                 lastResult = result
-                // A toggle during the fetch already cleared the fingerprint; this result answers the old question.
                 fingerprint = request.shape == shape ? result.fingerprint : nil
                 let now = clock()
                 lastFullFetch = now
