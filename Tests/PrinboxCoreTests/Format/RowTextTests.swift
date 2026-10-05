@@ -20,6 +20,19 @@ import Testing
         #expect(RowText.detail(row(pr), now: now) == "billing · waiting 6h · +1 −0 · Review requested")
     }
 
+    @Test func compactRowCarriesItsStackPosition() throws {
+        let base = makePR(id: "base", number: 1, source: .mine, headRef: "f1", baseRef: "main")
+        let top = makePR(id: "top", number: 2, source: .mine, headRef: "f2", baseRef: "f1")
+        let lone = makePR(id: "lone", number: 3, source: .mine)
+        let stacked = InboxBuilder.build(makeResult([base, top]))
+        let rows = try #require(stacked.section(.waitingOnOthers)).rows
+        let baseRow = try #require(rows.first { $0.pullRequest.id == "base" })
+        let topRow = try #require(rows.first { $0.pullRequest.id == "top" })
+        #expect(RowText.compact(baseRow).hasSuffix(" · stack 1/2"))
+        #expect(RowText.compact(topRow).hasSuffix(" · stack 2/2"))
+        #expect(RowText.compact(row(lone)) == "#3 Add feature · Waiting for review")
+    }
+
     @Test func compactTrailerNamesTheRepositoryAndDraft() {
         let pr = makePR(repository: "globex/billing", source: .mine)
         #expect(RowText.compactTrailer(row(pr)) == "· billing")
@@ -111,5 +124,22 @@ import Testing
         let snoozed = InboxRow(
             pullRequest: pr, classification: Classifier.classify(pr, viewer: testViewer, snoozed: true)!)
         #expect(RowText.compactTrailer(snoozed, age: "2h") == "· billing · Snoozed · 2h")
+    }
+
+    @Test func metaAndTrailerCarryTheStack() throws {
+        let base = makePR(
+            id: "base", number: 1, repository: "globex/billing", reviewRequestedAt: date("2026-08-10T06:00:00Z"),
+            headRef: "f1", baseRef: "main")
+        let top = makePR(
+            id: "top", number: 2, repository: "globex/billing", isDraft: true, additions: 1, deletions: 0,
+            source: .mine, headRef: "f2", baseRef: "f1")
+        let inbox = InboxBuilder.build(makeResult([base, top]))
+        let baseRow = try #require(inbox.section(.needsReview)?.rows.first)
+        let topRow = try #require(inbox.section(.waitingOnOthers)?.rows.first)
+        #expect(RowText.meta(baseRow, now: now).hasSuffix(" · stack 1/2"))
+        #expect(RowText.detail(baseRow, now: now).hasSuffix(" · stack 1/2 · Review requested"))
+        #expect(RowText.compactTrailer(topRow, showOrg: true) == "· globex/billing · stack 2/2 · Draft")
+        #expect(RowText.help(topRow) == "globex/billing · stacked on #1")
+        #expect(RowText.help(baseRow) == "globex/billing")
     }
 }

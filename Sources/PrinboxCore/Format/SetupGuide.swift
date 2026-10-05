@@ -14,7 +14,7 @@ public struct SetupLink: Equatable, Sendable {
 /// What to do when gh is missing or signed out: shown as the popover's setup panel and printed by
 /// `--print`. Other errors need no setup and keep the normal warning line.
 public struct SetupGuide: Equatable, Sendable {
-    public static let defaultsDomain = "io.github.creeonix.prinbox"
+    public static let settingsPath = "~/.config/prinbox/settings.json"
 
     public let title: String
     public let summary: String
@@ -38,9 +38,7 @@ public struct SetupGuide: Equatable, Sendable {
             SetupStep(text: "Sign in to GitHub", command: "gh auth login"),
         ],
         link: SetupLink(title: "Other ways to install gh", url: URL(string: "https://cli.github.com")!),
-        footnote: SetupStep(
-            text: "Installed gh somewhere else? Point PRInbox at it",
-            command: "defaults write \(defaultsDomain) ghPath /path/to/gh"))
+        footnote: SetupStep(text: "Installed gh somewhere else? Set ghPath in \(settingsPath)", command: nil))
 
     static func missingOverride(_ path: String) -> SetupGuide {
         SetupGuide(
@@ -48,8 +46,7 @@ public struct SetupGuide: Equatable, Sendable {
             summary: "PRInbox is set to use gh at \(path), but nothing runnable is there.",
             steps: [
                 SetupStep(
-                    text: "Remove the setting to use gh from Homebrew or PATH",
-                    command: "defaults delete \(defaultsDomain) ghPath"),
+                    text: "Remove ghPath from \(settingsPath) to use gh from Homebrew or PATH", command: nil),
                 SetupStep(text: "Or install gh", command: "brew install gh"),
             ],
             link: nil, footnote: nil)

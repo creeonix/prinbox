@@ -22,11 +22,9 @@ public actor AvatarCache {
         self.clock = clock
     }
 
-    /// ~/Library/Caches/<bundleID>/avatars
-    public static func defaultDirectory(bundleID: String) -> URL {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent(bundleID)
-            .appendingPathComponent("avatars")
+    /// `<cache directory>/avatars`.
+    public static func directory(in directories: Directories) -> URL {
+        directories.cache.appendingPathComponent("avatars")
     }
 
     public func data(login: String, url: URL?) async -> Data? {

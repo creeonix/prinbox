@@ -32,8 +32,11 @@ final class QueryLog: @unchecked Sendable {
 @Suite struct GhClientTests {
     let gh = GhLocator(overridePath: "/fake/gh", environmentPath: nil, isExecutable: { $0 == "/fake/gh" })
 
-    func client(_ handler: @escaping @Sendable (URL, [String], [String: String]) throws -> CommandOutput) -> GhClient {
-        GhClient(locator: gh, runner: FakeRunner(handler: handler))
+    func client(
+        logger: Logging = NullLogging(),
+        _ handler: @escaping @Sendable (URL, [String], [String: String]) throws -> CommandOutput
+    ) -> GhClient {
+        GhClient(locator: gh, runner: FakeRunner(handler: handler), logger: logger)
     }
 
     static func ok(_ data: Data, stderr: String = "", exitCode: Int32 = 0) -> CommandOutput {
@@ -44,10 +47,10 @@ final class QueryLog: @unchecked Sendable {
 
     /// Answers the search with `search` and each details query through `details(ids, callNumber)`.
     func twoPhase(
-        search: Data, log: QueryLog = QueryLog(),
+        search: Data, log: QueryLog = QueryLog(), logger: Logging = NullLogging(),
         details: @escaping @Sendable ([String], Int) throws -> CommandOutput = { ids, _ in nodes(ids) }
     ) -> GhClient {
-        client { executable, arguments, environment in
+        client(logger: logger) { executable, arguments, environment in
             #expect(executable.path == "/fake/gh")
             #expect(arguments.prefix(3) == ["api", "graphql", "-f"])
             #expect(environment["GH_PROMPT_DISABLED"] == "1")
@@ -77,6 +80,16 @@ final class QueryLog: @unchecked Sendable {
         #expect(result.cost == 1 + 3 * 5)
         #expect(result.fingerprint.count == 23)
         #expect(result.fingerprint["r1"] == date(TwoPhaseJSON.updatedAt))
+    }
+
+    @Test func unchangedRequiresTheSameViewer() async throws {
+        let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")])
+        let previous = ["PR_1": date(TwoPhaseJSON.updatedAt)]
+        let same = try await twoPhase(search: search).fetch(FetchRequest(previous: previous, previousViewer: "me"))
+        #expect(same == .unchanged)
+        let other = try await twoPhase(search: search).fetch(
+            FetchRequest(previous: previous, previousViewer: "someone"))
+        guard case .result = other else { return #expect(Bool(false), "a different viewer must fetch in full") }
     }
 
     @Test func unchangedWhenThePreviousFingerprintMatches() async throws {
@@ -111,14 +124,18 @@ final class QueryLog: @unchecked Sendable {
 
     @Test func aFailingBatchIsRetriedAsTwoHalves() async throws {
         let log = QueryLog()
+        let logger = MemoryLogging()
         let search = TwoPhaseJSON.search(mine: (1...10).map { TwoPhaseJSON.hit("o\($0)") })
-        let result = try await twoPhase(search: search, log: log) { ids, call in
+        let result = try await twoPhase(search: search, log: log, logger: logger) { ids, call in
             if call == 2 { return Self.ok(Data(), stderr: "gh: HTTP 502", exitCode: 1) }
             return Self.nodes(ids)
         }.fetch()
         #expect(log.detailsQueries.map { TwoPhaseJSON.requestedIDs(in: $0).count }.sorted() == [5, 5, 10])
         #expect(result.pullRequests.count == 10)
         #expect(result.pullRequests.map(\.id) == (1...10).map { "o\($0)" })
+        let notice = logger.lines.first { $0.level == .notice }
+        #expect(notice?.message == "details batch of 10 failed; retrying split")
+        #expect(notice?.detail != nil)
     }
 
     @Test func aLoneIDIsRetriedOnceAsIs() async throws {
@@ -244,5 +261,90 @@ final class QueryLog: @unchecked Sendable {
         let result = try await twoPhase(search: TwoPhaseJSON.search(mine: [TwoPhaseJSON.hit("o1")]), log: log).fetch()
         #expect(result.pullRequests.count == 1)
         #expect(log.queries[0].contains("involved: search"))
+    }
+
+    @Test func aFetchLogsOneInfoLineAndAnUnchangedCheckAnother() async throws {
+        let logger = MemoryLogging()
+        let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")])
+        let client = twoPhase(search: search, logger: logger)
+        _ = try await client.fetch(.full)
+        let fetchLines = logger.messages(.info).filter { $0.hasPrefix("fetch: 2 requests") }
+        #expect(fetchLines.count == 1)
+        let previous = ["PR_1": date(TwoPhaseJSON.updatedAt)]
+        _ = try await client.fetch(FetchRequest(previous: previous))
+        #expect(logger.messages(.info).contains { $0.hasPrefix("fetch unchanged: 1 request") })
+        #expect(logger.lines.allSatisfy { $0.category == .gh })
+    }
+
+    @Test func aNonZeroExitLogsStderrAsThePrivateDetail() async {
+        let logger = MemoryLogging()
+        let client = client(logger: logger) { _, _, _ in
+            CommandOutput(exitCode: 1, stdout: Data(), stderr: "gh: Bad credentials (HTTP 401)\n")
+        }
+        await #expect(throws: FetchError.loggedOut) { try await client.fetch(.full) }
+        let line = logger.lines.first { $0.level == .error }
+        #expect(line?.message == "gh exited 1")
+        #expect(line?.detail == "gh: Bad credentials (HTTP 401)\n")
+    }
+
+    @Test func idsThatAreNotNodeIDsAreDroppedWithANoticeBeforePhaseTwo() async throws {
+        let logger = MemoryLogging()
+        let log = QueryLog()
+        let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1"), TwoPhaseJSON.hit("bad id\"")])
+        _ = try await twoPhase(search: search, log: log, logger: logger).fetch(.full)
+        #expect(log.detailsQueries.count == 1)
+        #expect(TwoPhaseJSON.requestedIDs(in: log.detailsQueries[0]) == ["PR_1"])
+        #expect(logger.messages(.notice) == ["dropped 1 ids that are not node ids"])
+    }
+
+    @Test func theFetchLineCarriesTheLowestRemainingAcrossEveryResponse() async throws {
+        let logger = MemoryLogging()
+        let hits = (1...12).map { TwoPhaseJSON.hit("PR_\($0)") }
+        let search = TwoPhaseJSON.search(review: hits)
+        let client = twoPhase(search: search, logger: logger) { ids, call in
+            // The search says 4900; the batches say 4890 and 4895. The lowest is the truth after the fetch.
+            var body =
+                try JSONSerialization.jsonObject(
+                    with: TwoPhaseJSON.details(ids.map { TwoPhaseJSON.node($0) })) as! [String: Any]
+            var data = body["data"] as! [String: Any]
+            data["rateLimit"] = ["cost": 5, "remaining": call == 2 ? 4890 : 4895, "resetAt": "2026-08-01T13:00:00Z"]
+            body["data"] = data
+            return Self.ok(try JSONSerialization.data(withJSONObject: body))
+        }
+        _ = try await client.fetch(.full)
+        let line = try #require(logger.messages(.info).first { $0.hasPrefix("fetch: ") })
+        #expect(line.contains("remaining 4890"))
+    }
+
+    @Test func theUnchangedLineCarriesRemainingAndElapsed() async throws {
+        let logger = MemoryLogging()
+        let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")])
+        let client = twoPhase(search: search, logger: logger)
+        _ = try await client.fetch(FetchRequest(previous: ["PR_1": date(TwoPhaseJSON.updatedAt)]))
+        let line = try #require(logger.messages(.info).first { $0.hasPrefix("fetch unchanged: ") })
+        #expect(line.contains("remaining 4900"))
+        #expect(line.hasSuffix(" ms"))
+    }
+
+    @Test func cancellationIsHonoredBeforeTheRetryNotice() async throws {
+        final class Box: @unchecked Sendable {
+            private let lock = NSLock()
+            private var task: Task<FetchOutcome, Error>?
+            func set(_ t: Task<FetchOutcome, Error>) { lock.withLock { task = t } }
+            func cancel() { lock.withLock { task?.cancel() } }
+        }
+        let box = Box()
+        let logger = MemoryLogging()
+        let log = QueryLog()
+        let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")])
+        let client = twoPhase(search: search, log: log, logger: logger) { _, _ in
+            box.cancel()
+            throw FetchError.timedOut
+        }
+        let task = Task { try await client.fetch(.full) }
+        box.set(task)
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(log.detailsQueries.count == 1)
+        #expect(logger.messages(.notice).isEmpty)
     }
 }

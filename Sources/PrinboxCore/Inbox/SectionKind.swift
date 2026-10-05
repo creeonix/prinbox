@@ -75,4 +75,22 @@ public enum Reason: String, Sendable, Equatable {
     /// Rows with these reasons draw the comment bubble and its count in the accent color: the conversation is
     /// what needs attention.
     public var highlightsComments: Bool { self == .awaitingReply || self == .openThreads }
+
+    /// The stable code the JSON carries; the raw value is the display text.
+    public var code: String {
+        switch self {
+        case .reviewRequested: "reviewRequested"
+        case .reReviewRequested: "reReviewRequested"
+        case .mentioned: "mentioned"
+        case .awaitingReply: "awaitingReply"
+        case .openThreads: "openThreads"
+        case .changesRequested: "changesRequested"
+        case .mergeConflicts: "mergeConflicts"
+        case .ciRed: "ciRed"
+        case .readyToMerge: "readyToMerge"
+        case .draft: "draft"
+        case .waitingForReview: "waitingForReview"
+        case .snoozed: "snoozed"
+        }
+    }
 }

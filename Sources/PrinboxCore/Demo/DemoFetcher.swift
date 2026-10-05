@@ -4,7 +4,9 @@ import Foundation
 /// login is fictional (three orgs: acme, globex, initech), every mark state appears at least once, and
 /// every time is relative to the moment the fetcher was created, so ages read naturally and refreshes
 /// return identical PRs: nothing "changes", the demo snooze stays asleep and the new marks stay put.
-/// Includes two replies to you (waiting 4h and 1h) and one unanswered open thread on an approved PR.
+/// Includes two replies to you (waiting 4h and 1h), one unanswered open thread on an approved PR, and two
+/// stacks: bob's #1291 on #1290 inside Needs your review, and your #1301 on #1298 across Your PRs and Waiting
+/// on others.
 public struct DemoFetcher: InboxFetching {
     private let base: Date
 
@@ -53,7 +55,8 @@ enum DemoData {
             _ number: Int, _ title: String, repo: String, author: String, _ additions: Int, _ deletions: Int,
             updated: Double, source: SearchSource, isDraft: Bool = false, decision: ReviewDecision = .reviewRequired,
             ci: CIState = .success, mergeable: Mergeable = .mergeable, comments: Int = 0,
-            reviewed: Double? = nil, requested: Double? = nil, threads: [ReviewThread]? = nil
+            reviewed: Double? = nil, requested: Double? = nil, threads: [ReviewThread]? = nil,
+            head: String? = nil, base: String? = nil
         ) -> PullRequest {
             PullRequest(
                 id: "DEMO_\(number)", number: number, title: title,
@@ -62,12 +65,18 @@ enum DemoData {
                 createdAt: ago(24 * 5), updatedAt: ago(updated), reviewDecision: decision, mergeable: mergeable,
                 ci: ci, viewerReview: reviewed.map { ViewerReview(state: "COMMENTED", submittedAt: ago($0)) },
                 reviewRequestedAt: requested.map(ago), readyForReviewAt: nil, source: source,
-                commentCount: comments, ownerAvatarURL: nil, ownerIsOrganization: true, threads: threads)
+                commentCount: comments, ownerAvatarURL: nil, ownerIsOrganization: true,
+                headRef: head, baseRef: base, threads: threads)
         }
         return [
             pr(
                 1290, "Migrate the settings page to the new design system", repo: "acme/web", author: "bob",
-                620, 410, updated: 3, source: .review, comments: 3, requested: 50),
+                620, 410, updated: 3, source: .review, comments: 3, requested: 50,
+                head: "settings-redesign", base: "main"),
+            pr(
+                1291, "Settings page: migrate the notifications tab", repo: "acme/web", author: "bob",
+                140, 65, updated: 2, source: .review, ci: .pending, comments: 1, requested: 49,
+                head: "settings-notifications", base: "settings-redesign"),
             pr(
                 2104, "Charge sales tax per region", repo: "globex/billing", author: "frank",
                 301, 88, updated: 2, source: .review, decision: .changesRequested, ci: .failure, comments: 7,
@@ -104,7 +113,8 @@ enum DemoData {
                 140, 6, updated: 0.5, source: .mentions, ci: .none, comments: 4),
             pr(
                 1301, "Speed up search indexing", repo: "acme/web", author: "me",
-                388, 120, updated: 1, source: .mine, ci: .failure, comments: 2),
+                388, 120, updated: 1, source: .mine, ci: .failure, comments: 2,
+                head: "search-indexing", base: "swift-6-4"),
             pr(
                 489, "Retry webhook deliveries with backoff", repo: "acme/api", author: "me",
                 75, 20, updated: 6, source: .mine, decision: .approved, comments: 5,
@@ -117,7 +127,7 @@ enum DemoData {
                 540, 233, updated: 9, source: .mine, decision: .changesRequested, comments: 9),
             pr(
                 1298, "Bump the Swift toolchain to 6.4", repo: "acme/web", author: "me",
-                4, 4, updated: 20, source: .mine, ci: .pending),
+                4, 4, updated: 20, source: .mine, ci: .pending, head: "swift-6-4", base: "main"),
             pr(
                 33, "Add a cover sheet to every report", repo: "initech/tps", author: "me",
                 27, 3, updated: 30, source: .mine, comments: 1),

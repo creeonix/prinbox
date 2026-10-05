@@ -169,4 +169,75 @@ import Testing
         #expect(!inbox.spansMultipleOrgs)
         #expect(inbox.section(.needsReview)?.moreCount == 0)
     }
+
+    func ago(_ day: Int) -> Date { date("2026-08-0\(day)T10:00:00Z") }
+
+    @Test func aChainStaysContiguousWhereItsMostUrgentMemberSorts() {
+        let inbox = InboxBuilder.build(
+            makeResult([
+                makePR(id: "a", number: 1, reviewRequestedAt: ago(2), headRef: "f1", baseRef: "main"),
+                makePR(id: "c", number: 3, reviewRequestedAt: ago(3)),
+                makePR(id: "b", number: 2, reviewRequestedAt: ago(4), headRef: "f2", baseRef: "f1"),
+            ]))
+        let rows = inbox.section(.needsReview)?.rows
+        #expect(rows?.map(\.id) == ["a", "b", "c"])
+        #expect(rows?.map { $0.stack?.position } == [1, 2, nil])
+    }
+
+    @Test func aBlockSortsByItsMostUrgentMemberEvenWhenThatIsTheTop() {
+        let inbox = InboxBuilder.build(
+            makeResult([
+                makePR(id: "a", number: 1, reviewRequestedAt: ago(4), headRef: "f1", baseRef: "main"),
+                makePR(id: "c", number: 3, reviewRequestedAt: ago(3)),
+                makePR(id: "b", number: 2, reviewRequestedAt: ago(2), headRef: "f2", baseRef: "f1"),
+            ]))
+        #expect(inbox.section(.needsReview)?.rows.map(\.id) == ["a", "b", "c"])
+    }
+
+    @Test func theCapKeepsABlockWholeWhenItStartsInsideIt() {
+        let singles = (1...7).map {
+            makePR(id: "s\($0)", number: $0, reviewRequestedAt: date("2026-08-01T0\($0):00:00Z"))
+        }
+        let x = makePR(id: "x", number: 8, reviewRequestedAt: ago(2), headRef: "f1", baseRef: "main")
+        let y = makePR(id: "y", number: 9, reviewRequestedAt: ago(3), headRef: "f2", baseRef: "f1")
+        let whole = InboxBuilder.build(makeResult(singles + [x, y]), cap: 8)
+        #expect(whole.section(.needsReview)?.rows.map(\.id).suffix(2) == ["x", "y"])
+        #expect(whole.section(.needsReview)?.moreCount == 0)
+        let cut = InboxBuilder.build(makeResult(singles + [x, y]), cap: 7)
+        #expect(cut.section(.needsReview)?.rows.count == 7)
+        #expect(cut.section(.needsReview)?.moreCount == 2)
+    }
+
+    @Test func aSnoozedMemberStaysWithTheSnoozedRowsAndKeepsItsPosition() {
+        let base = makePR(id: "base", number: 1, updatedAt: ago(5), source: .mine, headRef: "f1", baseRef: "main")
+        let top = makePR(id: "top", number: 2, updatedAt: ago(4), source: .mine, headRef: "f2", baseRef: "f1")
+        let inbox = InboxBuilder.build(makeResult([base, top]), snoozed: ["base"])
+        let rows = inbox.section(.waitingOnOthers)?.rows
+        #expect(rows?.map(\.id) == ["top", "base"])
+        #expect(rows?.last?.classification.reason == .snoozed)
+        #expect(rows?.last?.stack?.position == 1)
+    }
+
+    @Test func positionsCrossSections() {
+        let base = makePR(id: "base", number: 1, reviewRequestedAt: ago(2), headRef: "f1", baseRef: "main")
+        let top = makePR(id: "top", number: 2, ci: .failure, source: .mine, headRef: "f2", baseRef: "f1")
+        let inbox = InboxBuilder.build(makeResult([base, top]))
+        #expect(inbox.section(.needsReview)?.rows.first?.stack?.position == 1)
+        #expect(
+            inbox.section(.yourPRs)?.rows.first?.stack
+                == StackPosition(position: 2, size: 2, parentID: "base", parentNumber: 1, rootID: "base"))
+    }
+
+    @Test func aForkHasNoPositionsAndNoReordering() {
+        let inbox = InboxBuilder.build(
+            makeResult([
+                makePR(id: "a", number: 1, reviewRequestedAt: ago(1), headRef: "f", baseRef: "main"),
+                makePR(id: "c", number: 3, reviewRequestedAt: ago(2)),
+                makePR(id: "b", number: 2, reviewRequestedAt: ago(3), headRef: "l", baseRef: "f"),
+                makePR(id: "d", number: 4, reviewRequestedAt: ago(4), headRef: "r", baseRef: "f"),
+            ]))
+        let rows = inbox.section(.needsReview)?.rows
+        #expect(rows?.map(\.id) == ["a", "c", "b", "d"])
+        #expect(rows?.allSatisfy { $0.stack == nil } == true)
+    }
 }

@@ -1,11 +1,11 @@
 import Foundation
 import Observation
 
-/// Which sections are folded, persisted in user defaults.
+/// Which sections are folded, persisted through `KeyValueStoring` (settings.json in the app).
 @MainActor
 @Observable
 public final class FoldStore {
-    public static let key = "foldedSections"
+    public nonisolated static let key = "foldedSections"
     /// First run: only "Needs your review" is open, as in the sketchybar prototype.
     public static let defaultFolded: Set<SectionKind> = [.takeAnotherLook, .mentions, .yourPRs, .waitingOnOthers]
 

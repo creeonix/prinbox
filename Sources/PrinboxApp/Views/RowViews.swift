@@ -49,7 +49,7 @@ struct PullRequestRowView: View {
             .opacity(pr.isDraft ? 0.5 : 1)
         }
         .buttonStyle(.plain)
-        .help(pr.repository)
+        .help(RowText.help(row))
     }
 
     private var badge: OrgBadgeView? {
@@ -101,7 +101,7 @@ struct CompactRowView: View {
             .opacity(row.pullRequest.isDraft || snoozed ? 0.6 : 1)
         }
         .buttonStyle(.plain)
-        .help(row.pullRequest.repository)
+        .help(RowText.help(row))
     }
 
     private func trailer(age: String?) -> some View {

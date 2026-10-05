@@ -1,13 +1,13 @@
 import Foundation
 import Observation
 
-/// How the inbox is shown, persisted in user defaults.
+/// How the inbox is shown, persisted through `KeyValueStoring` (settings.json in the app).
 @MainActor
 @Observable
 public final class DisplaySettings {
-    public static let groupKey = "groupByOrganization"
-    public static let orgAvatarsKey = "showOrganizationAvatars"
-    public static let compactKey = "compactRows"
+    public nonisolated static let groupKey = "groupByOrganization"
+    public nonisolated static let orgAvatarsKey = "showOrganizationAvatars"
+    public nonisolated static let compactKey = "compactRows"
 
     public private(set) var groupByOrganization: Bool
     public private(set) var showOrganizationAvatars: Bool

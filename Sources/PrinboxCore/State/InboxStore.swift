@@ -12,7 +12,7 @@ public final class InboxStore {
     public static let rateLimitFallbackPause: TimeInterval = 15 * 60
     /// A refresh that finds nothing changed skips phase 2, but CI results and merge conflicts do not move a PR's
     /// `updatedAt`, so a full fetch runs at least this often.
-    public static let fullFetchInterval: TimeInterval = 15 * 60
+    public static let fullFetchInterval: TimeInterval = InboxCache.fingerprintCeiling
 
     public private(set) var inbox: Inbox?
     public private(set) var error: FetchError?
@@ -40,15 +40,50 @@ public final class InboxStore {
     @ObservationIgnored private var fingerprint: [String: Date]?
     @ObservationIgnored private var lastFullFetch: Date?
     @ObservationIgnored private let fetcher: InboxFetching
+    @ObservationIgnored private let cache: CacheStoring
     @ObservationIgnored private let clock: @Sendable () -> Date
 
     public init(
         fetcher: InboxFetching, state: StateStore = StateStore(persistence: MemoryStatePersistence()),
-        clock: @escaping @Sendable () -> Date = { Date() }
+        cache: CacheStoring = MemoryCache(), clock: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.fetcher = fetcher
         self.state = state
+        self.cache = cache
         self.clock = clock
+    }
+
+    /// Adopts the cache at launch: rows at once, the last confirmation time, and, when the trust rules hold,
+    /// the fingerprint (so the first refresh may be an unchanged check) and the arrivals baseline (so PRs that
+    /// entered an attention section while the app was not running notify). Rows already in the cached result
+    /// that the baseline lacks (a poller fetched them) are announced here. Called once, before the first
+    /// refresh.
+    public func adoptCache() {
+        guard let cached = cache.load() else { return }
+        lastResult = cached.result
+        lastSuccess = cached.checkedAt
+        if let fingerprint = cached.trustedFingerprint(now: clock(), includeConversation: includeConversation) {
+            self.fingerprint = fingerprint
+            lastFullFetch = cached.fetchedAt
+        }
+        known = cached.trustedAttention(includeConversation: includeConversation)
+        let built = InboxBuilder.build(cached.result, snoozed: state.snoozedIDs)
+        inbox = built
+        // A poller may have refreshed the fingerprint past the baseline, so the first refresh can be an unchanged
+        // check: announce what it fetched now, and advance the baseline in the cache too.
+        let arrived = Arrivals.compute(previous: known, current: built)
+        if !arrived.isEmpty {
+            let baseline = Arrivals.baseline(after: built, complete: cached.result.isComplete, extending: known)
+            known = baseline
+            arrivals = arrived
+            cache.update { existing in
+                guard var next = existing else { return nil }
+                next.attention = baseline.sorted()
+                return next
+            }
+        }
+        onInboxChange?()
+        if !arrived.isEmpty { onArrivals?(arrived) }
     }
 
     public var badge: StatusBadge {
@@ -130,9 +165,11 @@ public final class InboxStore {
         onInboxChange?()
     }
 
-    private static func baseline(after inbox: Inbox, complete: Bool, extending previous: Set<String>?) -> Set<String> {
-        let current = Arrivals.attentionIDs(inbox)
-        return complete ? current : (previous ?? []).union(current)
+    /// Picks up a snooze or wake another writer (the command) made in state.json; rebuilds when the set changed.
+    public func reloadState() {
+        let before = state.snoozedIDs
+        state.reload()
+        if state.snoozedIDs != before { rebuild() }
     }
 
     private var isPaused: Bool {
@@ -144,23 +181,38 @@ public final class InboxStore {
             let request = nextRequest()
             switch try await fetcher.fetch(request) {
             case .unchanged:
+                reloadState()
+                let now = clock()
                 error = nil
-                lastSuccess = clock()
+                lastSuccess = now
                 pausedUntil = nil
+                cache.update { existing in
+                    guard var next = existing else { return nil }
+                    next.checkedAt = now
+                    return next
+                }
             case .result(let result):
                 state.didFetch(result)
                 let built = InboxBuilder.build(result, snoozed: state.snoozedIDs)
                 let arrived = Arrivals.compute(previous: known, current: built)
+                let baseline = Arrivals.baseline(after: built, complete: result.isComplete, extending: known)
                 arrivals = arrived
-                known = Self.baseline(after: built, complete: result.isComplete, extending: known)
+                known = baseline
                 lastResult = result
                 // A toggle during the fetch already cleared the fingerprint; this result answers the old question.
                 fingerprint = request.includeConversation == includeConversation ? result.fingerprint : nil
-                lastFullFetch = clock()
+                let now = clock()
+                lastFullFetch = now
                 inbox = built
                 error = nil
-                lastSuccess = clock()
+                lastSuccess = now
                 pausedUntil = nil
+                cache.update { _ in
+                    InboxCache(
+                        fetchedAt: now, checkedAt: now, includeConversation: request.includeConversation,
+                        viewer: result.viewerLogin, fingerprint: result.fingerprint, attention: baseline.sorted(),
+                        result: result)
+                }
                 onInboxChange?()
                 // `arrived`, not `arrivals`: a hook that snoozes synchronously rebuilds and clears the latter.
                 if !arrived.isEmpty { onArrivals?(arrived) }
@@ -178,6 +230,9 @@ public final class InboxStore {
     /// The previous fingerprint rides along while the last full fetch is younger than `fullFetchInterval`.
     private func nextRequest() -> FetchRequest {
         let fresh = lastFullFetch.map { clock().timeIntervalSince($0) < Self.fullFetchInterval } ?? false
-        return FetchRequest(previous: fresh ? fingerprint : nil, includeConversation: includeConversation)
+        let previous = fresh ? fingerprint : nil
+        return FetchRequest(
+            previous: previous, includeConversation: includeConversation,
+            previousViewer: previous == nil ? nil : lastResult?.viewerLogin)
     }
 }

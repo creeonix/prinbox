@@ -11,6 +11,7 @@ public final class PopoverState {
     public let folds: FoldStore
     public let display: DisplaySettings
     public let colors: OrgColorStore
+    public let opener: URLOpening
     public private(set) var selection = Selection()
     public private(set) var showingSettings = false
     public private(set) var isRecordingShortcut = false
@@ -23,13 +24,19 @@ public final class PopoverState {
     @ObservationIgnored public var onSettingsOpened: (@MainActor () -> Void)?
     /// Called when a shortcut recording ends for any reason, so the shell re-registers the shortcut.
     @ObservationIgnored public var onRecordingEnded: (@MainActor () -> Void)?
+    /// Called after a URL was handed to the opener, so the shell can close the popover.
+    @ObservationIgnored public var onDidOpenURL: (@MainActor () -> Void)?
     @ObservationIgnored private var lastItems: [InboxItemID] = []
 
-    public init(store: InboxStore, folds: FoldStore, display: DisplaySettings, colors: OrgColorStore) {
+    public init(
+        store: InboxStore, folds: FoldStore, display: DisplaySettings, colors: OrgColorStore,
+        opener: URLOpening = NullURLOpener()
+    ) {
         self.store = store
         self.folds = folds
         self.display = display
         self.colors = colors
+        self.opener = opener
         lastItems = items
         store.onInboxChange = { [weak self] in self?.inboxDidChange() }
     }
@@ -55,6 +62,15 @@ public final class PopoverState {
     public func setGroupByOrganization(_ on: Bool) {
         display.setGroupByOrganization(on)
         reconcileSelection()
+    }
+
+    // MARK: Opening
+
+    /// Opens a PR, a section page or a help link through the adapter, then tells the shell.
+    public func open(_ url: URL) {
+        let opener = self.opener
+        Task { await opener.open(url) }
+        onDidOpenURL?()
     }
 
     // MARK: Selection
@@ -125,6 +141,7 @@ public final class PopoverState {
 
     /// Resets transient state each time the popover opens and selects the first PR row.
     public func popoverWillShow() {
+        store.reloadState()
         showingSettings = false
         if isRecordingShortcut { stopRecording() }
         copiedCommand = nil

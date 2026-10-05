@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+    import FoundationNetworking
+#endif
+
 public protocol DataLoading: Sendable {
     func load(_ url: URL) async throws -> Data
 }

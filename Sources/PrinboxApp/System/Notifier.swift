@@ -39,7 +39,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         await refresh()
     }
 
-    func deliver(_ notice: ArrivalNotice) {
+    func deliver(_ notice: ArrivalNotice) async {
         guard let center else { return }
         let content = UNMutableNotificationContent()
         content.title = notice.title
@@ -48,7 +48,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let request = UNNotificationRequest(identifier: Self.arrivalsIdentifier, content: content, trigger: nil)
         center.add(request) { error in
             if let error {
-                Self.log.error("notification not delivered: \(String(describing: error), privacy: .public)")
+                Self.log.error("notification not delivered: \(String(describing: error), privacy: .private)")
             }
         }
     }
@@ -76,3 +76,5 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         .banner
     }
 }
+
+extension Notifier: NotificationDelivering {}

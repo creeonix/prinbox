@@ -25,12 +25,29 @@ final class AppCoordinator {
     private var closingForBrowser = false
     private let isDemo: Bool
 
-    /// In demo mode the inbox comes from `DemoFetcher`, preferences live in a separate suite with every
-    /// section open, the state (one snooze, four new rows) stays in memory, and no global shortcut is
-    /// registered, so a demo never touches the real setup.
-    init(demo: Bool = false) {
-        let defaults = demo ? Self.demoDefaults() : UserDefaults.standard
-        let client = GhClient()
+    /// In demo mode the inbox comes from `DemoFetcher`, settings live in memory with every section open, the
+    /// state (one snooze, four new rows) stays in memory, and no global shortcut is registered, so a demo never
+    /// touches the real setup. `settingsPath` names an explicit settings file (the screenshot harness).
+    init(demo: Bool = false, settingsPath: String? = nil) {
+        let logger = OSLogging()
+        let directories = MacDirectories()
+        let settings: KeyValueStoring
+        if let settingsPath {
+            settings = JSONKeyValueFile(url: URL(fileURLWithPath: settingsPath), logger: logger)
+        } else if demo {
+            settings = MemoryKeyValueStore(initial: [FoldStore.key: [String]()])
+        } else {
+            let file = JSONKeyValueFile(url: directories.config.appendingPathComponent("settings.json"), logger: logger)
+            let moved = SettingsMigration.migrate(from: UserDefaults.standard, to: file)
+            if !moved.isEmpty { logger.notice(.state, "moved \(moved.count) settings from defaults to settings.json") }
+            settings = file
+        }
+        let updateState: KeyValueStoring =
+            demo
+            ? MemoryKeyValueStore()
+            : JSONKeyValueFile(url: directories.state.appendingPathComponent("update.json"), logger: logger)
+        let locator = GhLocator(overridePath: settings.object(forKey: GhLocator.overrideKey) as? String)
+        let client = GhClient(locator: locator, logger: logger)
         let fetcher: InboxFetching
         let persistence: StatePersisting
         if demo {
@@ -39,25 +56,33 @@ final class AppCoordinator {
             persistence = MemoryStatePersistence(demoFetcher.initialState)
         } else {
             fetcher = client
-            persistence = JSONStateFile(url: JSONStateFile.defaultURL())
+            persistence = JSONStateFile(url: JSONStateFile.url(in: directories))
         }
-        let store = InboxStore(fetcher: fetcher, state: StateStore(persistence: persistence))
+        let lock = demo ? nil : FileLock(url: directories.state.appendingPathComponent("prinbox.lock"), logger: logger)
+        let store = InboxStore(
+            fetcher: fetcher, state: StateStore(persistence: persistence, lock: lock, logger: logger),
+            cache: demo
+                ? MemoryCache()
+                : JSONCacheFile(url: directories.state.appendingPathComponent("cache.json"), lock: lock, logger: logger)
+        )
         isDemo = demo
         self.client = client
         info = AppInfo(client: client)
         // Demo builds report "dev", so the store never checks there.
         updates = UpdateStore(
-            currentVersion: demo ? "dev" : info.version, checker: GhReleaseChecker(locator: GhLocator()),
-            defaults: defaults)
+            currentVersion: demo ? "dev" : info.version, checker: GhReleaseChecker(locator: locator),
+            defaults: updateState)
         self.store = store
-        let display = DisplaySettings(defaults: defaults)
-        let colors = OrgColorStore(defaults: defaults)
-        state = PopoverState(store: store, folds: FoldStore(defaults: defaults), display: display, colors: colors)
-        hotKeys = HotKeySettings(defaults: defaults)
-        notifications = NotificationSettings(defaults: defaults)
-        fetchSettings = FetchSettings(defaults: defaults)
+        let display = DisplaySettings(defaults: settings)
+        let colors = OrgColorStore(defaults: settings)
+        state = PopoverState(
+            store: store, folds: FoldStore(defaults: settings), display: display, colors: colors,
+            opener: WorkspaceURLOpener())
+        hotKeys = HotKeySettings(defaults: settings)
+        notifications = NotificationSettings(defaults: settings)
+        fetchSettings = FetchSettings(defaults: settings)
         store.setIncludeConversation(fetchSettings.followReviewThreads)
-        avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.defaultDirectory(bundleID: Self.bundleID)))
+        avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.directory(in: directories)))
     }
 
     func start() {
@@ -67,8 +92,13 @@ final class AppCoordinator {
             self?.loginItem.refresh()
             Task { await self?.notifier.refresh() }
         }
+        state.onDidOpenURL = { [weak self] in
+            guard let self, self.popover?.isShown == true else { return }
+            self.closingForBrowser = true
+            self.popover?.close()
+        }
         notifier.onOpen = { [weak self] url in
-            if let url { NSWorkspace.shared.open(url) } else { self?.showPopover() }
+            if let url { self?.state.open(url) } else { self?.showPopover() }
         }
         notifier.start()
         store.onArrivals = { [weak self] rows in self?.notify(rows) }
@@ -93,13 +123,8 @@ final class AppCoordinator {
         triggers.start(
             { [weak self] in await self?.refreshAll() },
             retrySetup: { [weak self] in await self?.store.retryIfSetupNeeded() })
+        store.adoptCache()
         refreshNow()
-    }
-
-    private static func demoDefaults() -> UserDefaults {
-        let defaults = UserDefaults(suiteName: "\(bundleID).demo") ?? .standard
-        defaults.set([String](), forKey: FoldStore.key)
-        return defaults
     }
 
     private func makeActions() -> PopoverActions {
@@ -164,7 +189,7 @@ final class AppCoordinator {
             await notifier.refresh()
             // The popover may have opened during the round-trip.
             guard notifier.status == .authorized, !(self.popover?.isShown ?? false) else { return }
-            notifier.deliver(notice)
+            await notifier.deliver(notice)
         }
     }
 
@@ -198,13 +223,11 @@ final class AppCoordinator {
     }
 
     private func openUpdate() {
-        NSWorkspace.shared.open(updates.available?.url ?? GhReleaseChecker.releasesPage)
+        state.open(updates.available?.url ?? GhReleaseChecker.releasesPage)
     }
 
     private func open(_ url: URL) {
-        closingForBrowser = true
-        NSWorkspace.shared.open(url)
-        popover?.close()
+        state.open(url)
     }
 
     private func handleKey(_ event: NSEvent) -> Bool {

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Which search in `SearchQuery` returned a pull request. Declaration order is the dedupe priority.
-public enum SearchSource: String, Sendable, CaseIterable {
+public enum SearchSource: String, Sendable, CaseIterable, Codable, CodingKeyRepresentable {
     case review
     case mentions
     case mine
@@ -12,20 +12,20 @@ public enum SearchSource: String, Sendable, CaseIterable {
     public var boundsCompleteness: Bool { self != .involved }
 }
 
-public enum ReviewDecision: Sendable, Equatable {
+public enum ReviewDecision: String, Sendable, Equatable, Codable {
     case approved
     case changesRequested
     case reviewRequired
     case none
 }
 
-public enum Mergeable: Sendable, Equatable {
+public enum Mergeable: String, Sendable, Equatable, Codable {
     case mergeable
     case conflicting
     case unknown
 }
 
-public enum CIState: Sendable, Equatable {
+public enum CIState: String, Sendable, Equatable, Codable {
     case success
     case failure
     case pending
@@ -33,7 +33,7 @@ public enum CIState: Sendable, Equatable {
 }
 
 /// The viewer's latest submitted review. Pending (unsubmitted) reviews are never represented.
-public struct ViewerReview: Sendable, Equatable {
+public struct ViewerReview: Sendable, Equatable, Codable {
     public let state: String
     public let submittedAt: Date?
 
@@ -43,7 +43,7 @@ public struct ViewerReview: Sendable, Equatable {
     }
 }
 
-public struct PullRequest: Sendable, Equatable, Identifiable {
+public struct PullRequest: Sendable, Equatable, Identifiable, Codable {
     public let id: String
     public let number: Int
     public let title: String
@@ -78,6 +78,8 @@ public struct PullRequest: Sendable, Equatable, Identifiable {
     /// Review threads and reviews; nil when the conversation was not fetched (setting off, demo without them).
     public let threads: [ReviewThread]?
     public let reviews: [Review]?
+    /// The head branch lives in another repository (a fork). Such a PR is never another PR's parent.
+    public let isCrossRepository: Bool
 
     public init(
         id: String, number: Int, title: String, url: URL, repository: String, isArchived: Bool,
@@ -86,7 +88,7 @@ public struct PullRequest: Sendable, Equatable, Identifiable {
         ci: CIState, viewerReview: ViewerReview?, reviewRequestedAt: Date?, readyForReviewAt: Date?,
         source: SearchSource, commentCount: Int = 0, ownerAvatarURL: URL? = nil, ownerIsOrganization: Bool = false,
         headRef: String? = nil, baseRef: String? = nil, lastCommitAt: Date? = nil, threads: [ReviewThread]? = nil,
-        reviews: [Review]? = nil
+        reviews: [Review]? = nil, isCrossRepository: Bool = false
     ) {
         self.id = id
         self.number = number
@@ -116,6 +118,7 @@ public struct PullRequest: Sendable, Equatable, Identifiable {
         self.lastCommitAt = lastCommitAt
         self.threads = threads
         self.reviews = reviews
+        self.isCrossRepository = isCrossRepository
     }
 
     /// Repository owner: "acme" for "acme/web". Shown as the org name.

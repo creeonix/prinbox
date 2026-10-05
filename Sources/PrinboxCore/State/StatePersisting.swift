@@ -14,11 +14,9 @@ public struct JSONStateFile: StatePersisting {
 
     public init(url: URL) { self.url = url }
 
-    /// `~/Library/Application Support/prinbox/state.json`.
-    public static func defaultURL() -> URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("prinbox", isDirectory: true)
-            .appendingPathComponent("state.json")
+    /// `<state directory>/state.json`.
+    public static func url(in directories: Directories) -> URL {
+        directories.state.appendingPathComponent("state.json")
     }
 
     /// Nil for a missing file; the read itself decides, so a file created between a check and the read is

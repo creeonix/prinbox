@@ -5,7 +5,7 @@ import Observation
 @MainActor
 @Observable
 public final class HotKeySettings {
-    public static let key = "globalShortcut"
+    public nonisolated static let key = "globalShortcut"
 
     public private(set) var spec: HotKeySpec?
     /// Set by the app when registration fails, typically because another app owns the shortcut.

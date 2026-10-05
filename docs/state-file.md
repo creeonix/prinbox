@@ -1,4 +1,4 @@
-# The state file
+# The state, cache and settings files
 
 PRInbox remembers what it knows about individual pull requests in one JSON file:
 
@@ -6,6 +6,56 @@ PRInbox remembers what it knows about individual pull requests in one JSON file:
 
 It is meant to be read and written by more than one program (the app today, an MCP server later), so this
 page is the contract. `Sources/PrinboxCore/State/AppState.swift` is the reference implementation.
+
+## Files
+
+PRInbox keeps five files, written by the app and by the `prinbox` command:
+
+| File | Directory (macOS; Linux) | Holds | Writers |
+|---|---|---|---|
+| `settings.json` | `~/.config/prinbox` (`$XDG_CONFIG_HOME/prinbox`) | every setting (section "Settings") | the app |
+| `state.json` | `~/Library/Application Support/prinbox` (`$XDG_STATE_HOME/prinbox`) | snoozes and the seen ledger: the contract below | the app and the command |
+| `cache.json` | same directory | the last fetch and its bookkeeping (section "Cache") | the app and the command |
+| `update.json` | same directory | the daily release check (`updateCheckedAt`, `latestRelease`) | the app |
+| `prinbox.lock` | same directory | nothing: an advisory lock (`flock`) | whoever writes `state.json` or `cache.json` |
+
+Every write of `state.json` or `cache.json` is reload, apply, replace, under the lock: the writer takes the
+lock, re-reads the file, applies its one change and replaces the file atomically. The lock is held for
+milliseconds, never during a fetch, and a writer that cannot get it within two seconds writes anyway and
+logs a notice. So `state.json` is the truth and memory mirrors it: a snooze from the command shows in the
+popover on its next refresh or open, and a snooze in the popover shows in `prinbox inbox --cached` at once.
+
+| Writer | `settings.json` | `state.json` | `cache.json` |
+|---|---|---|---|
+| App | Settings changes, folds, org colors, the one-time migration from defaults | snooze, unsnooze, fetch reconciliation (wake, prune, seed `seen`), popover close | after every full fetch; `checkedAt` on an unchanged check |
+| `prinbox inbox` | never | wake and prune after a complete fetch | after a fetch (`attention` only with `--notify`); `checkedAt` on unchanged; nothing when served from the cache |
+| `prinbox snooze`, `unsnooze` | never | the entry; wake and prune when it had to fetch | only when `snooze` had to fetch |
+| `prinbox open` | never | wake and prune when it had to fetch | only when it had to fetch |
+| `prinbox print`, `Prinbox --print` | never | never | never |
+| `--demo` | never | never | never |
+
+### Settings
+
+`settings.json` is one JSON object of the keys the app's stores keep: `compactRows`, `foldedSections`,
+`followReviewThreads`, `ghPath`, `globalShortcut`, `groupByOrganization`, `notifyOnNewReviewRequests`,
+`orgColors`, `showOrganizationAvatars`. A missing key means its default. The app rewrites one key at a time
+after re-reading the file, so a hand edit made while the app runs survives; the edit itself takes effect at
+the next launch. The command reads `followReviewThreads` and `ghPath`. On the first 0.5.0 launch the app
+copies every known key out of the `io.github.creeonix.prinbox` defaults domain into the file and removes it
+there.
+
+### Cache
+
+`cache.json` is not a contract: its shape may change with any release, and a `version` a reader does not know
+means "no cache". Other programs read the inbox through `prinbox inbox --format json` (see
+`docs/inbox-json.md`). For transparency, its keys: `version` (1), `fetchedAt` (when `result` was fetched),
+`checkedAt` (the last time GitHub confirmed it, including an unchanged check), `includeConversation` (the
+request shape it came from), `viewer`, `fingerprint` (id to `updatedAt` over every search hit),
+`attention` (the arrivals baseline: the non-draft ids of the attention sections, written only by a
+notifier), `result` (the fetch: `viewerLogin`, `pullRequests`, `totals`, `fetched`, `warnings`). Nothing in it
+is body text: the same fields the popover shows, titles, logins and URLs included. Readers trust the
+fingerprint for 15 minutes and only for the same `includeConversation`; the rows and the baseline have no
+age limit.
 
 ## Shape
 
@@ -26,7 +76,7 @@ page is the contract. `Sources/PrinboxCore/State/AppState.swift` is the referenc
 
 | Key | Type | Meaning |
 |---|---|---|
-| `version` | integer | The schema version, 1. Missing means 1. |
+| `version` | integer | The schema version, 1. Missing means the version this build writes. |
 | `snoozed` | object keyed by PR node id | PRs the user parked. `snoozedAt`: when. `updatedAt`: the PR's `updatedAt` at that moment, which the fallback wake rule compares against. Missing means no snoozes. |
 | `seen` | object keyed by PR node id, or absent | The PR's `updatedAt` when the user last closed the popover over it. Absent until the first fetch seeds it, which is different from empty: absent means "never looked", empty means "the inbox was empty when last looked at". |
 
@@ -37,7 +87,7 @@ place), so a reader never sees a partial file.
 ## Rules for readers
 
 - Ignore keys you do not know.
-- Treat a missing `version` as 1 and a missing `snoozed` as empty; `seen` may be absent.
+- Treat a missing `version` as the version this build writes (1 today) and a missing `snoozed` as empty; `seen` may be absent.
 - A file that is not a JSON object is unreadable. The app logs it, starts with an empty state in memory and
   overwrites the file on its next change; `--print` warns on stderr and ignores snoozes.
 - A `version` higher than you know: load the keys you know and keep that number when you write.
@@ -53,5 +103,6 @@ place), so a reader never sees a partial file.
 ## Who writes when
 
 The app writes on snooze and unsnooze, after every fetch that woke or pruned a snooze or pruned the ledger, and
-when the popover closes (the rows shown become seen). `Prinbox --print` never writes. `--demo` never touches
-the file.
+when the popover closes (the rows shown become seen). The `prinbox` command writes on `snooze` and `unsnooze`,
+and wakes and prunes after a complete fetch; it never writes `seen`. `Prinbox --print` never writes. `--demo`
+never touches the file.

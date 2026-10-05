@@ -35,7 +35,8 @@ func makePR(
     baseRef: String? = nil,
     lastCommitAt: Date? = nil,
     threads: [ReviewThread]? = nil,
-    reviews: [Review]? = nil
+    reviews: [Review]? = nil,
+    isCrossRepository: Bool = false
 ) -> PullRequest {
     PullRequest(
         id: id,
@@ -63,7 +64,8 @@ func makePR(
         baseRef: baseRef,
         lastCommitAt: lastCommitAt,
         threads: threads,
-        reviews: reviews
+        reviews: reviews,
+        isCrossRepository: isCrossRepository
     )
 }
 

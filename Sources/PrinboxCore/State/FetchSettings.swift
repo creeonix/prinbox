@@ -2,12 +2,12 @@ import Foundation
 import Observation
 
 /// Whether refreshes follow review threads (Replies to you, open threads on your PRs, the thread-aware snooze
-/// wake), persisted in user defaults. Off is the lighter refresh: three searches and rows only, and a snooze
+/// wake), persisted through `KeyValueStoring` (settings.json in the app). Off is the lighter refresh: three searches and rows only, and a snooze
 /// wakes on any change.
 @MainActor
 @Observable
 public final class FetchSettings {
-    public static let key = "followReviewThreads"
+    public nonisolated static let key = "followReviewThreads"
 
     public private(set) var followReviewThreads: Bool
     @ObservationIgnored private let defaults: KeyValueStoring

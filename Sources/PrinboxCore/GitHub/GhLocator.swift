@@ -1,10 +1,11 @@
 import Foundation
 
 /// Finds the gh binary. Apps launched from Finder or at login do not inherit the shell PATH, so the
-/// Homebrew locations are checked explicitly before PATH. A `ghPath` override is exclusive: when set,
+/// Homebrew locations are checked explicitly before PATH. A `ghPath` setting is exclusive: when set,
 /// only that path is used, so a wrong override is reported instead of silently bypassed.
 public struct GhLocator: Sendable {
     public static let fixedCandidates = ["/opt/homebrew/bin/gh", "/usr/local/bin/gh"]
+    public static let overrideKey = "ghPath"
 
     /// The non-empty `ghPath` override, if any.
     public let overridePath: String?
@@ -12,7 +13,7 @@ public struct GhLocator: Sendable {
     private let isExecutable: @Sendable (String) -> Bool
 
     public init(
-        overridePath: String? = UserDefaults.standard.string(forKey: "ghPath"),
+        overridePath: String? = nil,
         environmentPath: String? = ProcessInfo.processInfo.environment["PATH"],
         isExecutable: @escaping @Sendable (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }
     ) {

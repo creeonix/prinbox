@@ -1,11 +1,16 @@
-PRODUCT   := Prinbox
-APP_NAME  := PRInbox
-BUNDLE_ID := io.github.creeonix.prinbox
-VERSION   ?= 0.4.0
-BUILD_DIR := build
-APP       := $(BUILD_DIR)/$(APP_NAME).app
-DMG       := $(BUILD_DIR)/$(APP_NAME)-$(VERSION).dmg
-INSTALLED := /Applications/$(APP_NAME).app
+PRODUCT    := PrinboxApp
+EXECUTABLE := Prinbox
+APP_NAME   := PRInbox
+BUNDLE_ID  := io.github.creeonix.prinbox
+VERSION    ?= 0.5.0
+BUILD_DIR  := build
+APP        := $(BUILD_DIR)/$(APP_NAME).app
+DMG        := $(BUILD_DIR)/$(APP_NAME)-$(VERSION).dmg
+INSTALLED  := /Applications/$(APP_NAME).app
+CLI_PRODUCT := prinbox
+PREFIX      ?= $(HOME)/.local
+CLI_BIN      = $$(swift build -c release --product $(CLI_PRODUCT) $(ARCH_FLAGS) --show-bin-path)/$(CLI_PRODUCT)
+CLI_TARBALL := $(BUILD_DIR)/$(CLI_PRODUCT)-$(VERSION)-macos.tar.gz
 
 # Universal by default, so local builds match the released DMG. Use ARCHS=arm64 for a faster local build.
 ARCHS         ?= arm64 x86_64
@@ -21,7 +26,7 @@ SIGN_FLAGS    := $(if $(filter -,$(SIGN_IDENTITY)),,--options runtime --timestam
 TESTING_PLUGINS := $(shell d="$$(dirname "$$(dirname "$$(xcrun --find swift)")")/lib/swift/host/plugins/testing"; [ -d "$$d" ] && echo "$$d")
 SWIFT_TEST_FLAGS := $(if $(TESTING_PLUGINS),-Xswiftc -plugin-path -Xswiftc $(TESTING_PLUGINS))
 
-.PHONY: test lint format coverage build icon app dmg install uninstall run clean
+.PHONY: test lint format coverage build icon app dmg install uninstall run clean cli install-cli cli-tarball
 
 test:
 	swift test $(SWIFT_TEST_FLAGS)
@@ -61,7 +66,7 @@ app: build
 	rm -rf "$(APP)"
 	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources"
 	cp "$$(swift build -c release --product $(PRODUCT) $(ARCH_FLAGS) --show-bin-path)/$(PRODUCT)" \
-		"$(APP)/Contents/MacOS/$(PRODUCT)"
+		"$(APP)/Contents/MacOS/$(EXECUTABLE)"
 	cp Resources/AppIcon.icns "$(APP)/Contents/Resources/AppIcon.icns"
 	sed 's/__VERSION__/$(VERSION)/g' Resources/Info.plist > "$(APP)/Contents/Info.plist"
 	codesign --force --sign "$(SIGN_IDENTITY)" $(SIGN_FLAGS) --identifier $(BUNDLE_ID) "$(APP)"
@@ -71,17 +76,37 @@ dmg: app
 	scripts/make-dmg.sh "$(APP)" "$(DMG)" "$(APP_NAME) $(VERSION)"
 
 install: app
-	-pkill -x $(PRODUCT)
-	@for i in $$(seq 50); do pgrep -xq $(PRODUCT) || break; sleep 0.1; done
+	-pkill -x $(EXECUTABLE)
+	@for i in $$(seq 50); do pgrep -xq $(EXECUTABLE) || break; sleep 0.1; done
 	rm -rf "$(INSTALLED)"
 	cp -R "$(APP)" /Applications/
 	open "$(INSTALLED)"
 
+cli:
+	swift build -c release --product $(CLI_PRODUCT) $(ARCH_FLAGS)
+	codesign --force --sign "$(SIGN_IDENTITY)" $(SIGN_FLAGS) "$(CLI_BIN)"
+
+install-cli: cli
+	mkdir -p "$(PREFIX)/bin"
+	cp "$(CLI_BIN)" "$(PREFIX)/bin/$(CLI_PRODUCT)"
+	@echo "installed $(PREFIX)/bin/$(CLI_PRODUCT)"
+
+# The release asset for the Homebrew formula: the universal binary and the license, plus the checksum the
+# tap script reads.
+cli-tarball: cli
+	rm -rf "$(BUILD_DIR)/cli" && mkdir -p "$(BUILD_DIR)/cli"
+	cp "$(CLI_BIN)" LICENSE "$(BUILD_DIR)/cli/"
+	COPYFILE_DISABLE=1 tar -C "$(BUILD_DIR)/cli" -czf "$(CLI_TARBALL)" $(CLI_PRODUCT) LICENSE
+	cd "$(BUILD_DIR)" && shasum -a 256 "$(notdir $(CLI_TARBALL))" > "$(notdir $(CLI_TARBALL)).sha256"
+
+# uninstall takes the same PREFIX as install-cli for the command.
 uninstall:
-	-"$(INSTALLED)/Contents/MacOS/$(PRODUCT)" --unregister-login-item
-	-pkill -x $(PRODUCT)
-	rm -rf "$(INSTALLED)" "$(HOME)/Library/Caches/$(BUNDLE_ID)" "$(HOME)/Library/Application Support/prinbox"
+	-"$(INSTALLED)/Contents/MacOS/$(EXECUTABLE)" --unregister-login-item
+	-pkill -x $(EXECUTABLE)
+	rm -f "$(PREFIX)/bin/$(CLI_PRODUCT)"
+	rm -rf "$(INSTALLED)" "$(HOME)/Library/Caches/$(BUNDLE_ID)" "$(HOME)/Library/Application Support/prinbox" "$(HOME)/.config/prinbox"
 	-defaults delete $(BUNDLE_ID)
+	-defaults delete $(BUNDLE_ID).demo
 
 run:
 	swift run $(PRODUCT)

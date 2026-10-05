@@ -37,6 +37,7 @@ import Testing
         ] {
             #expect(text.contains(field), "\(field)")
         }
+        #expect(text.contains("isCrossRepository"))
         #expect(!text.contains("bodyText"))
         let rows = DetailsQuery.template(includeConversation: false)
         #expect(!rows.contains("reviewThreads"))
@@ -58,5 +59,9 @@ import Testing
         #expect(DetailsQuery.text(ids: ["PR_9", "x y"], includeConversation: true).contains("nodes(ids: [\"PR_9\"])"))
         #expect(!DetailsQuery.isValidID("é"))
         #expect(DetailsQuery.isValidID("PR_kwDOABCD-5M6xyz="))
+    }
+
+    @Test func validIDsFiltersWhatTextWouldDrop() {
+        #expect(DetailsQuery.validIDs(["PR_1", "", "bad id", "PR_2=="]) == ["PR_1", "PR_2=="])
     }
 }

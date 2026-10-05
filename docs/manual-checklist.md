@@ -17,7 +17,7 @@ Run them before a release.
 - [ ] Offline (network off): the icon turns red with `!`, and the popover keeps the last data with an "Offline" line.
 - [ ] After sleep and wake with a working network, the icon does not turn red.
 - [ ] Signed out (`GH_CONFIG_DIR=$(mktemp -d) /Applications/PRInbox.app/Contents/MacOS/Prinbox`): red `!`, and the popover shows "Sign in to the GitHub CLI" with a working Copy button.
-- [ ] gh missing (`/Applications/PRInbox.app/Contents/MacOS/Prinbox -ghPath /nonexistent`): the popover shows the "gh not found" steps.
+- [ ] gh missing: with `"ghPath": "/nonexistent"` in a settings file passed through `--settings`, the popover shows the "gh not found" steps naming `~/.config/prinbox/settings.json`.
 - [ ] After fixing gh (for example `gh auth login`), the popover returns to the inbox within about 10 seconds without a click.
 - [ ] `make install VERSION=0.0.1`: after the first refresh the icon shows the up-arrow badge, the popover shows "PRInbox x.y.z is available", the right-click menu has "Download PRInbox x.y.z…", and all open the release page. `make install` (real version) clears them.
 - [ ] The popover is 460 pt wide, still opens under the icon, and the tiling window manager leaves it alone.
@@ -39,7 +39,7 @@ Run them before a release.
 - [ ] With the popover closed, a new review request gives one banner (title, org/repo); clicking it opens the PR. Two at once give one banner that opens the popover.
 - [ ] Nothing fires while the popover is open; the rows get the bar instead.
 - [ ] Settings > Compact rows: the new-row bar sits at the row's left edge, not floating beside the indent.
-- [ ] `swift run Prinbox` with notifications on does not crash, and Settings says they are not available.
+- [ ] `swift run PrinboxApp` with notifications on does not crash, and Settings says they are not available.
 - [ ] Settings > Compact rows: every section shows one-line rows with the age; ↑/↓ and Enter still work; turning it off restores the full rows.
 - [ ] VoiceOver reads an organization separator as "acme, 3 pull requests".
 - [ ] Clicking an older banner while the popover is open opens that PR; the popover closes on its own when the browser comes to the front.
@@ -58,3 +58,13 @@ Run them before a release.
 - [ ] After upgrading from 0.3.1, `~/Library/Application Support/prinbox/state.json` still lists the earlier snooze and the app reads it.
 - [ ] The first right-click on a row after the popover opens shows the row menu; the popover stays open.
 - [ ] Dismissing a row menu by clicking in another app closes the popover; choosing Copy link keeps it open.
+- [ ] After upgrading from 0.4.0, the first launch moves the settings: `defaults read io.github.creeonix.prinbox` reports no settings keys and `~/.config/prinbox/settings.json` holds the former values; every switch in Settings is as before.
+- [ ] Toggling a switch in Settings rewrites `settings.json` and keeps a key added by hand; a hand edit (for example `"compactRows": true`) takes effect at the next launch.
+- [ ] `prinbox inbox --format tmux` beside the running app prints the badge count; `--verbose` shows `fetch unchanged: 1 request` on the second run.
+- [ ] `prinbox snooze <id>` from a terminal: on the next popover open the row sits in Waiting on others as Snoozed and the badge dropped; `S` on a row in the popover shows `"snoozed" : true` in `prinbox inbox --cached` at once.
+- [ ] After quitting and relaunching, the popover shows rows immediately with the earlier "updated HH:MM"; a review request that arrived while the app was quit gives one banner after the launch.
+- [ ] `prinbox inbox --cached --format lines | fzf --delimiter '\t' --with-nth 3..7` lists the rows; `prinbox open <id>` opens the PR in the browser.
+- [ ] With the network off: `prinbox inbox --format json` prints the cached rows with `"error"` set and exits 1; `--format waybar` exits 0 with the `error` class.
+- [ ] Signed out (`GH_CONFIG_DIR=$(mktemp -d) prinbox inbox`): exit 3 and the sign-in steps on stderr.
+- [ ] On the live account, a stacked pair (if one exists) shows `· stack 1/2` and `· stack 2/2` on adjacent rows, and the tooltip of the upper one says "stacked on #N".
+- [ ] After the release: `brew install --cask creeonix/tap/prinbox` and `brew install creeonix/tap/prinbox-cli` install, and `prinbox --version` prints 0.5.0.

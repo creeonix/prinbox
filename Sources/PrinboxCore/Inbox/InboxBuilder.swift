@@ -13,6 +13,7 @@ public enum InboxBuilder {
     /// `snoozed` holds the ids the user parked; they are classified as snoozed before anything else.
     public static func build(_ result: FetchResult, snoozed: Set<String> = [], cap: Int = rowCap) -> Inbox {
         let viewer = result.viewerLogin
+        let stacks = Stacks.compute(result.pullRequests)
         let rows = result.pullRequests
             .filter { !$0.isArchived }
             .compactMap { pr -> InboxRow? in
@@ -20,24 +21,54 @@ public enum InboxBuilder {
                 else { return nil }
                 return InboxRow(
                     pullRequest: pr, classification: classification,
-                    pendingReplies: Classifier.pendingReplies(pr, viewer: viewer, reason: classification.reason))
+                    pendingReplies: Classifier.pendingReplies(pr, viewer: viewer, reason: classification.reason),
+                    stack: stacks[pr.id])
             }
         let remainders = unfetchedBySection(result)
         let sections = SectionKind.allCases.compactMap { kind -> InboxSection? in
             let members = sorted(rows.filter { $0.classification.section == kind }, kind: kind)
             // Snoozed rows follow the capped rows in full: hidden ones could never be woken from the popover.
+            // The snooze also wins over contiguity: a parked chain member sits with the parked rows.
             let snoozed = members.filter { $0.classification.reason == .snoozed }
-            let active = members.filter { $0.classification.reason != .snoozed }
+            let active = blocked(members.filter { $0.classification.reason != .snoozed })
+            let shown = capped(active, cap: cap)
             let remainder = remainders[kind] ?? 0
             guard !members.isEmpty || remainder > 0 else { return nil }
             return InboxSection(
-                kind: kind, rows: Array(active.prefix(cap)) + snoozed, count: members.count + remainder,
-                moreCount: max(0, active.count - cap) + remainder)
+                kind: kind, rows: shown + snoozed, count: members.count + remainder,
+                moreCount: active.count - shown.count + remainder)
         }
         let badge = rows.filter { $0.classification.section.countsTowardBadge && !$0.pullRequest.isDraft }.count
         let owners = Set(rows.map(\.pullRequest.ownerLogin))
         return Inbox(
             sections: sections, badgeCount: badge, warnings: result.warnings, spansMultipleOrgs: owners.count > 1)
+    }
+
+    /// Keeps a chain contiguous: when its first member in sort order is met, every member of that chain the
+    /// section shows follows it, ordered by position. The block therefore sits where its most urgent member would.
+    static func blocked(_ rows: [InboxRow]) -> [InboxRow] {
+        var placed = Set<String>()
+        var out: [InboxRow] = []
+        for row in rows where !placed.contains(row.id) {
+            guard let root = row.stack?.rootID else {
+                out.append(row)
+                placed.insert(row.id)
+                continue
+            }
+            let members = rows.filter { $0.stack?.rootID == root }
+                .sorted { ($0.stack?.position ?? 0) < ($1.stack?.position ?? 0) }
+            out += members
+            placed.formUnion(members.map(\.id))
+        }
+        return out
+    }
+
+    /// The cap never splits a block: a chain that starts within the cap is shown whole.
+    static func capped(_ rows: [InboxRow], cap: Int) -> [InboxRow] {
+        guard rows.count > cap, cap > 0, let root = rows[cap - 1].stack?.rootID else { return Array(rows.prefix(cap)) }
+        var end = cap
+        while end < rows.count, rows[end].stack?.rootID == root { end += 1 }
+        return Array(rows.prefix(end))
     }
 
     static func unfetchedBySection(_ result: FetchResult) -> [SectionKind: Int] {

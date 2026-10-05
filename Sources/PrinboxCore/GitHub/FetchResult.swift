@@ -48,3 +48,49 @@ public enum FetchError: Error, Sendable, Equatable {
     case githubUnavailable(status: Int)
     case other(String)
 }
+
+/// Stored in the cache without `cost` (a per-fetch figure) and `fingerprint` (a sibling key there).
+extension FetchResult: Codable {
+    enum CodingKeys: String, CodingKey {
+        case viewerLogin
+        case pullRequests
+        case totals
+        case fetched
+        case warnings
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            viewerLogin: try container.decode(String.self, forKey: .viewerLogin),
+            pullRequests: try container.decode([PullRequest].self, forKey: .pullRequests),
+            totals: try container.decode([SearchSource: Int].self, forKey: .totals),
+            fetched: try container.decode([SearchSource: Int].self, forKey: .fetched),
+            warnings: try container.decode([String].self, forKey: .warnings))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(viewerLogin, forKey: .viewerLogin)
+        try container.encode(pullRequests, forKey: .pullRequests)
+        try container.encode(totals, forKey: .totals)
+        try container.encode(fetched, forKey: .fetched)
+        try container.encode(warnings, forKey: .warnings)
+    }
+}
+
+extension FetchError {
+    /// The case name: the JSON `error.code`.
+    public var code: String {
+        switch self {
+        case .ghNotFound: "ghNotFound"
+        case .loggedOut: "loggedOut"
+        case .offline: "offline"
+        case .timedOut: "timedOut"
+        case .rateLimited: "rateLimited"
+        case .badResponse: "badResponse"
+        case .githubUnavailable: "githubUnavailable"
+        case .other: "other"
+        }
+    }
+}

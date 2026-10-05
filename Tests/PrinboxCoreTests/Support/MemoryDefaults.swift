@@ -6,4 +6,6 @@ final class MemoryDefaults: KeyValueStoring {
     func object(forKey defaultName: String) -> Any? { storage[defaultName] }
 
     func set(_ value: Any?, forKey defaultName: String) { storage[defaultName] = value }
+
+    var isEmpty: Bool { storage.isEmpty }
 }

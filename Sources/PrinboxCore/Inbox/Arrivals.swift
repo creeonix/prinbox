@@ -20,6 +20,13 @@ public enum Arrivals {
         return attentionRows(current).filter { !previous.contains($0.id) }
     }
 
+    /// The next baseline: the attention ids now, or, after an incomplete fetch, the previous baseline plus
+    /// them, so PRs a partial response left out do not come back as arrivals.
+    public static func baseline(after inbox: Inbox, complete: Bool, extending previous: Set<String>?) -> Set<String> {
+        let current = attentionIDs(inbox)
+        return complete ? current : (previous ?? []).union(current)
+    }
+
     private static func attentionRows(_ inbox: Inbox) -> [InboxRow] {
         inbox.sections.filter { sections.contains($0.kind) }.flatMap(\.rows).filter { !$0.pullRequest.isDraft }
     }
@@ -53,8 +60,9 @@ public struct ArrivalNotice: Equatable, Sendable {
         case (_, 0): title = "\(rows.count) new review requests"
         case (0, _): title = "\(rows.count) new replies"
         default:
-            title =
-                "\(rows.count) new: \(counted(requests, "review request")), \(counted(replies, "reply", plural: "replies"))"
+            let requestText = counted(requests, "review request")
+            let replyText = counted(replies, "reply", plural: "replies")
+            title = "\(rows.count) new: \(requestText), \(replyText)"
         }
         let titles = rows.prefix(3).map { RowText.title($0.pullRequest) }
         let rest = rows.count - titles.count
