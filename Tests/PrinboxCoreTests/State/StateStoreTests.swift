@@ -24,6 +24,7 @@ struct FailingPersistence: StatePersisting {
     let start = date("2026-08-10T12:00:00Z")
     let old = date("2026-08-01T10:00:00Z")
     let newer = date("2026-08-02T10:00:00Z")
+    let entry = SnoozeEntry(snoozedAt: date("2026-08-10T11:00:00Z"), updatedAt: date("2026-08-01T10:00:00Z"))
 
     func makeStore(_ memory: MemoryStatePersistence = MemoryStatePersistence()) -> (StateStore, MemoryStatePersistence)
     {
@@ -42,7 +43,8 @@ struct FailingPersistence: StatePersisting {
         #expect(first.first?.detail != nil)
         store.snooze(makePR())
         let lines = logger.lines
-        #expect(lines.count == 2)
+        #expect(lines.count == 3)
+        #expect(lines[1].message == "state.json unreadable, keeping the in-memory state")
         #expect(lines.last?.level == .error)
         #expect(lines.last?.category == .state)
         #expect(lines.last?.message == "state.json not saved")
@@ -148,5 +150,43 @@ struct FailingPersistence: StatePersisting {
         #expect(store.state == AppState())
         store.snooze(makePR(id: "a"))
         #expect(store.isSnoozed("a"))
+    }
+
+    @Test func aChangeIsAppliedOnTopOfTheFileNotTheMemoryCopy() throws {
+        let persistence = MemoryStatePersistence()
+        let store = StateStore(persistence: persistence, clock: { date("2026-08-10T12:00:00Z") })
+        // Another writer, the command, parks PR_2 while this store knows nothing about it.
+        try persistence.save(AppState(snoozed: ["PR_2": entry]))
+        store.snooze(makePR(id: "PR_1"))
+        #expect(store.snoozedIDs == ["PR_1", "PR_2"])
+        #expect(Set((persistence.saved?.snoozed ?? [:]).keys) == ["PR_1", "PR_2"])
+    }
+
+    @Test func reloadPublishesAnotherWritersChange() throws {
+        let persistence = MemoryStatePersistence()
+        let store = StateStore(persistence: persistence)
+        try persistence.save(AppState(snoozed: ["PR_2": entry]))
+        #expect(!store.isSnoozed("PR_2"))
+        store.reload()
+        #expect(store.isSnoozed("PR_2"))
+    }
+
+    @Test func anUnreadableFileKeepsTheMemoryCopyOnWriteAndReload() {
+        let logger = MemoryLogging()
+        let store = StateStore(persistence: FailingPersistence(loadFails: true, saveFails: true), logger: logger)
+        store.snooze(makePR(id: "PR_1"))
+        store.reload()
+        #expect(store.isSnoozed("PR_1"))
+        #expect(logger.messages(.notice) == ["state.json unreadable, keeping the in-memory state"])
+    }
+
+    @Test func aLockedStoreStillWrites() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("prinbox-state-lock-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = JSONStateFile(url: directory.appendingPathComponent("state.json"))
+        let store = StateStore(persistence: file, lock: FileLock(url: directory.appendingPathComponent("prinbox.lock")))
+        store.snooze(makePR(id: "PR_1"))
+        #expect(try file.load()?.snoozed.keys.contains("PR_1") == true)
     }
 }

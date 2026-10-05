@@ -8,15 +8,17 @@ import Observation
 public final class StateStore {
     public private(set) var state: AppState
     @ObservationIgnored private let persistence: StatePersisting
+    @ObservationIgnored private let lock: FileLock?
     @ObservationIgnored private let clock: @Sendable () -> Date
     @ObservationIgnored private let logger: Logging
 
     /// A file that cannot be read is logged and replaced by an empty state at the next save.
     public init(
-        persistence: StatePersisting, clock: @escaping @Sendable () -> Date = { Date() },
+        persistence: StatePersisting, lock: FileLock? = nil, clock: @escaping @Sendable () -> Date = { Date() },
         logger: Logging = NullLogging()
     ) {
         self.persistence = persistence
+        self.lock = lock
         self.clock = clock
         self.logger = logger
         do {
@@ -75,16 +77,42 @@ public final class StateStore {
         Dictionary(prs.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { _, new in new })
     }
 
-    /// Applies a change and saves when it changed anything. A failed save is logged; the in-memory state stays.
+    /// Picks up what another writer, the command, put in the file; nothing happens when it is unchanged or
+    /// unreadable.
+    public func reload() {
+        guard let loaded = try? persistence.load(), loaded != state else { return }
+        state = loaded
+    }
+
+    /// Applies a change on top of what the file holds now, under the lock, and saves when the result differs
+    /// from the file. The published state is the result either way. A failed save is logged; the in-memory
+    /// state keeps the change.
     private func update(_ change: (inout AppState) -> Void) {
-        var next = state
-        change(&next)
-        guard next != state else { return }
-        state = next
-        do {
-            try persistence.save(next)
-        } catch {
-            logger.error(.state, "state.json not saved", private: String(describing: error))
+        locked {
+            let base = loadForWrite()
+            var next = base
+            change(&next)
+            state = next
+            guard next != base else { return }
+            do {
+                try persistence.save(next)
+            } catch {
+                logger.error(.state, "state.json not saved", private: String(describing: error))
+            }
         }
+    }
+
+    /// The file's content right now: a missing file is an empty state, an unreadable one keeps the memory copy.
+    private func loadForWrite() -> AppState {
+        do {
+            return try persistence.load() ?? AppState()
+        } catch {
+            logger.notice(.state, "state.json unreadable, keeping the in-memory state")
+            return state
+        }
+    }
+
+    private func locked(_ body: () -> Void) {
+        if let lock { lock.withLock(body) } else { body() }
     }
 }

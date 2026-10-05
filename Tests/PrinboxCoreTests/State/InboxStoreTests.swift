@@ -419,4 +419,34 @@ final class ReceivedRows {
         #expect(received.ids == ["b"])
         #expect(store.state.isSnoozed("b"))
     }
+
+    @Test func anUnchangedCheckPicksUpAnotherWritersSnooze() async throws {
+        let persistence = MemoryStatePersistence()
+        let pr = makePR(id: "PR_1")
+        let fetcher = ScriptedFetcher(outcomes: { call, _ in call == 1 ? .result(makeResult([pr])) : .unchanged })
+        let store = InboxStore(fetcher: fetcher, state: StateStore(persistence: persistence))
+        await store.refresh()
+        #expect(store.inbox?.section(.needsReview)?.rows.count == 1)
+        let entry = SnoozeEntry(snoozedAt: date("2026-08-10T12:00:00Z"), updatedAt: pr.updatedAt)
+        try persistence.save(AppState(snoozed: ["PR_1": entry]))
+        await store.refresh()
+        #expect(store.inbox?.section(.needsReview) == nil)
+        #expect(store.inbox?.section(.waitingOnOthers)?.rows.first?.classification.reason == .snoozed)
+    }
+
+    @Test func reloadStateRebuildsOnlyWhenTheSnoozesChanged() async throws {
+        let persistence = MemoryStatePersistence()
+        let pr = makePR(id: "PR_1")
+        let store = InboxStore(
+            fetcher: ScriptedFetcher { _ in makeResult([pr]) }, state: StateStore(persistence: persistence))
+        let counter = Counter()
+        await store.refresh()
+        store.onInboxChange = { counter.bump() }
+        store.reloadState()
+        #expect(counter.value == 0)
+        try persistence.save(AppState(snoozed: ["PR_1": SnoozeEntry(snoozedAt: start, updatedAt: pr.updatedAt)]))
+        store.reloadState()
+        #expect(counter.value == 1)
+        #expect(store.inbox?.section(.waitingOnOthers)?.rows.first?.id == "PR_1")
+    }
 }

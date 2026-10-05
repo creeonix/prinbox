@@ -130,6 +130,13 @@ public final class InboxStore {
         onInboxChange?()
     }
 
+    /// Picks up a snooze or wake another writer (the command) made in state.json; rebuilds when the set changed.
+    public func reloadState() {
+        let before = state.snoozedIDs
+        state.reload()
+        if state.snoozedIDs != before { rebuild() }
+    }
+
     private static func baseline(after inbox: Inbox, complete: Bool, extending previous: Set<String>?) -> Set<String> {
         let current = Arrivals.attentionIDs(inbox)
         return complete ? current : (previous ?? []).union(current)
@@ -144,6 +151,7 @@ public final class InboxStore {
             let request = nextRequest()
             switch try await fetcher.fetch(request) {
             case .unchanged:
+                reloadState()
                 error = nil
                 lastSuccess = clock()
                 pausedUntil = nil

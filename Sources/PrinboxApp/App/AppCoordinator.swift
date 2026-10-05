@@ -58,7 +58,9 @@ final class AppCoordinator {
             fetcher = client
             persistence = JSONStateFile(url: JSONStateFile.url(in: directories))
         }
-        let store = InboxStore(fetcher: fetcher, state: StateStore(persistence: persistence, logger: logger))
+        let lock = demo ? nil : FileLock(url: directories.state.appendingPathComponent("prinbox.lock"), logger: logger)
+        let store = InboxStore(
+            fetcher: fetcher, state: StateStore(persistence: persistence, lock: lock, logger: logger))
         isDemo = demo
         self.client = client
         info = AppInfo(client: client)

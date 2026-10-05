@@ -125,6 +125,7 @@ public final class PopoverState {
 
     /// Resets transient state each time the popover opens and selects the first PR row.
     public func popoverWillShow() {
+        store.reloadState()
         showingSettings = false
         if isRecordingShortcut { stopRecording() }
         copiedCommand = nil

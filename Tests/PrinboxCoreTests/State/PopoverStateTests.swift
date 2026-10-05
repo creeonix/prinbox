@@ -321,4 +321,21 @@ import Testing
         await store.refresh()
         #expect(state.selection.current == .row("a"))
     }
+
+    @Test func popoverWillShowPicksUpAnotherWritersSnooze() async throws {
+        let persistence = MemoryStatePersistence()
+        let prs = [a, b]
+        let defaults = MemoryDefaults()
+        let state = PopoverState(
+            store: InboxStore(
+                fetcher: ScriptedFetcher { _ in makeResult(prs) }, state: StateStore(persistence: persistence)),
+            folds: FoldStore(defaults: defaults), display: DisplaySettings(defaults: defaults),
+            colors: OrgColorStore(defaults: defaults))
+        await state.refresh()
+        try persistence.save(
+            AppState(snoozed: ["a": SnoozeEntry(snoozedAt: date("2026-08-10T12:00:00Z"), updatedAt: a.updatedAt)]))
+        state.popoverWillShow()
+        #expect(state.store.inbox?.section(.waitingOnOthers)?.rows.first?.id == "a")
+        #expect(state.store.inbox?.section(.needsReview)?.rows.map(\.id) == ["b"])
+    }
 }
