@@ -35,23 +35,10 @@ enum CommandLineMode {
             print(DetailsQuery.template(includeConversation: true))
             return 0
         case .printInbox:
-            let client = Self.makeClient()
-            do {
-                let result = try await client.fetch()
-                let inbox = InboxBuilder.build(result, snoozed: Self.snoozedIDs(for: result))
-                print(InboxPrinter.render(inbox, now: Date()))
-                return 0
-            } catch let error as FetchError {
-                let text =
-                    SetupGuide.for(error, ghOverride: client.ghOverride)?.plainText
-                    ?? error.message(lastSuccess: nil)
-                let link = error.helpURL.map { " (\($0.absoluteString))" } ?? ""
-                FileHandle.standardError.write(Data((text + link + "\n").utf8))
-                return 1
-            } catch {
-                FileHandle.standardError.write(Data("\(error)\n".utf8))
-                return 1
-            }
+            return await CLI.run(
+                Invocation(command: .print, settingsPath: nil, verbose: false), context: Self.makeContext(),
+                stdout: { @Sendable in print($0, terminator: "") },
+                stderr: { @Sendable in FileHandle.standardError.write(Data($0.utf8)) })
         case .unregisterLoginItem:
             do {
                 try await SMAppService.mainApp.unregister()
@@ -63,21 +50,21 @@ enum CommandLineMode {
         }
     }
 
-    /// The same gh as the app: the `ghPath` setting from settings.json, if any.
-    private static func makeClient() -> GhClient {
-        let settings = JSONKeyValueFile(url: MacDirectories().config.appendingPathComponent("settings.json"))
+    /// The app's adapters for a command run: the same files, gh and logger as the running app.
+    private static func makeContext() -> RunContext {
+        let logger = OSLogging()
+        let directories = MacDirectories()
+        let settings = JSONKeyValueFile(url: directories.config.appendingPathComponent("settings.json"), logger: logger)
         let locator = GhLocator(overridePath: settings.object(forKey: GhLocator.overrideKey) as? String)
-        return GhClient(locator: locator, logger: OSLogging())
-    }
-
-    /// Snoozes from state.json, woken in memory as the app would; the file is never written here.
-    private static func snoozedIDs(for result: FetchResult) -> Set<String> {
-        do {
-            let state = try JSONStateFile(url: JSONStateFile.url(in: MacDirectories())).load() ?? AppState()
-            return Set(Snooze.reconcile(state.snoozed, with: result).keys)
-        } catch {
-            FileHandle.standardError.write(Data("warning: state.json unreadable, ignoring snoozes\n".utf8))
-            return []
-        }
+        let lock = FileLock(url: directories.state.appendingPathComponent("prinbox.lock"), logger: logger)
+        return RunContext(
+            fetcher: GhClient(locator: locator, logger: logger),
+            cache: JSONCacheFile(
+                url: directories.state.appendingPathComponent("cache.json"), lock: lock, logger: logger),
+            persistence: JSONStateFile(url: JSONStateFile.url(in: directories)), lock: lock,
+            followReviewThreads: settings.object(forKey: FetchSettings.key) as? Bool ?? true,
+            ghOverride: locator.overridePath, delivery: NoDelivery(), opener: WorkspaceURLOpener(), notifyNote: nil,
+            clock: { Date() }, logger: logger,
+            version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")
     }
 }

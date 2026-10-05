@@ -18,7 +18,7 @@ import Testing
             prinbox: "0.5.0-test", source: source, fetchedAt: now, checkedAt: now, viewer: "me", error: error)
         return InboxDocument.make(
             inbox, meta: meta,
-            isNew: { pr in state.seen.map { seen in seen[pr.id].map { pr.updatedAt > $0 } ?? true } ?? false }, now: now
+            isNew: state.isNew, now: now
         )
     }
 

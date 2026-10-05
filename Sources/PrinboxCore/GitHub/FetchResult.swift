@@ -78,3 +78,19 @@ extension FetchResult: Codable {
         try container.encode(warnings, forKey: .warnings)
     }
 }
+
+extension FetchError {
+    /// The case name: the JSON `error.code`.
+    public var code: String {
+        switch self {
+        case .ghNotFound: "ghNotFound"
+        case .loggedOut: "loggedOut"
+        case .offline: "offline"
+        case .timedOut: "timedOut"
+        case .rateLimited: "rateLimited"
+        case .badResponse: "badResponse"
+        case .githubUnavailable: "githubUnavailable"
+        case .other: "other"
+        }
+    }
+}

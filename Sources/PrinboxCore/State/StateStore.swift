@@ -60,11 +60,7 @@ public final class StateStore {
     // MARK: New since last look
 
     /// False until the ledger exists; then true for a PR the ledger lacks or knows with an older `updatedAt`.
-    public func isNew(_ pr: PullRequest) -> Bool {
-        guard let seen = state.seen else { return false }
-        guard let last = seen[pr.id] else { return true }
-        return pr.updatedAt > last
-    }
+    public func isNew(_ pr: PullRequest) -> Bool { state.isNew(pr) }
 
     /// The popover closed over these rows. Entries are upserted, never removed here; `didFetch` prunes.
     /// Nothing to mark leaves the ledger alone, so a close before the first fetch cannot create an empty one.

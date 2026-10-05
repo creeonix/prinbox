@@ -41,4 +41,11 @@ public struct AppState: Codable, Equatable, Sendable {
         snoozed = try container.decodeIfPresent([String: SnoozeEntry].self, forKey: .snoozed) ?? [:]
         seen = try container.decodeIfPresent([String: Date].self, forKey: .seen)
     }
+
+    /// False until the ledger exists; then true for a PR the ledger lacks or knows with an older `updatedAt`.
+    public func isNew(_ pr: PullRequest) -> Bool {
+        guard let seen else { return false }
+        guard let last = seen[pr.id] else { return true }
+        return pr.updatedAt > last
+    }
 }
