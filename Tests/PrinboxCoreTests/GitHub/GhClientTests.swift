@@ -82,6 +82,16 @@ final class QueryLog: @unchecked Sendable {
         #expect(result.fingerprint["r1"] == date(TwoPhaseJSON.updatedAt))
     }
 
+    @Test func unchangedRequiresTheSameViewer() async throws {
+        let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")])
+        let previous = ["PR_1": date(TwoPhaseJSON.updatedAt)]
+        let same = try await twoPhase(search: search).fetch(FetchRequest(previous: previous, previousViewer: "me"))
+        #expect(same == .unchanged)
+        let other = try await twoPhase(search: search).fetch(
+            FetchRequest(previous: previous, previousViewer: "someone"))
+        guard case .result = other else { return #expect(Bool(false), "a different viewer must fetch in full") }
+    }
+
     @Test func unchangedWhenThePreviousFingerprintMatches() async throws {
         let log = QueryLog()
         let client = twoPhase(search: hits23, log: log)

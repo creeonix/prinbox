@@ -1,7 +1,7 @@
 import Foundation
 
 /// One comment of a review thread: who and when. Bodies are never fetched.
-public struct ThreadComment: Sendable, Equatable {
+public struct ThreadComment: Sendable, Equatable, Codable {
     public let authorLogin: String
     public let createdAt: Date
 
@@ -12,7 +12,7 @@ public struct ThreadComment: Sendable, Equatable {
 }
 
 /// A review thread, comments oldest first (GitHub returns the last page in chronological order).
-public struct ReviewThread: Sendable, Equatable {
+public struct ReviewThread: Sendable, Equatable, Codable {
     public let isResolved: Bool
     public let comments: [ThreadComment]
 
@@ -23,7 +23,7 @@ public struct ReviewThread: Sendable, Equatable {
 }
 
 /// A submitted review: author, GitHub state (APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED), date.
-public struct Review: Sendable, Equatable {
+public struct Review: Sendable, Equatable, Codable {
     public let authorLogin: String
     public let state: String
     public let submittedAt: Date?

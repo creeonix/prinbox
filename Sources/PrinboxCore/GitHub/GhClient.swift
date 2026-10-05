@@ -7,10 +7,13 @@ public struct FetchRequest: Sendable, Equatable {
     public let previous: [String: Date]?
     /// Threads and reviews, and the `involved` search behind Replies to you. Off is the lighter refresh.
     public let includeConversation: Bool
+    /// The login `previous` was recorded for; when set, a different viewer never counts as unchanged.
+    public let previousViewer: String?
 
-    public init(previous: [String: Date]? = nil, includeConversation: Bool = true) {
+    public init(previous: [String: Date]? = nil, includeConversation: Bool = true, previousViewer: String? = nil) {
         self.previous = previous
         self.includeConversation = includeConversation
+        self.previousViewer = previousViewer
     }
 
     public static let full = FetchRequest()
@@ -71,7 +74,9 @@ public struct GhClient: InboxFetching {
         let search = try Self.interpretSearch(
             try await run(gh, query: SearchQuery.text(includeInvolved: request.includeConversation)))
         let fingerprint = PullRequestMapper.fingerprint(search)
-        if let previous = request.previous, previous == fingerprint {
+        if let previous = request.previous, previous == fingerprint,
+            request.previousViewer == nil || request.previousViewer == search.data?.viewer?.login
+        {
             let elapsed = Int((ContinuousClock.now - started) / .milliseconds(1))
             log.info(
                 .gh,

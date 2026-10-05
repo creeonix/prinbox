@@ -1,7 +1,7 @@
 import Foundation
 
 /// Which search in `SearchQuery` returned a pull request. Declaration order is the dedupe priority.
-public enum SearchSource: String, Sendable, CaseIterable {
+public enum SearchSource: String, Sendable, CaseIterable, Codable, CodingKeyRepresentable {
     case review
     case mentions
     case mine
@@ -12,20 +12,20 @@ public enum SearchSource: String, Sendable, CaseIterable {
     public var boundsCompleteness: Bool { self != .involved }
 }
 
-public enum ReviewDecision: Sendable, Equatable {
+public enum ReviewDecision: String, Sendable, Equatable, Codable {
     case approved
     case changesRequested
     case reviewRequired
     case none
 }
 
-public enum Mergeable: Sendable, Equatable {
+public enum Mergeable: String, Sendable, Equatable, Codable {
     case mergeable
     case conflicting
     case unknown
 }
 
-public enum CIState: Sendable, Equatable {
+public enum CIState: String, Sendable, Equatable, Codable {
     case success
     case failure
     case pending
@@ -33,7 +33,7 @@ public enum CIState: Sendable, Equatable {
 }
 
 /// The viewer's latest submitted review. Pending (unsubmitted) reviews are never represented.
-public struct ViewerReview: Sendable, Equatable {
+public struct ViewerReview: Sendable, Equatable, Codable {
     public let state: String
     public let submittedAt: Date?
 
@@ -43,7 +43,7 @@ public struct ViewerReview: Sendable, Equatable {
     }
 }
 
-public struct PullRequest: Sendable, Equatable, Identifiable {
+public struct PullRequest: Sendable, Equatable, Identifiable, Codable {
     public let id: String
     public let number: Int
     public let title: String
