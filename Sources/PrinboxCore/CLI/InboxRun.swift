@@ -106,7 +106,9 @@ public struct InboxRun: Sendable {
                 context.cache.update { existing in
                     InboxCache(
                         fetchedAt: now, checkedAt: now, includeConversation: threads, viewer: result.viewerLogin,
-                        fingerprint: result.fingerprint, attention: notify ? attention : existing?.attention,
+                        fingerprint: result.fingerprint,
+                        attention: notify
+                            ? attention : (existing?.includeConversation == threads ? existing?.attention : nil),
                         result: result)
                 }
                 return .success(Served(result: result, source: "fetch", fetchedAt: now, checkedAt: now, error: nil))

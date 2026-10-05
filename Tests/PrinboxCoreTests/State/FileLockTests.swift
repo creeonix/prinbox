@@ -17,6 +17,18 @@ final class OrderLog: @unchecked Sendable {
             .appendingPathComponent("prinbox.lock")
     }
 
+    /// Polls until the holder is inside its lock, failing the test after two seconds.
+    func waitUntil(_ condition: () -> Bool) async {
+        let deadline = Date().addingTimeInterval(2)
+        while !condition() {
+            if Date() >= deadline {
+                Issue.record("the holder did not take the lock within two seconds")
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
     @Test func twoLocksOnOnePathSerializeTheirBodies() async {
         let url = lockURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
@@ -28,7 +40,7 @@ final class OrderLog: @unchecked Sendable {
                 order.add("first out")
             }
         }
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitUntil { order.entries.contains("first in") }
         FileLock(url: url).withLock { order.add("second in") }
         await holder.value
         #expect(order.entries == ["first in", "first out", "second in"])
@@ -38,8 +50,14 @@ final class OrderLog: @unchecked Sendable {
         let url = lockURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let logger = MemoryLogging()
-        let holder = Task.detached { FileLock(url: url).withLock { Thread.sleep(forTimeInterval: 0.6) } }
-        try? await Task.sleep(for: .milliseconds(50))
+        let order = OrderLog()
+        let holder = Task.detached {
+            FileLock(url: url).withLock {
+                order.add("held")
+                Thread.sleep(forTimeInterval: 0.6)
+            }
+        }
+        await waitUntil { order.entries.contains("held") }
         var ran = false
         FileLock(url: url, patience: 0.1, logger: logger).withLock { ran = true }
         #expect(ran)

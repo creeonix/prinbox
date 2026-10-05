@@ -21,7 +21,8 @@ public enum InboxLines {
             for row in section.rows {
                 lines.append(
                     [
-                        row.id, section.kind, String(row.number), row.title, row.repository, row.reasonText, row.age,
+                        row.id, section.kind, String(row.number), RowText.flattened(row.title), row.repository,
+                        row.reasonText, row.age,
                         flags(row), row.url.absoluteString,
                     ].joined(separator: "\t"))
             }
@@ -73,7 +74,9 @@ public enum InboxWaybar {
         if let error = document.error { lines.append(error.message) }
         for section in document.sections where !section.rows.isEmpty {
             lines.append("\(section.title) (\(section.count))")
-            for row in section.rows { lines.append("#\(row.number) \(row.title) · \(row.repository) · \(row.age)") }
+            for row in section.rows {
+                lines.append("#\(row.number) \(RowText.flattened(row.title)) · \(row.repository) · \(row.age)")
+            }
         }
         return escape(lines.joined(separator: "\n"))
     }

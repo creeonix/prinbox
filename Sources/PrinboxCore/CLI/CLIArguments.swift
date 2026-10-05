@@ -119,7 +119,7 @@ public enum CLIArguments {
                 inboxFlags.append("--cached")
             case "--max-age":
                 let raw = try value(after: "--max-age")
-                guard let seconds = TimeInterval(raw), seconds >= 0 else {
+                guard let seconds = TimeInterval(raw), seconds.isFinite, seconds >= 0 else {
                     throw UsageError(message: "--max-age needs a number of seconds, not '\(raw)'")
                 }
                 options.cacheMode = .maxAge(seconds)

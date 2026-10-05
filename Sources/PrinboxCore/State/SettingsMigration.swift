@@ -12,11 +12,12 @@ public enum SettingsMigration {
     /// The update check's two keys now live in update.json; they are cleared from defaults, not copied.
     public static let obsoleteKeys = [UpdateStore.checkedAtKey, UpdateStore.latestReleaseKey]
 
-    /// Copies every known key `source` holds into `file`, then removes the copies (and the obsolete keys) from
-    /// `source`. A write that failed leaves the file missing: nothing is removed and the next launch retries.
-    /// Returns the keys moved.
+    /// Clears the obsolete keys from `source`, copies every known key it holds into `file`, then removes the
+    /// copies from `source`. A write that failed leaves the file missing: no copied key is removed and the next
+    /// launch retries. Returns the keys moved.
     public static func migrate(from source: KeyValueStoring, to file: JSONKeyValueFile) -> [String] {
         guard !file.fileExists else { return [] }
+        for key in obsoleteKeys { source.set(nil, forKey: key) }
         var copied: [String] = []
         for key in keys {
             guard let value = source.object(forKey: key) else { continue }
@@ -24,7 +25,7 @@ public enum SettingsMigration {
             copied.append(key)
         }
         guard file.fileExists else { return [] }
-        for key in copied + obsoleteKeys { source.set(nil, forKey: key) }
+        for key in copied { source.set(nil, forKey: key) }
         return copied
     }
 }

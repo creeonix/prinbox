@@ -141,6 +141,21 @@ import Testing
         #expect(InboxWaybar.escape("a & b < c > d") == "a &amp; b &lt; c &gt; d")
     }
 
+    @Test func linesAndTheWaybarTooltipFlattenTheTitle() throws {
+        let pr = makePR(title: "a\tb\nc", reviewRequestedAt: date("2026-08-10T10:00:00Z"))
+        let meta = DocumentMeta(prinbox: "x", source: "fetch", fetchedAt: now, checkedAt: now, viewer: "me", error: nil)
+        let document = InboxDocument.make(
+            InboxBuilder.build(makeResult([pr])), meta: meta, isNew: { _ in false }, now: now)
+        let lines = InboxLines.render(document).split(separator: "\n")
+        #expect(lines.count == 1)
+        let fields = lines[0].split(separator: "\t", omittingEmptySubsequences: false)
+        #expect(fields.count == 9)
+        #expect(fields[3] == "a b c")
+        let tooltip = try #require(try waybar(document)["tooltip"] as? String)
+        #expect(tooltip.contains("\n#1 a b c · acme/web · "))
+        #expect(document.sections.flatMap(\.rows).first?.title == "a\tb\nc")
+    }
+
     @Test func tmuxMirrorsTheIcon() async throws {
         #expect(InboxTmux.render(try await demoDocument()) == "8")
         let meta = DocumentMeta(prinbox: "x", source: "fetch", fetchedAt: now, checkedAt: now, viewer: "me", error: nil)

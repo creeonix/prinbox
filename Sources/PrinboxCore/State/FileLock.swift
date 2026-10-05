@@ -42,6 +42,7 @@ public struct FileLock: Sendable {
         }
         let deadline = Date().addingTimeInterval(patience)
         while flock(descriptor, LOCK_EX | LOCK_NB) != 0 {
+            if errno == EINTR { continue }
             if errno != EWOULDBLOCK || Date() >= deadline {
                 logger.notice(.state, "lock not acquired within \(Int(patience * 1000)) ms, writing without it")
                 close(descriptor)

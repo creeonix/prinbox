@@ -65,6 +65,8 @@ import Testing
         #expect(output.standardError == "prinbox: notifications on macOS are delivered by PRInbox.app\n")
         let (quiet, _) = try await run("inbox --format tmux", context: context)
         #expect(quiet.standardError == "")
+        let (served, _) = try await run("inbox --notify --cached --format tmux", context: context)
+        #expect(!served.standardError.contains("notifications on macOS"))
     }
 
     @Test func theCommandsReportThroughTheSameChannels() async throws {

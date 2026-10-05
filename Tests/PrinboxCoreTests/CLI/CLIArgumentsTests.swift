@@ -63,6 +63,7 @@ import Testing
         #expect(usageError("inbox --format") == "--format needs a value")
         #expect(usageError("inbox --max-age soon") == "--max-age needs a number of seconds, not 'soon'")
         #expect(usageError("inbox --max-age -5") == "--max-age needs a value")
+        #expect(usageError("inbox --max-age inf") == "--max-age needs a number of seconds, not 'inf'")
         #expect(usageError("inbox --cached --max-age 60") == "--cached and --max-age exclude each other")
         #expect(usageError("inbox extra") == "inbox takes no argument")
         #expect(usageError("print --format lines") == "--format applies to inbox only")

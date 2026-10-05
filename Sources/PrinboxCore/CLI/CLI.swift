@@ -15,7 +15,9 @@ public enum CLI {
             stdout("prinbox \(context.version)\n")
             return 0
         case .inbox(let options):
-            if options.notify, let note = context.notifyNote { stderr("prinbox: \(note)\n") }
+            if options.notify, options.cacheMode != .cached, let note = context.notifyNote {
+                stderr("prinbox: \(note)\n")
+            }
             let outcome = await run.inbox(options)
             for line in outcome.stderr { stderr(line + "\n") }
             if options.format != .json {

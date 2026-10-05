@@ -5,9 +5,15 @@ public enum RowText {
     /// "#12 Title". Control characters (line breaks, tabs, terminal escapes) and bidi overrides become
     /// spaces and whitespace runs collapse, so a row never wraps, recolors a terminal or reverses its text.
     public static func title(_ pr: PullRequest) -> String {
-        let scalars = pr.title.unicodeScalars.map { isUnsafe($0) ? " " : $0 }
-        let flat = String(String.UnicodeScalarView(scalars)).split(whereSeparator: \.isWhitespace)
-        return "#\(pr.number) \(flat.joined(separator: " "))"
+        "#\(pr.number) \(flattened(pr.title))"
+    }
+
+    /// Any text on one safe line: control characters and bidi overrides become spaces, whitespace runs
+    /// collapse to one space, and leading and trailing whitespace go.
+    public static func flattened(_ text: String) -> String {
+        let scalars = text.unicodeScalars.map { isUnsafe($0) ? " " : $0 }
+        return String(String.UnicodeScalarView(scalars)).split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
     }
 
     /// C0/C1 controls plus bidi embeddings, overrides and isolates (U+202A-U+202E, U+2066-U+2069).

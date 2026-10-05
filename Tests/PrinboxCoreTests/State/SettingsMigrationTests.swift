@@ -67,6 +67,16 @@ import Testing
         }
     }
 
+    @Test func obsoleteKeysAloneAreClearedWithoutCreatingAFile() throws {
+        try withFile { file in
+            let source = MemoryDefaults()
+            source.set("2026-01-01T00:00:00Z", forKey: UpdateStore.checkedAtKey)
+            #expect(SettingsMigration.migrate(from: source, to: file) == [])
+            #expect(source.isEmpty)
+            #expect(!file.fileExists)
+        }
+    }
+
     @Test func theKeyListNamesEveryStore() {
         #expect(SettingsMigration.keys.count == 9)
         #expect(SettingsMigration.keys.contains(NotificationSettings.key))

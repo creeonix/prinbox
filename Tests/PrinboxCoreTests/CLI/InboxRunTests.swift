@@ -55,6 +55,15 @@ import Testing
         #expect(cache.saved?.attention == ["PR_1", "PR_2"])
     }
 
+    @Test func aNonNotifierDropsTheBaselineWhenTheRequestShapeChanges() async {
+        let cache = MemoryCache(cached([pr1], attention: ["PR_1"], includeConversation: false))
+        let fetcher = ScriptedFetcher { _ in makeResult([self.pr1]) }
+        let context = makeContext(fetcher: fetcher, cache: cache, followReviewThreads: true)
+        _ = await InboxRun(context: context).inbox(InboxOptions())
+        #expect(cache.saved?.includeConversation == true)
+        #expect(cache.saved?.attention == nil)
+    }
+
     /// Answers `.unchanged` only when the request's fingerprint matches `current`, as GitHub would.
     func github(_ current: FetchResult) -> ScriptedFetcher {
         ScriptedFetcher(outcomes: { _, request in
