@@ -50,7 +50,8 @@ final class RecordingRunner: CommandRunning, @unchecked Sendable {
         await NotifySendDelivery(
             runner: RecordingRunner(error: CommandRunnerError.launchFailed("no such file")), logger: missing
         ).deliver(notice)
-        #expect(missing.messages(.notice).first?.hasPrefix("notify-send did not run") == true)
+        #expect(missing.messages(.notice) == ["notify-send did not run"])
+        #expect(missing.lines.first?.detail != nil)
     }
 
     @Test func noDeliveryDeliversNothing() async {
@@ -72,5 +73,14 @@ final class RecordingRunner: CommandRunning, @unchecked Sendable {
             .open(URL(string: "https://example.com")!)
         #expect(logger.lines.first?.message == "xdg-open exited 3")
         #expect(logger.lines.first?.detail == "no browser")
+    }
+
+    @Test func anOpenerThatCannotRunIsANoticeWithPrivateDetail() async {
+        let logger = MemoryLogging()
+        let runner = RecordingRunner(error: CommandRunnerError.launchFailed("no such file"))
+        await ProcessURLOpener(executable: URL(fileURLWithPath: "/usr/bin/xdg-open"), runner: runner, logger: logger)
+            .open(URL(string: "https://example.com")!)
+        #expect(logger.messages(.notice) == ["xdg-open did not run"])
+        #expect(logger.lines.first?.detail != nil)
     }
 }

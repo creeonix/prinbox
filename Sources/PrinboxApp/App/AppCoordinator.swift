@@ -93,8 +93,9 @@ final class AppCoordinator {
             Task { await self?.notifier.refresh() }
         }
         state.onDidOpenURL = { [weak self] in
-            self?.closingForBrowser = true
-            self?.popover?.close()
+            guard let self, self.popover?.isShown == true else { return }
+            self.closingForBrowser = true
+            self.popover?.close()
         }
         notifier.onOpen = { [weak self] url in
             if let url { self?.state.open(url) } else { self?.showPopover() }
