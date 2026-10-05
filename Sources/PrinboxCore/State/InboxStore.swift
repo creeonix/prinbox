@@ -55,7 +55,8 @@ public final class InboxStore {
 
     /// Adopts the cache at launch: rows at once, the last confirmation time, and, when the trust rules hold,
     /// the fingerprint (so the first refresh may be an unchanged check) and the arrivals baseline (so PRs that
-    /// entered an attention section while the app was not running notify). Called once, before the first
+    /// entered an attention section while the app was not running notify). Rows already in the cached result
+    /// that the baseline lacks (a poller fetched them) are announced here. Called once, before the first
     /// refresh.
     public func adoptCache() {
         guard let cached = cache.load() else { return }
@@ -66,8 +67,23 @@ public final class InboxStore {
             lastFullFetch = cached.fetchedAt
         }
         known = cached.trustedAttention(includeConversation: includeConversation)
-        inbox = InboxBuilder.build(cached.result, snoozed: state.snoozedIDs)
+        let built = InboxBuilder.build(cached.result, snoozed: state.snoozedIDs)
+        inbox = built
+        // A poller may have refreshed the fingerprint past the baseline, so the first refresh can be an unchanged
+        // check: announce what it fetched now, and advance the baseline in the cache too.
+        let arrived = Arrivals.compute(previous: known, current: built)
+        if !arrived.isEmpty {
+            let baseline = Arrivals.baseline(after: built, complete: cached.result.isComplete, extending: known)
+            known = baseline
+            arrivals = arrived
+            cache.update { existing in
+                guard var next = existing else { return nil }
+                next.attention = baseline.sorted()
+                return next
+            }
+        }
         onInboxChange?()
+        if !arrived.isEmpty { onArrivals?(arrived) }
     }
 
     public var badge: StatusBadge {

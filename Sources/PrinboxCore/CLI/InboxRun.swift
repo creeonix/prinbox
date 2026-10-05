@@ -63,8 +63,10 @@ public struct InboxRun: Sendable {
     }
 
     /// Phase 1 with the cached fingerprint when trusted. `.unchanged` serves the cached result and bumps
-    /// `checkedAt`; a result reconciles the state, notifies when asked, and replaces the cache. A run without
-    /// `--notify` leaves `attention` as it found it, so a poller never eats an arrival.
+    /// `checkedAt`; a result reconciles the state and replaces the cache. With `--notify` both branches announce
+    /// arrivals against the cached baseline and advance it, so what a poller fetched (refreshing the fingerprint,
+    /// so the notifier gets `.unchanged`) is still announced. A run without `--notify` keeps the `attention` it
+    /// finds in the cache at write time, so a poller never eats an arrival nor undoes a notifier's advance.
     private func fetch(cached: InboxCache?, notify: Bool) async -> Result<Served, FetchError> {
         let now = context.clock()
         let threads = context.followReviewThreads
@@ -75,9 +77,18 @@ public struct InboxRun: Sendable {
             switch try await context.fetcher.fetch(request) {
             case .unchanged:
                 guard let cached else { return .failure(.badResponse) }
+                var attention: [String]?
+                if notify {
+                    let (state, _) = loadStateForReading()
+                    let snoozed = Set(Snooze.reconcile(state.snoozed, with: cached.result).keys)
+                    attention = await announce(
+                        InboxBuilder.build(cached.result, snoozed: snoozed), complete: cached.result.isComplete,
+                        baseline: cached.trustedAttention(includeConversation: threads))
+                }
                 context.cache.update { existing in
                     guard var next = existing else { return nil }
                     next.checkedAt = now
+                    if let attention { next.attention = attention }
                     return next
                 }
                 return .success(
@@ -85,20 +96,18 @@ public struct InboxRun: Sendable {
                         result: cached.result, source: "unchanged", fetchedAt: cached.fetchedAt, checkedAt: now,
                         error: nil))
             case .result(let result):
-                let snoozed = reconcile(result)
-                let inbox = InboxBuilder.build(result, snoozed: snoozed)
-                var attention = cached?.attention
+                let inbox = InboxBuilder.build(result, snoozed: reconcile(result))
+                var attention: [String]?
                 if notify {
-                    let baseline = cached?.trustedAttention(includeConversation: threads)
-                    let arrived = Arrivals.compute(previous: baseline, current: inbox)
-                    if let notice = ArrivalNotice.make(arrived) { await context.delivery.deliver(notice) }
-                    attention = Arrivals.baseline(after: inbox, complete: result.isComplete, extending: baseline)
-                        .sorted()
+                    attention = await announce(
+                        inbox, complete: result.isComplete,
+                        baseline: cached?.trustedAttention(includeConversation: threads))
                 }
-                context.cache.update { _ in
+                context.cache.update { existing in
                     InboxCache(
                         fetchedAt: now, checkedAt: now, includeConversation: threads, viewer: result.viewerLogin,
-                        fingerprint: result.fingerprint, attention: attention, result: result)
+                        fingerprint: result.fingerprint, attention: notify ? attention : existing?.attention,
+                        result: result)
                 }
                 return .success(Served(result: result, source: "fetch", fetchedAt: now, checkedAt: now, error: nil))
             }
@@ -107,6 +116,13 @@ public struct InboxRun: Sendable {
         } catch {
             return .failure(.other(String(String(describing: error).prefix(120))))
         }
+    }
+
+    /// Delivers the rows that entered an attention section since `baseline`, and returns the advanced baseline.
+    private func announce(_ inbox: Inbox, complete: Bool, baseline: Set<String>?) async -> [String] {
+        let arrived = Arrivals.compute(previous: baseline, current: inbox)
+        if let notice = ArrivalNotice.make(arrived) { await context.delivery.deliver(notice) }
+        return Arrivals.baseline(after: inbox, complete: complete, extending: baseline).sorted()
     }
 
     /// Wakes and prunes snoozes against a fresh result, under the lock, and returns the ids still parked.

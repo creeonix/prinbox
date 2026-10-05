@@ -55,17 +55,53 @@ import Testing
         #expect(cache.saved?.attention == ["PR_1", "PR_2"])
     }
 
+    /// Answers `.unchanged` only when the request's fingerprint matches `current`, as GitHub would.
+    func github(_ current: FetchResult) -> ScriptedFetcher {
+        ScriptedFetcher(outcomes: { _, request in
+            request.previous == current.fingerprint ? .unchanged : .result(current)
+        })
+    }
+
     @Test func aPollerBetweenTwoNotifyRunsDoesNotEatTheArrival() async {
         let cache = MemoryCache(cached([pr1], attention: ["PR_1"]))
         let delivery = FakeDelivery()
-        let context = makeContext(
-            fetcher: ScriptedFetcher { _ in makeResult([self.pr1, self.pr2]) }, cache: cache, delivery: delivery)
+        let context = makeContext(fetcher: github(makeResult([pr1, pr2])), cache: cache, delivery: delivery)
         _ = await InboxRun(context: context).inbox(InboxOptions(format: .tmux))
         #expect(cache.saved?.attention == ["PR_1"])
         #expect(cache.saved?.result.pullRequests.count == 2)
-        _ = await InboxRun(context: context).inbox(InboxOptions(notify: true))
+        let notified = await InboxRun(context: context).inbox(InboxOptions(notify: true))
+        #expect(notified.document.source == "unchanged")
         #expect(delivery.notices.count == 1)
         #expect(cache.saved?.attention == ["PR_1", "PR_2"])
+    }
+
+    @Test func aNotifyRunThatGetsUnchangedStillAnnouncesWhatAPollerFetched() async {
+        let cache = MemoryCache(cached([pr1, pr2], attention: ["PR_1"]))
+        let delivery = FakeDelivery()
+        let fetcher = github(makeResult([pr1, pr2]))
+        let context = makeContext(fetcher: fetcher, cache: cache, delivery: delivery)
+        let first = await InboxRun(context: context).inbox(InboxOptions(notify: true))
+        #expect(first.document.source == "unchanged")
+        #expect(delivery.notices.map(\.title) == ["#2 Add feature"])
+        #expect(cache.saved?.attention == ["PR_1", "PR_2"])
+        _ = await InboxRun(context: context).inbox(InboxOptions(notify: true))
+        #expect(delivery.notices.count == 1)
+        #expect(await fetcher.calls == 2)
+    }
+
+    @Test func aPollerWritesTheReloadedAttentionNotTheOneItRead() async {
+        let cache = MemoryCache(cached([pr1], attention: ["PR_1"]))
+        let fetcher = ScriptedFetcher { [pr1, pr2] _ in
+            cache.update { existing in
+                guard var next = existing else { return nil }
+                next.attention = ["PR_1", "PR_9"]
+                return next
+            }
+            return makeResult([pr1, pr2])
+        }
+        _ = await InboxRun(context: makeContext(fetcher: fetcher, cache: cache)).inbox(InboxOptions(format: .tmux))
+        #expect(cache.saved?.result.pullRequests.count == 2)
+        #expect(cache.saved?.attention == ["PR_1", "PR_9"])
     }
 
     @Test func anUnchangedCheckServesTheCachedResultAndBumpsCheckedAt() async {
@@ -169,7 +205,7 @@ import Testing
         #expect(plain.document.error?.help == URL(string: "https://cli.github.com"))
     }
 
-    @Test func reconciliationWakesAndPrunesUnderTheLockAndLeavesSeenAlone() async throws {
+    @Test func reconciliationWakesAndPrunesAndLeavesSeenAlone() async throws {
         let persistence = MemoryStatePersistence()
         let woken = SnoozeEntry(snoozedAt: start - 3600, updatedAt: pr1.updatedAt - 3600)
         let gone = SnoozeEntry(snoozedAt: start - 3600, updatedAt: start)

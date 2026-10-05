@@ -543,6 +543,22 @@ final class ReceivedRows {
         #expect(memory.writeCount == 2)
     }
 
+    @Test func adoptCacheAnnouncesWhatAPollerFetchedWhileTheAppWasOff() async {
+        let clock = TestClock(start)
+        let memory = MemoryCache(
+            cached(fetchedAt: start - 60, attention: ["PR_1"], prs: [makePR(id: "PR_1"), makePR(id: "PR_2")]))
+        let fetcher = ScriptedFetcher(outcomes: { _, _ in .unchanged })
+        let received = ReceivedRows()
+        let store = InboxStore(fetcher: fetcher, cache: memory, clock: { clock.now })
+        store.onArrivals = { received.ids += $0.map(\.id) }
+        store.adoptCache()
+        #expect(received.ids == ["PR_2"])
+        #expect(memory.saved?.attention == ["PR_1", "PR_2"])
+        await store.refresh()
+        #expect(await fetcher.requests.first?.previous != nil)
+        #expect(received.ids == ["PR_2"])
+    }
+
     @Test func nothingIsAdoptedWithoutACache() {
         let store = InboxStore(fetcher: ScriptedFetcher { _ in makeResult([]) })
         store.adoptCache()
