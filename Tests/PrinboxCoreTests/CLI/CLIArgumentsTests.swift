@@ -48,6 +48,16 @@ import Testing
         #expect(usageError("snooze more:needsReview") == "'more:needsReview' is not a pull request node id")
     }
 
+    @Test func mcpTakesNoArgumentAndNoInboxFlag() throws {
+        #expect(try parse("mcp").command == .mcp)
+        #expect(
+            try parse("mcp --verbose --settings /tmp/s.json")
+                == Invocation(command: .mcp, settingsPath: "/tmp/s.json", verbose: true))
+        #expect(usageError("mcp extra") == "mcp takes no argument")
+        #expect(usageError("mcp --format json") == "--format applies to inbox only")
+        #expect(usageError("mcp --notify") == "--notify applies to inbox only")
+    }
+
     @Test func printVersionAndHelp() throws {
         #expect(try parse("print").command == .print)
         #expect(try parse("--version").command == .version)
@@ -72,7 +82,7 @@ import Testing
 
     @Test func usageNamesEveryCommand() {
         for word in [
-            "inbox", "print", "snooze", "unsnooze", "open", "--format", "--cached", "--max-age", "--notify",
+            "inbox", "print", "snooze", "unsnooze", "open", "mcp", "--format", "--cached", "--max-age", "--notify",
             "--settings", "--verbose", "--version", "--help",
         ] {
             #expect(CLIArguments.usage.contains(word), "\(word) missing from usage")

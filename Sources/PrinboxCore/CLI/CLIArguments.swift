@@ -34,6 +34,7 @@ public enum Command: Sendable, Equatable {
     case snooze(id: String)
     case unsnooze(id: String)
     case open(id: String)
+    case mcp
     case version
     case help
 }
@@ -57,7 +58,7 @@ public struct UsageError: Error, Equatable, Sendable {
     public init(message: String) { self.message = message }
 }
 
-/// The `prinbox` command line, parsed by hand: five commands and a handful of flags.
+/// The `prinbox` command line, parsed by hand: six commands and a handful of flags.
 public enum CLIArguments {
     public static let usage = """
         usage: prinbox <command> [options]
@@ -72,6 +73,7 @@ public enum CLIArguments {
           snooze <id>       park a pull request until something happens on it
           unsnooze <id>     wake it
           open <id>         open it in the browser
+          mcp               serve the inbox to AI agents over stdio (Model Context Protocol)
 
         options:
           --settings <path> the settings file (default ~/.config/prinbox/settings.json)
@@ -156,6 +158,9 @@ public enum CLIArguments {
             command =
                 name == "snooze"
                 ? .snooze(id: rest[0]) : name == "unsnooze" ? .unsnooze(id: rest[0]) : .open(id: rest[0])
+        case "mcp":
+            guard rest.isEmpty else { throw UsageError(message: "mcp takes no argument") }
+            command = .mcp
         default:
             throw UsageError(message: "unknown command '\(name)'")
         }
