@@ -183,9 +183,12 @@ public final class PopoverState {
         case .row(let prID):
             return url(forRow: prID).map(KeyAction.open) ?? .handled
         case .more(let kind):
-            return .open(kind.moreURL)
+            return .open(moreURL(kind))
         }
     }
+
+    /// The "+N more on GitHub" page of a section under the inbox's scope.
+    public func moreURL(_ kind: SectionKind) -> URL { (store.inbox ?? .empty).moreURL(kind) }
 
     /// Returns nil when the key is not for the popover, so the event continues to the view.
     public func handle(_ command: KeyCommand) -> KeyAction? {

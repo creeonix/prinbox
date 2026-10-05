@@ -71,7 +71,7 @@ public final class InboxStore {
             lastFullFetch = cached.fetchedAt
         }
         known = cached.trustedAttention(shape: shape)
-        let built = InboxBuilder.build(cached.result, snoozed: state.snoozedIDs)
+        let built = InboxBuilder.build(cached.result, snoozed: state.snoozedIDs, scope: shape.scope)
         inbox = built
         // A poller may have refreshed the fingerprint past the baseline, so the first refresh can be an unchanged
         // check: announce what it fetched now, and advance the baseline in the cache too.
@@ -175,7 +175,7 @@ public final class InboxStore {
     private func rebuild() {
         guard let lastResult else { return }
         arrivals = []
-        inbox = InboxBuilder.build(lastResult, snoozed: state.snoozedIDs)
+        inbox = InboxBuilder.build(lastResult, snoozed: state.snoozedIDs, scope: shape.scope)
         onInboxChange?()
     }
 
@@ -210,7 +210,7 @@ public final class InboxStore {
                 }
             case .result(let result):
                 state.didFetch(result)
-                let built = InboxBuilder.build(result, snoozed: state.snoozedIDs)
+                let built = InboxBuilder.build(result, snoozed: state.snoozedIDs, scope: request.scope)
                 let arrived = Arrivals.compute(previous: known, current: built)
                 let baseline = Arrivals.baseline(after: built, complete: result.isComplete, extending: known)
                 arrivals = arrived

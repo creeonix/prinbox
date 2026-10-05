@@ -39,6 +39,23 @@ public enum SectionKind: String, CaseIterable, Sendable, Codable {
         case .yourPRs, .waitingOnOthers: URL(string: "https://github.com/pulls")!
         }
     }
+
+    /// The section's GitHub page. With a scope, a search URL carrying the section's qualifier and the scope's,
+    /// so "+N more on GitHub" opens the filtered list (spec 4.3); without one, the pages above.
+    public func moreURL(scope: SearchScope) -> URL {
+        guard !scope.isEmpty else { return moreURL }
+        let source: SearchSource =
+            switch self {
+            case .needsReview, .takeAnotherLook: .review
+            case .mentions: .mentions
+            case .repliesToYou: .involved
+            case .yourPRs, .waitingOnOthers: .mine
+            }
+        var components = URLComponents(string: "https://github.com/pulls")!
+        let qualifier = SearchQuery.qualifier(source, scope: scope)
+        components.queryItems = [URLQueryItem(name: "q", value: "is:open is:pr \(qualifier) sort:updated-desc")]
+        return components.url!
+    }
 }
 
 public enum ReasonTone: Sendable, Equatable {

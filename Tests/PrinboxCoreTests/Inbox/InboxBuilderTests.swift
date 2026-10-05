@@ -240,4 +240,13 @@ import Testing
         #expect(rows?.map(\.id) == ["a", "c", "b", "d"])
         #expect(rows?.allSatisfy { $0.stack == nil } == true)
     }
+
+    @Test func theInboxCarriesTheScopeForItsMoreLinks() {
+        let scope = SearchScope(repositories: ["acme"])
+        let inbox = InboxBuilder.build(makeResult([makePR()]), scope: scope)
+        #expect(inbox.scope == scope)
+        #expect(inbox.moreURL(.needsReview) == SectionKind.needsReview.moreURL(scope: scope))
+        #expect(InboxBuilder.build(makeResult([makePR()])).scope == .none)
+        #expect(Inbox.empty.moreURL(.mentions) == SectionKind.mentions.moreURL)
+    }
 }

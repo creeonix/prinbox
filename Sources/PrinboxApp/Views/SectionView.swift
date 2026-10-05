@@ -30,7 +30,7 @@ struct SectionView: View {
                 }
                 if section.moreCount > 0 {
                     MoreRowView(count: section.moreCount, isSelected: state.isSelected(.more(section.kind))) {
-                        actions.open(section.kind.moreURL)
+                        actions.open(state.moreURL(section.kind))
                     }
                     .id(InboxItemID.more(section.kind))
                     .onHover { inside in if inside { state.select(.more(section.kind)) } }

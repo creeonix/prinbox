@@ -11,7 +11,10 @@ public enum InboxBuilder {
     ]
 
     /// `snoozed` holds the ids the user parked; they are classified as snoozed before anything else.
-    public static func build(_ result: FetchResult, snoozed: Set<String> = [], cap: Int = rowCap) -> Inbox {
+    public static func build(
+        _ result: FetchResult, snoozed: Set<String> = [], cap: Int = rowCap,
+        scope: SearchScope = .none
+    ) -> Inbox {
         let viewer = result.viewerLogin
         let stacks = Stacks.compute(result.pullRequests)
         let rows = result.pullRequests
@@ -41,7 +44,8 @@ public enum InboxBuilder {
         let badge = rows.filter { $0.classification.section.countsTowardBadge && !$0.pullRequest.isDraft }.count
         let owners = Set(rows.map(\.pullRequest.ownerLogin))
         return Inbox(
-            sections: sections, badgeCount: badge, warnings: result.warnings, spansMultipleOrgs: owners.count > 1)
+            sections: sections, badgeCount: badge, warnings: result.warnings, spansMultipleOrgs: owners.count > 1,
+            scope: scope)
     }
 
     /// Keeps a chain contiguous: when its first member in sort order is met, every member of that chain the

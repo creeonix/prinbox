@@ -67,12 +67,18 @@ public struct Inbox: Sendable, Equatable {
     public let warnings: [String]
     /// True when the fetched PRs belong to more than one owner; rows then show `org/repo` and org badges.
     public let spansMultipleOrgs: Bool
+    /// The scope the rows were fetched under; the "+N more" links carry it.
+    public let scope: SearchScope
 
-    public init(sections: [InboxSection], badgeCount: Int, warnings: [String], spansMultipleOrgs: Bool = false) {
+    public init(
+        sections: [InboxSection], badgeCount: Int, warnings: [String], spansMultipleOrgs: Bool = false,
+        scope: SearchScope = .none
+    ) {
         self.sections = sections
         self.badgeCount = badgeCount
         self.warnings = warnings
         self.spansMultipleOrgs = spansMultipleOrgs
+        self.scope = scope
     }
 
     public static let empty = Inbox(sections: [], badgeCount: 0, warnings: [])
@@ -80,4 +86,7 @@ public struct Inbox: Sendable, Equatable {
     public var isEmpty: Bool { sections.isEmpty }
 
     public func section(_ kind: SectionKind) -> InboxSection? { sections.first { $0.kind == kind } }
+
+    /// The section's GitHub page under this inbox's scope.
+    public func moreURL(_ kind: SectionKind) -> URL { kind.moreURL(scope: scope) }
 }

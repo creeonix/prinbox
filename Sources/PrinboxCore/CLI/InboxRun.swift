@@ -88,8 +88,9 @@ public struct InboxRun: Sendable {
                 if notify {
                     let (state, _) = loadStateForReading()
                     let snoozed = Set(Snooze.reconcile(state.snoozed, with: cached.result).keys)
+                    let announced = InboxBuilder.build(cached.result, snoozed: snoozed, scope: context.scope)
                     attention = await announce(
-                        InboxBuilder.build(cached.result, snoozed: snoozed), complete: cached.result.isComplete,
+                        announced, complete: cached.result.isComplete,
                         baseline: cached.trustedAttention(shape: shape))
                 }
                 context.cache.update { existing in
@@ -105,7 +106,7 @@ public struct InboxRun: Sendable {
                         result: cached.result, source: "unchanged", fetchedAt: cached.fetchedAt, checkedAt: now,
                         error: nil))
             case .result(let result):
-                let inbox = InboxBuilder.build(result, snoozed: reconcile(result))
+                let inbox = InboxBuilder.build(result, snoozed: reconcile(result), scope: context.scope)
                 var attention: [String]?
                 if notify {
                     attention = await announce(
@@ -158,7 +159,7 @@ public struct InboxRun: Sendable {
     private func outcome(_ served: Served, exitCode: Int32, extra: [String], setupGuide: String? = nil) -> RunOutcome {
         let (state, warning) = loadStateForReading()
         let snoozed = Set(Snooze.reconcile(state.snoozed, with: served.result).keys)
-        let inbox = InboxBuilder.build(served.result, snoozed: snoozed)
+        let inbox = InboxBuilder.build(served.result, snoozed: snoozed, scope: context.scope)
         let meta = DocumentMeta(
             prinbox: context.version, source: served.source, fetchedAt: served.fetchedAt, checkedAt: served.checkedAt,
             viewer: served.result.viewerLogin, error: served.error.map { errorInfo($0, lastSuccess: served.checkedAt) })
@@ -281,7 +282,8 @@ public struct InboxRun: Sendable {
                 throw FetchError.badResponse
             }
             let (state, warning) = loadStateForReading()
-            let inbox = InboxBuilder.build(result, snoozed: Set(Snooze.reconcile(state.snoozed, with: result).keys))
+            let snoozed = Set(Snooze.reconcile(state.snoozed, with: result).keys)
+            let inbox = InboxBuilder.build(result, snoozed: snoozed, scope: context.scope)
             return (InboxPrinter.render(inbox, now: context.clock()), warning ? [Self.stateWarning] : [], 0)
         } catch let error as FetchError {
             return ("", [stderrLine(error, lastSuccess: nil)], error.needsSetup ? 3 : 1)

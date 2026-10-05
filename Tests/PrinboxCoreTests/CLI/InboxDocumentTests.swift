@@ -86,4 +86,14 @@ import Testing
                 "mergeConflicts", "ciRed", "readyToMerge", "draft", "waitingForReview", "snoozed",
             ])
     }
+
+    @Test func moreUrlFollowsTheInboxScope() {
+        let scope = SearchScope(repositories: ["acme"])
+        let inbox = InboxBuilder.build(makeResult([makePR()]), scope: scope)
+        let document = InboxDocument.make(inbox, meta: meta, isNew: { _ in false }, now: now)
+        #expect(document.sections[0].moreUrl == SectionKind.needsReview.moreURL(scope: scope))
+        #expect(document.sections[5].moreUrl == SectionKind.waitingOnOthers.moreURL(scope: scope))
+        let empty = InboxDocument.make(nil, meta: meta, isNew: { _ in false }, now: now)
+        #expect(empty.sections[0].moreUrl == SectionKind.needsReview.moreURL)
+    }
 }
