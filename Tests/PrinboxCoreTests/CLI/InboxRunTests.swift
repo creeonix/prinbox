@@ -336,4 +336,40 @@ import Testing
                 "other",
             ])
     }
+
+    @Test func theScopeRidesInTheRequestAndGatesTheCache() async {
+        let scope = SearchScope(directReviewRequestsOnly: true)
+        let fetcher = ScriptedFetcher { _ in makeResult([self.pr1]) }
+        let cache = MemoryCache(cached([pr1], attention: ["PR_1"]))
+        let context = makeContext(fetcher: fetcher, cache: cache, scope: scope)
+        _ = await InboxRun(context: context).inbox(InboxOptions())
+        let request = await fetcher.requests.first
+        #expect(request?.scope == scope)
+        #expect(request?.previous == nil)
+        #expect(cache.saved?.scope == scope)
+        #expect(cache.saved?.attention == nil)
+        _ = await InboxRun(context: context).inbox(InboxOptions())
+        #expect(await fetcher.requests.last?.previous == ["PR_1": pr1.updatedAt])
+        #expect(await fetcher.requests.count == 2)
+    }
+
+    @Test func anUnchangedBumpIsDroppedWhenTheCacheMovedUnderneath() async {
+        let cache = MemoryCache(cached([pr1]))
+        let fetcher = ScriptedFetcher(outcomes: { _, _ in
+            cache.update { _ in self.cached([self.pr2], fetchedAt: self.start - 10, checkedAt: self.start - 10) }
+            return .unchanged
+        })
+        let outcome = await InboxRun(context: makeContext(fetcher: fetcher, cache: cache)).inbox(InboxOptions())
+        #expect(outcome.document.source == "unchanged")
+        #expect(cache.saved?.checkedAt == start - 10)
+        #expect(cache.saved?.result.pullRequests.map(\.id) == ["PR_2"])
+    }
+
+    @Test func printFetchesWithTheScope() async throws {
+        let scope = SearchScope(repositories: ["acme"])
+        let fetcher = ScriptedFetcher { _ in makeResult([self.pr1]) }
+        let printed = await InboxRun(context: makeContext(fetcher: fetcher, scope: scope)).printInbox()
+        #expect(printed.exitCode == 0)
+        #expect(await fetcher.requests.first == FetchRequest(scope: scope))
+    }
 }

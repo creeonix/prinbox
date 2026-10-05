@@ -65,6 +65,9 @@ public struct InboxRun: Sendable {
         )
     }
 
+    /// The request shape this run fetches under; the cache is trusted for it alone.
+    private var shape: FetchShape { FetchShape(includeConversation: context.followReviewThreads, scope: context.scope) }
+
     /// Phase 1 with the cached fingerprint when trusted. `.unchanged` serves the cached result and bumps
     /// `checkedAt`; a result reconciles the state and replaces the cache. With `--notify` both branches announce
     /// arrivals against the cached baseline and advance it, so what a poller fetched (refreshing the fingerprint,
@@ -72,10 +75,11 @@ public struct InboxRun: Sendable {
     /// finds in the cache at write time, so a poller never eats an arrival nor undoes a notifier's advance.
     private func fetch(cached: InboxCache?, notify: Bool) async -> Result<Served, FetchError> {
         let now = context.clock()
-        let threads = context.followReviewThreads
-        let previous = cached?.trustedFingerprint(now: now, shape: FetchShape(includeConversation: threads))
+        let shape = self.shape
+        let previous = cached?.trustedFingerprint(now: now, shape: shape)
         let request = FetchRequest(
-            previous: previous, includeConversation: threads, previousViewer: previous == nil ? nil : cached?.viewer)
+            previous: previous, includeConversation: shape.includeConversation,
+            previousViewer: previous == nil ? nil : cached?.viewer, scope: shape.scope)
         do {
             switch try await context.fetcher.fetch(request) {
             case .unchanged:
@@ -86,10 +90,12 @@ public struct InboxRun: Sendable {
                     let snoozed = Set(Snooze.reconcile(state.snoozed, with: cached.result).keys)
                     attention = await announce(
                         InboxBuilder.build(cached.result, snoozed: snoozed), complete: cached.result.isComplete,
-                        baseline: cached.trustedAttention(shape: FetchShape(includeConversation: threads)))
+                        baseline: cached.trustedAttention(shape: shape))
                 }
                 context.cache.update { existing in
-                    guard var next = existing else { return nil }
+                    // Spec 7.3: stamp only the cache this check confirmed; a notifier's baseline advance is
+                    // dropped with it, and announced again next time (two notifiers are unsupported anyway).
+                    guard var next = existing, next.shape == shape, next.fingerprint == previous else { return nil }
                     next.checkedAt = now
                     if let attention { next.attention = attention }
                     return next
@@ -103,15 +109,14 @@ public struct InboxRun: Sendable {
                 var attention: [String]?
                 if notify {
                     attention = await announce(
-                        inbox, complete: result.isComplete,
-                        baseline: cached?.trustedAttention(shape: FetchShape(includeConversation: threads)))
+                        inbox, complete: result.isComplete, baseline: cached?.trustedAttention(shape: shape))
                 }
                 context.cache.update { existing in
                     InboxCache(
-                        fetchedAt: now, checkedAt: now, includeConversation: threads, viewer: result.viewerLogin,
-                        fingerprint: result.fingerprint,
-                        attention: notify
-                            ? attention : (existing?.includeConversation == threads ? existing?.attention : nil),
+                        fetchedAt: now, checkedAt: now, includeConversation: shape.includeConversation,
+                        scope: shape.scope,
+                        viewer: result.viewerLogin, fingerprint: result.fingerprint,
+                        attention: notify ? attention : (existing?.shape == shape ? existing?.attention : nil),
                         result: result)
                 }
                 return .success(Served(result: result, source: "fetch", fetchedAt: now, checkedAt: now, error: nil))
@@ -272,7 +277,9 @@ public struct InboxRun: Sendable {
     /// Today's `--print`: a full fetch with the conversation on, snoozes read-only, nothing written.
     public func printInbox() async -> (stdout: String, stderr: [String], exitCode: Int32) {
         do {
-            let result = try await context.fetcher.fetch()
+            guard case .result(let result) = try await context.fetcher.fetch(FetchRequest(scope: context.scope)) else {
+                throw FetchError.badResponse
+            }
             let (state, warning) = loadStateForReading()
             let inbox = InboxBuilder.build(result, snoozed: Set(Snooze.reconcile(state.snoozed, with: result).keys))
             return (InboxPrinter.render(inbox, now: context.clock()), warning ? [Self.stateWarning] : [], 0)

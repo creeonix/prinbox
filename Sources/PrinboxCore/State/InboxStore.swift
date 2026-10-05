@@ -23,8 +23,12 @@ public final class InboxStore {
     public private(set) var arrivals: [InboxRow] = []
     /// Snoozes and the seen ledger; the popover reads and writes it through this store.
     public let state: StateStore
-    /// Follow review threads: threads, reviews and the `involved` search. Off is the lighter refresh.
-    public private(set) var includeConversation = true
+    /// What a refresh asks for: Follow review threads (threads, reviews and the `involved` search) and the
+    /// scope settings. A change clears the fingerprint and the in-memory baseline, so the next refresh is a
+    /// full one and a quiet start (spec 4.3).
+    public private(set) var shape = FetchShape()
+    /// Follow review threads, read from `shape`.
+    public var includeConversation: Bool { shape.includeConversation }
 
     /// Called after every inbox change, whoever triggered the refresh (timer, wake, popover, R key).
     @ObservationIgnored public var onInboxChange: (@MainActor () -> Void)?
@@ -62,13 +66,11 @@ public final class InboxStore {
         guard let cached = cache.load() else { return }
         lastResult = cached.result
         lastSuccess = cached.checkedAt
-        if let fingerprint = cached.trustedFingerprint(
-            now: clock(), shape: FetchShape(includeConversation: includeConversation))
-        {
+        if let fingerprint = cached.trustedFingerprint(now: clock(), shape: shape) {
             self.fingerprint = fingerprint
             lastFullFetch = cached.fetchedAt
         }
-        known = cached.trustedAttention(shape: FetchShape(includeConversation: includeConversation))
+        known = cached.trustedAttention(shape: shape)
         let built = InboxBuilder.build(cached.result, snoozed: state.snoozedIDs)
         inbox = built
         // A poller may have refreshed the fingerprint past the baseline, so the first refresh can be an unchanged
@@ -134,14 +136,24 @@ public final class InboxStore {
         await refresh()
     }
 
-    // MARK: Conversation
+    // MARK: Request shape
 
-    /// Changing what a fetch asks for invalidates the fingerprint, so the next refresh is a full one. The caller
-    /// triggers that refresh.
+    /// Changing what a fetch asks for invalidates the fingerprint and the baseline, so the next refresh is a
+    /// full, quiet one. The caller triggers that refresh.
     public func setIncludeConversation(_ on: Bool) {
-        guard on != includeConversation else { return }
-        includeConversation = on
+        setShape(FetchShape(includeConversation: on, scope: shape.scope))
+    }
+
+    /// The scope settings changed (spec 4.3). The caller triggers the refresh.
+    public func setScope(_ scope: SearchScope) {
+        setShape(FetchShape(includeConversation: shape.includeConversation, scope: scope))
+    }
+
+    private func setShape(_ next: FetchShape) {
+        guard next != shape else { return }
+        shape = next
         fingerprint = nil
+        known = nil
     }
 
     // MARK: Snooze
@@ -189,7 +201,10 @@ public final class InboxStore {
                 lastSuccess = now
                 pausedUntil = nil
                 cache.update { existing in
-                    guard var next = existing else { return nil }
+                    // Another writer may have replaced the cache since this request's fingerprint was taken
+                    // (spec 7.3): stamp only the cache this check confirmed.
+                    guard var next = existing, next.shape == request.shape, next.fingerprint == request.previous
+                    else { return nil }
                     next.checkedAt = now
                     return next
                 }
@@ -202,7 +217,7 @@ public final class InboxStore {
                 known = baseline
                 lastResult = result
                 // A toggle during the fetch already cleared the fingerprint; this result answers the old question.
-                fingerprint = request.includeConversation == includeConversation ? result.fingerprint : nil
+                fingerprint = request.shape == shape ? result.fingerprint : nil
                 let now = clock()
                 lastFullFetch = now
                 inbox = built
@@ -212,6 +227,7 @@ public final class InboxStore {
                 cache.update { _ in
                     InboxCache(
                         fetchedAt: now, checkedAt: now, includeConversation: request.includeConversation,
+                        scope: request.scope,
                         viewer: result.viewerLogin, fingerprint: result.fingerprint, attention: baseline.sorted(),
                         result: result)
                 }
@@ -234,7 +250,7 @@ public final class InboxStore {
         let fresh = lastFullFetch.map { clock().timeIntervalSince($0) < Self.fullFetchInterval } ?? false
         let previous = fresh ? fingerprint : nil
         return FetchRequest(
-            previous: previous, includeConversation: includeConversation,
-            previousViewer: previous == nil ? nil : lastResult?.viewerLogin)
+            previous: previous, includeConversation: shape.includeConversation,
+            previousViewer: previous == nil ? nil : lastResult?.viewerLogin, scope: shape.scope)
     }
 }

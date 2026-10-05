@@ -8,6 +8,8 @@ public struct RunContext: Sendable {
     public let persistence: StatePersisting
     public let lock: FileLock?
     public let followReviewThreads: Bool
+    /// The scope settings every fetch of this run honors (spec 4.1).
+    public let scope: SearchScope
     public let ghOverride: String?
     public let delivery: NotificationDelivering
     public let opener: URLOpening
@@ -19,7 +21,8 @@ public struct RunContext: Sendable {
 
     public init(
         fetcher: InboxFetching, cache: CacheStoring, persistence: StatePersisting, lock: FileLock?,
-        followReviewThreads: Bool, ghOverride: String?, delivery: NotificationDelivering, opener: URLOpening,
+        followReviewThreads: Bool, scope: SearchScope = .none, ghOverride: String?, delivery: NotificationDelivering,
+        opener: URLOpening,
         notifyNote: String?, clock: @escaping @Sendable () -> Date, logger: Logging, version: String
     ) {
         self.fetcher = fetcher
@@ -27,6 +30,7 @@ public struct RunContext: Sendable {
         self.persistence = persistence
         self.lock = lock
         self.followReviewThreads = followReviewThreads
+        self.scope = scope
         self.ghOverride = ghOverride
         self.delivery = delivery
         self.opener = opener

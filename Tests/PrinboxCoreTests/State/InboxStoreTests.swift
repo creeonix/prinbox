@@ -565,4 +565,63 @@ final class ReceivedRows {
         #expect(store.inbox == nil)
         #expect(store.lastSuccess == nil)
     }
+
+    @Test func setScopeClearsTheFingerprintAndTheBaselineAndRidesInTheRequest() async {
+        let clock = TestClock(start)
+        let scope = SearchScope(directReviewRequestsOnly: true, repositories: ["acme"])
+        let pr1 = makePR(id: "PR_1")
+        let pr2 = makePR(id: "PR_2")
+        let fetcher = ScriptedFetcher(outcomes: { call, _ in .result(makeResult(call == 1 ? [pr1] : [pr1, pr2])) })
+        let received = ReceivedRows()
+        let store = InboxStore(fetcher: fetcher, clock: { clock.now })
+        store.onArrivals = { received.ids = $0.map(\.id) }
+        await store.refresh()
+        #expect(received.ids == [])
+        store.setScope(scope)
+        #expect(store.shape == FetchShape(includeConversation: true, scope: scope))
+        #expect(store.includeConversation)
+        store.setScope(scope)
+        clock.advance(60)
+        await store.refresh()
+        let requests = await fetcher.requests
+        #expect(requests.count == 2)
+        #expect(requests[1].previous == nil)
+        #expect(requests[1].scope == scope)
+        // The first fetch under a new shape is a quiet start: PR_2 is new to the view, not an arrival.
+        #expect(received.ids == [])
+        #expect(store.inbox?.badgeCount == 2)
+    }
+
+    @Test func anUnchangedBumpLeavesACacheOfAnotherShapeOrFingerprintAlone() async throws {
+        let clock = TestClock(start)
+        let memory = MemoryCache()
+        let pr = makePR(id: "PR_1")
+        let other = makePR(id: "PR_2")
+        let fetcher = ScriptedFetcher(outcomes: { call, _ in call == 1 ? .result(makeResult([pr])) : .unchanged })
+        let store = InboxStore(fetcher: fetcher, cache: memory, clock: { clock.now })
+        await store.refresh()
+        #expect(memory.writeCount == 1)
+        // A server fetching under another scope replaced the cache meanwhile.
+        memory.update { _ in
+            InboxCache(
+                fetchedAt: self.start + 10, checkedAt: self.start + 10, includeConversation: true,
+                scope: SearchScope(hideDrafts: true), viewer: testViewer, fingerprint: ["PR_2": other.updatedAt],
+                attention: nil, result: makeResult([other]))
+        }
+        clock.advance(300)
+        await store.refresh()
+        #expect(memory.saved?.checkedAt == start + 10)
+        #expect(memory.writeCount == 2)
+        // The same shape but a newer fingerprint is left alone too.
+        memory.update { _ in
+            InboxCache(
+                fetchedAt: self.start + 300, checkedAt: self.start + 300, includeConversation: true, viewer: testViewer,
+                fingerprint: ["PR_2": other.updatedAt], attention: nil, result: makeResult([other]))
+        }
+        clock.advance(60)
+        await store.refresh()
+        #expect(memory.saved?.checkedAt == start + 300)
+        #expect(memory.writeCount == 3)
+        #expect(store.lastSuccess == start + 360)
+    }
 }
