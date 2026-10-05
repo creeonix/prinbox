@@ -24,6 +24,18 @@ public enum RowText {
             row.classification.waitingSince.map { "waiting \(RelativeAge.format(from: $0, to: now))" }
             ?? "updated \(RelativeAge.format(from: pr.updatedAt, to: now)) ago"
         return [repoLabel(pr, showOrg: showOrg), age, "+\(pr.additions) −\(pr.deletions)"].joined(separator: " · ")
+            + stackSegment(row)
+    }
+
+    /// " · stack 2/3" for a chain member, nothing otherwise. A fact in the fact line, not a mark.
+    static func stackSegment(_ row: InboxRow) -> String {
+        row.stack.map { " · stack \($0.position)/\($0.size)" } ?? ""
+    }
+
+    /// The row tooltip: the full repository name, and the parent for a chain member.
+    public static func help(_ row: InboxRow) -> String {
+        guard let parent = row.stack?.parentNumber else { return row.pullRequest.repository }
+        return "\(row.pullRequest.repository) · stacked on #\(parent)"
     }
 
     /// The fixed tail of a compact row, after the truncating title: "· web", "· web · Draft" or
@@ -32,7 +44,7 @@ public enum RowText {
     public static func compactTrailer(_ row: InboxRow, showOrg: Bool = false, age: String? = nil) -> String {
         let repo = "· \(repoLabel(row.pullRequest, showOrg: showOrg))"
         let status = row.classification.reason == .snoozed ? " · Snoozed" : row.pullRequest.isDraft ? " · Draft" : ""
-        return repo + status + (age.map { " · \($0)" } ?? "")
+        return repo + stackSegment(row) + status + (age.map { " · \($0)" } ?? "")
     }
 
     /// The age for a compact row outside Waiting on others: "8h" waiting, or "1h ago" since the last update.

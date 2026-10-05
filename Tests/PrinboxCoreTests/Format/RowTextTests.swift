@@ -112,4 +112,21 @@ import Testing
             pullRequest: pr, classification: Classifier.classify(pr, viewer: testViewer, snoozed: true)!)
         #expect(RowText.compactTrailer(snoozed, age: "2h") == "· billing · Snoozed · 2h")
     }
+
+    @Test func metaAndTrailerCarryTheStack() throws {
+        let base = makePR(
+            id: "base", number: 1, repository: "globex/billing", reviewRequestedAt: date("2026-08-10T06:00:00Z"),
+            headRef: "f1", baseRef: "main")
+        let top = makePR(
+            id: "top", number: 2, repository: "globex/billing", isDraft: true, additions: 1, deletions: 0,
+            source: .mine, headRef: "f2", baseRef: "f1")
+        let inbox = InboxBuilder.build(makeResult([base, top]))
+        let baseRow = try #require(inbox.section(.needsReview)?.rows.first)
+        let topRow = try #require(inbox.section(.waitingOnOthers)?.rows.first)
+        #expect(RowText.meta(baseRow, now: now).hasSuffix(" · stack 1/2"))
+        #expect(RowText.detail(baseRow, now: now).hasSuffix(" · stack 1/2 · Review requested"))
+        #expect(RowText.compactTrailer(topRow, showOrg: true) == "· globex/billing · stack 2/2 · Draft")
+        #expect(RowText.help(topRow) == "globex/billing · stacked on #1")
+        #expect(RowText.help(baseRow) == "globex/billing")
+    }
 }

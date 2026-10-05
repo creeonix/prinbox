@@ -71,4 +71,21 @@ import Testing
             """
         #expect(InboxPrinter.render(inbox, now: now) == expected)
     }
+
+    @Test func aChainPrintsItsPositionOnEachDetailLine() {
+        let inbox = InboxBuilder.build(
+            makeResult([
+                makePR(
+                    id: "a", number: 1, title: "Base", repository: "acme/web",
+                    reviewRequestedAt: date("2026-08-10T06:00:00Z"), headRef: "f1", baseRef: "main"),
+                makePR(
+                    id: "b", number: 2, title: "Top", repository: "acme/web",
+                    reviewRequestedAt: date("2026-08-10T07:00:00Z"), headRef: "f2", baseRef: "f1"),
+            ]))
+        let lines = InboxPrinter.render(inbox, now: now).split(separator: "\n").map(String.init)
+        let details = lines.filter { $0.contains("waiting") && $0.contains("+") }
+        #expect(details.count == 2)
+        #expect(details[0].contains(" · stack 1/2 · "))
+        #expect(details[1].contains(" · stack 2/2 · "))
+    }
 }

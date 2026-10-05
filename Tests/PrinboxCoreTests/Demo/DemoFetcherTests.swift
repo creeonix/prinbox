@@ -16,7 +16,7 @@ import Testing
     }
 
     @Test func badgeCountsTheNonDraftReviewAndMentionRows() async throws {
-        #expect(try await inbox().badgeCount == 8)
+        #expect(try await inbox().badgeCount == 9)
     }
 
     @Test func spansThreeFictionalOrganizations() async throws {
@@ -64,7 +64,7 @@ import Testing
         #expect(Set(unseen) == ["DEMO_2104", "DEMO_482", "DEMO_58", "DEMO_145"])
         let box = InboxBuilder.build(result, snoozed: Set(state.snoozed.keys))
         #expect(box.sections.map(\.kind) == SectionKind.allCases)
-        #expect(box.badgeCount == 7)
+        #expect(box.badgeCount == 8)
         #expect(box.section(.waitingOnOthers)?.rows.last?.classification.reason == .snoozed)
     }
 
@@ -80,6 +80,23 @@ import Testing
         #expect(own.classification.reason == .openThreads)
         #expect(own.pendingReplies == 1)
         #expect(RowMarks.isReady(own.pullRequest))
-        #expect(box.sections.flatMap(\.rows).count == 16)
+        #expect(box.sections.flatMap(\.rows).count == 17)
+    }
+
+    @Test func twoChainsOneInsideASectionAndOneAcrossTwo() async throws {
+        let box = try await inbox()
+        let review = try #require(box.section(.needsReview))
+        #expect(review.rows.prefix(2).map(\.id) == ["DEMO_1290", "DEMO_1291"])
+        #expect(
+            review.rows[0].stack
+                == StackPosition(position: 1, size: 2, parentID: nil, parentNumber: nil, rootID: "DEMO_1290"))
+        #expect(RowText.meta(review.rows[1], now: now).hasSuffix("· stack 2/2"))
+        let base = try #require(box.section(.waitingOnOthers)?.rows.first { $0.id == "DEMO_1298" })
+        let top = try #require(box.section(.yourPRs)?.rows.first { $0.id == "DEMO_1301" })
+        #expect(base.stack?.position == 1)
+        #expect(top.stack?.parentID == "DEMO_1298")
+        #expect(RowText.compactTrailer(base, showOrg: true) == "· acme/web · stack 1/2")
+        #expect(RowText.help(top) == "acme/web · stacked on #1298")
+        #expect(box.sections.flatMap(\.rows).filter { $0.stack != nil }.count == 4)
     }
 }

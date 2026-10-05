@@ -5,12 +5,18 @@ public struct InboxRow: Sendable, Equatable, Identifiable {
     public let classification: Classification
     /// Threads waiting for the viewer's answer (Awaiting your reply, Open threads); 0 otherwise.
     public let pendingReplies: Int
+    /// The row's place in a chain of stacked pull requests, nil for a PR outside any chain.
+    public let stack: StackPosition?
     public var id: String { pullRequest.id }
 
-    public init(pullRequest: PullRequest, classification: Classification, pendingReplies: Int = 0) {
+    public init(
+        pullRequest: PullRequest, classification: Classification, pendingReplies: Int = 0,
+        stack: StackPosition? = nil
+    ) {
         self.pullRequest = pullRequest
         self.classification = classification
         self.pendingReplies = pendingReplies
+        self.stack = stack
     }
 }
 
