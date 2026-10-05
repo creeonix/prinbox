@@ -122,4 +122,32 @@ import Testing
         let replies = await serve([], context: makeContext(fetcher: ScriptedFetcher { _ in makeResult([]) }))
         #expect(replies.isEmpty)
     }
+
+    /// One server, two calls; the fetcher flips the setting during call 1, as the app would between questions.
+    @Test func settingsAreReadAgainForEveryCall() async {
+        nonisolated(unsafe) let defaults = MemoryDefaults()
+        defaults.set(false, forKey: SearchScope.hideDraftsKey)
+        let fetcher = ScriptedFetcher { call in
+            if call == 1 { defaults.set(true, forKey: SearchScope.hideDraftsKey) }
+            return makeResult([])
+        }
+        let call = request(1, "tools/call", ["name": "get_inbox", "arguments": ["max_age_seconds": 0]])
+        let transcript = Transcript([call, call])
+        let server = MCPServer(
+            makeContext: { makeContext(fetcher: fetcher, scope: SearchScope.read(from: defaults)) },
+            readLine: transcript.next, write: transcript.write)
+        await server.serve()
+        #expect(transcript.lines.count == 2)
+        let hideDrafts = await fetcher.requests.map { $0.scope.hideDrafts }
+        #expect(hideDrafts == [false, true])
+    }
+
+    @Test func blankLinesAreIgnored() async {
+        let replies = await serve(
+            ["", "   ", "\r", request(1, "ping")],
+            context: makeContext(fetcher: ScriptedFetcher { _ in makeResult([]) })
+        )
+        #expect(replies.count == 1)
+        #expect(replies.first?["id"] == 1)
+    }
 }

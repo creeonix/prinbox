@@ -42,6 +42,9 @@ public enum MCPTools {
         "additionalProperties": false,
     ]
 
+    /// The snooze tools change `state.json`, never GitHub, and a repeat is a no-op.
+    static let writeAnnotations: JSONValue = ["readOnlyHint": false, "destructiveHint": false, "idempotentHint": true]
+
     public static let definitions: JSONValue = [
         [
             "name": "get_inbox",
@@ -58,17 +61,20 @@ public enum MCPTools {
                 ],
                 "additionalProperties": false,
             ],
+            "annotations": ["readOnlyHint": true, "destructiveHint": false],
         ],
         [
             "name": "snooze_pull_request",
             "description":
                 "Parks a pull request until something happens on it: a push, a reply in a thread the user took part in, a new review request, or a review on the user's own pull request. It moves to Waiting on others and leaves the menu-bar count. Idempotent.",
             "inputSchema": idSchema,
+            "annotations": writeAnnotations,
         ],
         [
             "name": "unsnooze_pull_request",
             "description": "Wakes a snoozed pull request now; it returns to its section. Idempotent.",
             "inputSchema": idSchema,
+            "annotations": writeAnnotations,
         ],
     ]
 

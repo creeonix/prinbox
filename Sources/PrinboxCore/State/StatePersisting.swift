@@ -32,9 +32,9 @@ public struct JSONStateFile: StatePersisting {
     }
 
     /// Nil for a missing file; the read itself decides, so a file created between a check and the read is
-    /// still loaded. A file over `sizeLimit` throws before it is read.
+    /// still loaded. A file over `sizeLimit` throws before it is read; a symbolic link is measured by its target.
     public func load() throws -> AppState? {
-        let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size]
+        let size = (try? FileManager.default.attributesOfItem(atPath: url.resolvingSymlinksInPath().path))?[.size]
         if let bytes = (size as? NSNumber)?.intValue ?? size as? Int, bytes > sizeLimit {
             throw StateFileTooLarge(bytes: bytes)
         }

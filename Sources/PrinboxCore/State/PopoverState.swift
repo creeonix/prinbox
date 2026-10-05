@@ -125,7 +125,8 @@ public final class PopoverState {
     /// Rows marked new in every section, folded or not; the header shows it.
     public var newCount: Int { allRows.filter(isNew).count }
 
-    /// The popover closed: the rows it showed are now seen, and a recording in progress ends.
+    /// The popover closed: the rows it showed are now seen, and a recording in progress ends. Closing over
+    /// Settings leaves them first, which commits the Repositories field.
     public func popoverDidClose() {
         if showingSettings { leaveSettings() }
         if isRecordingShortcut { stopRecording() }

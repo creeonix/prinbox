@@ -44,6 +44,8 @@ import Testing
         #expect(tools[0]["description"]?.stringValue?.contains("docs/inbox-json.md") == true)
         #expect(tools[0]["description"]?.stringValue?.contains("60 seconds") == true)
         #expect(tools[1]["description"]?.stringValue?.contains("Idempotent") == true)
+        #expect(tools[0]["annotations"]?["readOnlyHint"] == true)
+        #expect(tools[1]["annotations"]?["idempotentHint"] == true)
     }
 
     @Test func getInboxServesTheCacheByDefaultAndFetchesAtZero() async throws {
@@ -97,13 +99,13 @@ import Testing
         #expect(result.structuredContent?["sections"]?[0]?["rows"]?[0]?["id"] == "PR_1")
     }
 
-    @Test func aServedCacheIsNeverAnErrorEvenAfterAFailedFetch() async throws {
+    @Test func aServedCacheIsNeverAnErrorEvenWhenAFetchWouldFail() async throws {
         let logger = MemoryLogging()
+        let fetcher = ScriptedFetcher { _ in throw FetchError.offline }
         let run = InboxRun(
-            context: makeContext(
-                fetcher: ScriptedFetcher { _ in throw FetchError.offline }, cache: MemoryCache(cached([pr1])),
-                logger: logger))
+            context: makeContext(fetcher: fetcher, cache: MemoryCache(cached([pr1])), logger: logger))
         let served = try await MCPTools.call("get_inbox", arguments: nil, run: run)
+        #expect(await fetcher.calls == 0)
         #expect(served.isError == false)
         #expect(served.structuredContent?["error"] == .null)
         #expect(logger.messages(.notice).isEmpty)

@@ -5,7 +5,8 @@ import Foundation
 public enum CLI {
     public static func run(
         _ invocation: Invocation, context: RunContext, stdout: @escaping (String) -> Void,
-        stderr: @escaping (String) -> Void, readLine: @escaping () -> String? = { nil }
+        stderr: @escaping (String) -> Void, readLine: @escaping () -> String? = { nil },
+        makeContext: (() -> RunContext)? = nil
     ) async -> Int32 {
         let run = InboxRun(context: context)
         switch invocation.command {
@@ -38,7 +39,7 @@ public enum CLI {
         case .open(let id):
             return report(await run.open(id: id), stderr: stderr)
         case .mcp:
-            await MCPServer(context: context, readLine: readLine, write: stdout).serve()
+            await MCPServer(makeContext: makeContext ?? { context }, readLine: readLine, write: stdout).serve()
             return 0
         }
     }

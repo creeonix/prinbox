@@ -15,6 +15,8 @@ with them (see `docs/state-file.md`). Logs go to stderr, which the client keeps;
 
 The server answers `initialize` with the client's protocol version when it is one of `2025-11-25`,
 `2025-06-18`, `2025-03-26` or `2024-11-05`, else with `2025-11-25`; its only capability is `tools`.
+The server reads `settings.json` again for every call, so a setting changed in the app applies to the agent's
+next question.
 
 ## Tools
 
@@ -29,7 +31,8 @@ fetches now. The document's `source` (`fetch`, `unchanged`, `cache`) and `checke
 A fetch beside the running app costs GitHub one request when nothing changed. Snooze parks a pull request
 until something happens on it (a push, a reply in a thread the user took part in, a new review request, a
 review on the user's own PR); both tools are idempotent. There is no tool to open a pull request: the URL is in
-every row, and opening a browser is the client's job.
+every row, and opening a browser is the client's job. The tools carry MCP annotations: `get_inbox` is
+read-only, the other two are idempotent, none is destructive.
 
 ## Errors
 
@@ -38,7 +41,7 @@ every row, and opening a browser is the client's job.
 | exit 2 (unknown tool, a missing or malformed `id`, a bad `max_age_seconds`, an unknown argument) | JSON-RPC error `-32602` with the message |
 | exit 1 or 3 on `get_inbox` (fetch failed, gh missing or signed out) | the document with `error` set and the cached rows if any, `isError: true`; when setup is needed, a second text block holds the setup steps |
 | exit 1 or 3 on snooze or unsnooze | `isError: true` with the command's own message as the text |
-| anything else | an unknown method is `-32601`; a line that is not JSON is `-32700`; a batch is `-32600` |
+| anything else | an unknown method is `-32601`; a line that is not JSON is `-32700` (a blank line gets no reply); a batch is `-32600` |
 
 A `get_inbox` served from the cache is never an error, even when the last fetch failed: the call asked for
 the cache and got it.

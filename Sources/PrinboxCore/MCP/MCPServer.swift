@@ -2,7 +2,8 @@ import Foundation
 
 /// `prinbox mcp` (spec section 3): the Model Context Protocol server over stdio. One JSON-RPC message per line
 /// in and out, requests handled one at a time in arrival order, nothing but protocol on stdout. Logs go
-/// through the context's logger, which the command points at stderr. The reader and writer are injected, so
+/// through the context's logger, which the command points at stderr. The context is built afresh for every
+/// message, so a setting changed in the app applies to the next call. The reader and writer are injected, so
 /// a test drives a whole session in memory.
 public struct MCPServer {
     /// Newest first. A client's version is echoed when it is one of these; any other gets the first.
@@ -10,14 +11,22 @@ public struct MCPServer {
     public static let instructions =
         "prinbox is the user's inbox of GitHub pull requests waiting on them, read through the GitHub CLI. Call get_inbox first; every id the other tools take is a rows[].id from it. Nothing here reads the text of a comment, a review or a description."
 
-    let context: RunContext
+    let makeContext: () -> RunContext
     let readLine: () -> String?
     let write: (String) -> Void
 
-    public init(context: RunContext, readLine: @escaping () -> String?, write: @escaping (String) -> Void) {
-        self.context = context
+    /// `makeContext` runs once per message, so the settings it reads are the ones current at that call.
+    public init(
+        makeContext: @escaping () -> RunContext, readLine: @escaping () -> String?, write: @escaping (String) -> Void
+    ) {
+        self.makeContext = makeContext
         self.readLine = readLine
         self.write = write
+    }
+
+    /// One context for the whole session; the tests use it.
+    public init(context: RunContext, readLine: @escaping () -> String?, write: @escaping (String) -> Void) {
+        self.init(makeContext: { context }, readLine: readLine, write: write)
     }
 
     /// Reads until stdin closes; a reply, when there is one, is written with its newline before the next read.
@@ -27,8 +36,10 @@ public struct MCPServer {
         }
     }
 
-    /// One line in, zero or one line out.
+    /// One line in, zero or one line out. A blank or whitespace-only line is not a message and gets no reply.
     public func handle(_ line: String) async -> String? {
+        guard !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let context = makeContext()
         switch JSONRPC.parse(line) {
         case .invalid(let error):
             context.logger.debug(.cli, "mcp: unparseable line")
@@ -37,7 +48,7 @@ public struct MCPServer {
             return nil
         case .request(let id, let method, let params):
             do {
-                return JSONRPC.response(id: id, result: try await dispatch(method, params: params))
+                return JSONRPC.response(id: id, result: try await dispatch(method, params: params, context: context))
             } catch let error as JSONRPCError {
                 return JSONRPC.error(id: id, error)
             } catch {
@@ -47,7 +58,7 @@ public struct MCPServer {
         }
     }
 
-    func dispatch(_ method: String, params: JSONValue?) async throws -> JSONValue {
+    func dispatch(_ method: String, params: JSONValue?, context: RunContext) async throws -> JSONValue {
         switch method {
         case "initialize":
             let requested = params?["protocolVersion"]?.stringValue

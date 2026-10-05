@@ -44,9 +44,8 @@ popover on its next refresh or open, and a snooze in the popover shows in `prinb
 `showOrganizationAvatars`. A missing key means its default. The app rewrites one key at a time after
 re-reading the file, so a hand edit made while the app runs survives; the edit itself takes effect at the next
 launch. The command and the server read `followReviewThreads`, `ghPath`, `directReviewRequestsOnly`,
-`repositories` and `hideDrafts`. On the first 0.5.0 launch the app
-copies every known key out of the `io.github.creeonix.prinbox` defaults domain into the file and removes it
-there.
+`repositories` and `hideDrafts`; the server reads them at every call. On the first 0.5.0 launch the app copies
+every known key out of the `io.github.creeonix.prinbox` defaults domain into the file and removes it there.
 
 ### Cache
 
