@@ -375,4 +375,9 @@ final class QueryLog: @unchecked Sendable {
         #expect(log.detailsQueries.count == 1)
         #expect(logger.messages(.notice).isEmpty)
     }
+
+    @Test func remainingTextPrintsAQuestionMarkWhenUnknown() {
+        #expect(GhClient.remainingText(nil) == "?")
+        #expect(GhClient.remainingText(4890) == "4890")
+    }
 }

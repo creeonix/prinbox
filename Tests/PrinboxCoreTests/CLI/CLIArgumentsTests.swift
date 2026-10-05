@@ -88,4 +88,13 @@ import Testing
             #expect(CLIArguments.usage.contains(word), "\(word) missing from usage")
         }
     }
+
+    @Test func moreUsageEdges() throws {
+        #expect(usageError("inbox --format=") == "unknown format '' (json, lines, waybar, tmux)")
+        #expect(usageError("--settings --verbose inbox") == "--settings needs a value")
+        #expect(try parse("inbox --max-age 0").command == .inbox(InboxOptions(cacheMode: .maxAge(0))))
+        #expect(try parse("inbox --max-age 1.5").command == .inbox(InboxOptions(cacheMode: .maxAge(1.5))))
+        #expect(try parse("--format lines inbox").command == .inbox(InboxOptions(format: .lines)))
+        #expect(try parse("--settings /tmp/s.json snooze PR_1").settingsPath == "/tmp/s.json")
+    }
 }

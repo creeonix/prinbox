@@ -372,4 +372,33 @@ import Testing
         #expect(printed.exitCode == 0)
         #expect(await fetcher.requests.first == FetchRequest(scope: scope))
     }
+
+    @Test func writeStateFailurePathsReportOnStderr() async {
+        let cache = MemoryCache(cached([pr1]))
+        let unreadable = InboxRun(
+            context: makeContext(
+                fetcher: ScriptedFetcher { _ in makeResult([]) }, cache: cache,
+                persistence: FailingPersistence(loadFails: true, saveFails: true)))
+        #expect(
+            await unreadable.snooze(id: "PR_1")
+                == CommandOutcome(
+                    exitCode: 1, stderr: ["prinbox: state.json is unreadable, nothing written"], pullRequest: pr1))
+        let unsaveable = InboxRun(
+            context: makeContext(
+                fetcher: ScriptedFetcher { _ in makeResult([]) }, cache: cache,
+                persistence: FailingPersistence(loadFails: false, saveFails: true)))
+        let outcome = await unsaveable.snooze(id: "PR_1")
+        #expect(outcome.exitCode == 1)
+        #expect(outcome.stderr.first?.hasPrefix("prinbox: state.json not saved: ") == true)
+    }
+
+    @Test func snoozeAndOpenExit3WhenSetupIsNeeded() async {
+        let run = InboxRun(context: makeContext(fetcher: ScriptedFetcher { _ in throw FetchError.loggedOut }))
+        let snoozed = await run.snooze(id: "PR_1")
+        #expect(snoozed.exitCode == 3)
+        #expect(snoozed.stderr == [SetupGuide.signedOut.plainText])
+        let opened = await run.open(id: "PR_1")
+        #expect(opened.exitCode == 3)
+        #expect(opened.stderr == [SetupGuide.signedOut.plainText])
+    }
 }

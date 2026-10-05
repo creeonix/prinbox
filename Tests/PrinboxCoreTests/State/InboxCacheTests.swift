@@ -167,4 +167,22 @@ import Testing
         #expect(memory.writeCount == 1)
         #expect(memory.saved?.viewer == "me")
     }
+
+    @Test func updateUnderTheLockWritesAndReleases() throws {
+        try withCacheFile { file, url in
+            let logger = MemoryLogging()
+            let lock = FileLock(
+                url: url.deletingLastPathComponent().appendingPathComponent("prinbox.lock"), patience: 0.2,
+                logger: logger)
+            let locked = JSONCacheFile(url: url, lock: lock, logger: logger)
+            locked.update { _ in cache(result: makeResult([makePR(id: "PR_1")])) }
+            locked.update { existing in
+                guard var next = existing else { return nil }
+                next.checkedAt = now + 60
+                return next
+            }
+            #expect(file.load()?.checkedAt == now + 60)
+            #expect(logger.lines.isEmpty)
+        }
+    }
 }

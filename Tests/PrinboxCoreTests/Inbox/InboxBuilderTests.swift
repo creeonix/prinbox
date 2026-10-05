@@ -249,4 +249,36 @@ import Testing
         #expect(InboxBuilder.build(makeResult([makePR()])).scope == .none)
         #expect(Inbox.empty.moreURL(.mentions) == SectionKind.mentions.moreURL)
     }
+
+    @Test func aBlockEndingExactlyAtTheCapIsNotStretched() {
+        // s1..s6 wait since Aug 1 (01:00..06:00), the block x (Aug 2), y (Aug 3) follows, w (Aug 5) is last:
+        // s1 s2 s3 s4 s5 s6 x y w. Cap 8 ends on y, the block's last member; nothing after it shares the root.
+        let singles = (1...6).map {
+            makePR(id: "s\($0)", number: $0, reviewRequestedAt: date("2026-08-01T0\($0):00:00Z"))
+        }
+        let x = makePR(id: "x", number: 7, reviewRequestedAt: ago(2), headRef: "f1", baseRef: "main")
+        let y = makePR(id: "y", number: 8, reviewRequestedAt: ago(3), headRef: "f2", baseRef: "f1")
+        let w = makePR(id: "w", number: 9, reviewRequestedAt: ago(5))
+        let inbox = InboxBuilder.build(makeResult(singles + [x, y, w]), cap: 8)
+        #expect(inbox.section(.needsReview)?.rows.map(\.id) == ["s1", "s2", "s3", "s4", "s5", "s6", "x", "y"])
+        #expect(inbox.section(.needsReview)?.moreCount == 1)
+    }
+
+    @Test func theCapStretchesOverAWholeChainOfThree() {
+        // s1..s6, then the block x (Aug 2), y (Aug 3), z (Aug 4), then w (Aug 5): ten rows. Cap 7 lands on x
+        // and takes y and z with it; cap 8 lands on y and takes z. Both show nine rows and leave w.
+        let singles = (1...6).map {
+            makePR(id: "s\($0)", number: $0, reviewRequestedAt: date("2026-08-01T0\($0):00:00Z"))
+        }
+        let x = makePR(id: "x", number: 7, reviewRequestedAt: ago(2), headRef: "f1", baseRef: "main")
+        let y = makePR(id: "y", number: 8, reviewRequestedAt: ago(3), headRef: "f2", baseRef: "f1")
+        let z = makePR(id: "z", number: 9, reviewRequestedAt: ago(4), headRef: "f3", baseRef: "f2")
+        let w = makePR(id: "w", number: 10, reviewRequestedAt: ago(5))
+        for cap in [7, 8] {
+            let inbox = InboxBuilder.build(makeResult(singles + [x, y, z, w]), cap: cap)
+            #expect(inbox.section(.needsReview)?.rows.map(\.id).suffix(3) == ["x", "y", "z"], "cap \(cap)")
+            #expect(inbox.section(.needsReview)?.rows.count == 9, "cap \(cap)")
+            #expect(inbox.section(.needsReview)?.moreCount == 1, "cap \(cap)")
+        }
+    }
 }

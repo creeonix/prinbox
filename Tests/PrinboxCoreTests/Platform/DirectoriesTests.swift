@@ -43,4 +43,9 @@ import Testing
         #expect(JSONStateFile.url(in: dirs).path == "/Users/dev/.local/state/prinbox/state.json")
         #expect(AvatarCache.directory(in: dirs).path == "/Users/dev/.cache/prinbox/avatars")
     }
+
+    @Test func relativeXDGCacheHomeIsIgnoredToo() {
+        let dirs = XDGDirectories(home: home, environment: ["XDG_CACHE_HOME": "relative/cache"])
+        #expect(dirs.cache.path == "/Users/dev/.cache/prinbox")
+    }
 }
