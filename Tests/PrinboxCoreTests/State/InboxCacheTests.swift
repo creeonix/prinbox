@@ -92,6 +92,22 @@ import Testing
         }
     }
 
+    @Test func aFailedWriteLogsAnErrorWithThePathKeptPrivate() throws {
+        let blocker = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "prinbox-blocker-\(UUID().uuidString)")
+        try Data().write(to: blocker)
+        defer { try? FileManager.default.removeItem(at: blocker) }
+        let logger = MemoryLogging()
+        let file = JSONCacheFile(url: blocker.appendingPathComponent("cache.json"), logger: logger)
+        file.update { _ in cache(result: makeResult([])) }
+        let errors = logger.lines.filter { $0.level == .error }
+        #expect(errors.count == 1)
+        #expect(errors.first?.category == .state)
+        #expect(errors.first?.message == "cache.json not saved")
+        #expect(errors.first?.detail != nil)
+        #expect(file.load() == nil)
+    }
+
     @Test func updateReturningNilWritesNothing() throws {
         try withCacheFile { file, url in
             file.update { _ in nil }

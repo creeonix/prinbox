@@ -31,7 +31,7 @@ public struct JSONCacheFile: CacheStoring {
         do {
             try write(next)
         } catch {
-            logger.error(.state, "cache.json not saved: \(String(describing: error))")
+            logger.error(.state, "cache.json not saved", private: String(describing: error))
         }
     }
 
