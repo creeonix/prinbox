@@ -37,6 +37,7 @@ import Testing
         ] {
             #expect(text.contains(field), "\(field)")
         }
+        #expect(text.contains("isCrossRepository"))
         #expect(!text.contains("bodyText"))
         let rows = DetailsQuery.template(includeConversation: false)
         #expect(!rows.contains("reviewThreads"))

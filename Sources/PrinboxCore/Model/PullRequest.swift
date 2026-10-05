@@ -78,6 +78,8 @@ public struct PullRequest: Sendable, Equatable, Identifiable, Codable {
     /// Review threads and reviews; nil when the conversation was not fetched (setting off, demo without them).
     public let threads: [ReviewThread]?
     public let reviews: [Review]?
+    /// The head branch lives in another repository (a fork). Such a PR is never another PR's parent.
+    public let isCrossRepository: Bool
 
     public init(
         id: String, number: Int, title: String, url: URL, repository: String, isArchived: Bool,
@@ -86,7 +88,7 @@ public struct PullRequest: Sendable, Equatable, Identifiable, Codable {
         ci: CIState, viewerReview: ViewerReview?, reviewRequestedAt: Date?, readyForReviewAt: Date?,
         source: SearchSource, commentCount: Int = 0, ownerAvatarURL: URL? = nil, ownerIsOrganization: Bool = false,
         headRef: String? = nil, baseRef: String? = nil, lastCommitAt: Date? = nil, threads: [ReviewThread]? = nil,
-        reviews: [Review]? = nil
+        reviews: [Review]? = nil, isCrossRepository: Bool = false
     ) {
         self.id = id
         self.number = number
@@ -116,6 +118,7 @@ public struct PullRequest: Sendable, Equatable, Identifiable, Codable {
         self.lastCommitAt = lastCommitAt
         self.threads = threads
         self.reviews = reviews
+        self.isCrossRepository = isCrossRepository
     }
 
     /// Repository owner: "acme" for "acme/web". Shown as the org name.

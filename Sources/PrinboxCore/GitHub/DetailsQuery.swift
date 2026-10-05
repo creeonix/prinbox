@@ -7,7 +7,7 @@ public enum DetailsQuery {
 
     static let rowFields = [
         "id number title url isDraft additions deletions createdAt updatedAt totalCommentsCount",
-        "headRefName baseRefName",
+        "headRefName baseRefName isCrossRepository",
         "author { login avatarUrl(size: 64) }",
         "repository { nameWithOwner isArchived owner { __typename login avatarUrl(size: 64) } }",
         "reviewDecision mergeable",

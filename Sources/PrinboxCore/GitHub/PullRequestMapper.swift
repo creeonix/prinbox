@@ -113,7 +113,8 @@ enum PullRequestMapper {
             baseRef: node.baseRefName,
             lastCommitAt: lastCommit?.committedDate,
             threads: node.reviewThreads.map(threads),
-            reviews: node.reviews.map(reviews)
+            reviews: node.reviews.map(reviews),
+            isCrossRepository: node.isCrossRepository ?? false
         )
     }
 

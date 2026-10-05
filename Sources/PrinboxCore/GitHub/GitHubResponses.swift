@@ -92,6 +92,7 @@ struct PRNode: Decodable {
     let latestOpinionatedReviews: Connection<ReviewStateNode>?
     let headRefName: String?
     let baseRefName: String?
+    let isCrossRepository: Bool?
     let reviewThreads: Connection<ThreadNode>?
     let reviews: Connection<ReviewNode>?
 

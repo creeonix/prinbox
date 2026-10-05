@@ -155,4 +155,16 @@ import Testing
         #expect(try map([:], source: .involved).source == .involved)
         #expect(try map([:], source: .mine).source == .mine)
     }
+
+    @Test func isCrossRepositoryReadsTrueAndDefaultsToFalse() throws {
+        let fork = try DetailsResponse.decode(
+            TwoPhaseJSON.details([TwoPhaseJSON.node("PR_1", ["isCrossRepository": true])]))
+        let plain = try DetailsResponse.decode(TwoPhaseJSON.details([TwoPhaseJSON.node("PR_2")]))
+        let forkPR = PullRequestMapper.makePullRequest(
+            try #require(fork.data?.nodes?.first ?? nil), source: .review, viewer: "me")
+        let plainPR = PullRequestMapper.makePullRequest(
+            try #require(plain.data?.nodes?.first ?? nil), source: .review, viewer: "me")
+        #expect(forkPR.isCrossRepository)
+        #expect(!plainPR.isCrossRepository)
+    }
 }

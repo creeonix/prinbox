@@ -45,7 +45,7 @@
       | {
           id: prid($id), number, title: "PR title \($n)", url: "https://github.com/\($repo)/pull/\(.number)",
           isDraft, additions, deletions, createdAt, updatedAt, totalCommentsCount,
-          headRefName: ref(.headRefName), baseRefName: ref(.baseRefName),
+          headRefName: ref(.headRefName), baseRefName: ref(.baseRefName), isCrossRepository,
           author: (if .author == null then null
             else {login: login(.author.login), avatarUrl: "https://avatars.githubusercontent.com/u/\($n)?v=4"} end),
           repository: {nameWithOwner: $repo, isArchived: .repository.isArchived, owner: (.repository.owner | ownerNode($raw))},
