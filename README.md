@@ -54,7 +54,9 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
   review again. It moves to Waiting on others, leaves the count, and comes back by itself when someone
   replies in a thread that concerns you, pushes a commit, requests your review again or (on your PRs)
   submits a review; your own activity keeps it parked. `U` brings it back sooner. Snoozes are kept in
-  `~/Library/Application Support/prinbox/state.json`.
+  `state.json` (see Privacy).
+- **Stacked pull requests:** a PR whose base branch is another open PR's head branch says `stack 2/3` in its
+  fact line, and the chain stays together in its section. Simple chains only; a fork or a cycle gets no badge.
 - **New since your last look:** rows that appeared or changed since you last closed the popover carry an accent
   bar at their left edge, and the header counts them.
 - **Notifications** (off by default): one banner per refresh when a PR enters Needs your review, Replies to
@@ -92,6 +94,9 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
 3. Open PRInbox. Releases are signed ad hoc rather than with an Apple Developer ID, so macOS blocks the
    first launch. Right-click PRInbox in Applications and choose **Open**, or go to
    **System Settings › Privacy & Security** and click **Open Anyway**. This is needed once.
+
+Or with Homebrew: `brew install --cask creeonix/tap/prinbox` for the app (add `--no-quarantine` to skip the
+first-launch step) and `brew install creeonix/tap/prinbox-cli` for the command.
 
 Requires macOS 14 or later, on Apple silicon or Intel.
 
@@ -139,14 +144,13 @@ The popover replaces the list with setup steps, each command with a Copy button:
 
 PRInbox checks again every 10 seconds, so it recovers by itself shortly after you finish.
 
-If gh lives somewhere unusual, point PRInbox at it:
+If gh lives somewhere unusual, point PRInbox at it in `~/.config/prinbox/settings.json`:
 
-```sh
-defaults write io.github.creeonix.prinbox ghPath /path/to/gh
+```json
+{ "ghPath" : "/path/to/gh" }
 ```
 
-When this override is set, PRInbox uses only that path. Remove it with
-`defaults delete io.github.creeonix.prinbox ghPath`.
+When this is set, PRInbox and `prinbox` use only that path. Remove the key to go back to Homebrew's gh or PATH.
 
 ### Settings
 
@@ -154,7 +158,9 @@ Open Settings with the gear in the popover. It holds the global shortcut, launch
 organization**, **Show organization avatars**, **Compact rows**, **Follow review threads**, **Notify about
 new review requests and replies**, the detected `gh` path, the version and Quit. Turning notifications on
 asks macOS for permission once; if you decline, Settings says where to turn them on. Settings stay inside
-the popover, so there is never a window for a tiling window manager to grab.
+the popover, so there is never a window for a tiling window manager to grab. Every setting lives in
+`~/.config/prinbox/settings.json`, one key per switch; a hand edit takes effect at the next launch, and the
+first 0.5.0 launch moves your 0.4 settings there out of macOS defaults.
 
 <p align="center">
   <img src="docs/images/popover-compact.png" width="460" alt="The same inbox with Compact rows on">
@@ -162,10 +168,34 @@ the popover, so there is never a window for a tiling window manager to grab.
 
 ### Command line
 
+The `prinbox` command gives the same inbox to a terminal, a status line or a picker. It shares the settings,
+the snoozes and the fetch cache with the app, so a run beside the app costs GitHub one request when nothing
+changed.
+
 ```sh
-/Applications/PRInbox.app/Contents/MacOS/Prinbox --print   # print your inbox once (snoozed PRs show as such)
-/Applications/PRInbox.app/Contents/MacOS/Prinbox --demo    # run with sample data
+brew install creeonix/tap/prinbox-cli        # or: make install-cli (into ~/.local/bin)
+prinbox inbox                                # the inbox as JSON (docs/inbox-json.md)
+prinbox inbox --format lines                 # one tab-separated row per line, for fzf, walker or rofi
+prinbox inbox --format tmux --max-age 60     # the count for a status line, fetching at most once a minute
+prinbox inbox --format waybar                # Waybar's custom-module object
+prinbox inbox --cached                       # print the cache without contacting GitHub (instant pickers)
+prinbox print                                # the inbox as text, a full fetch that touches nothing
+prinbox snooze PR_kwDOA1                     # park a pull request (ids come from the JSON or the lines)
+prinbox unsnooze PR_kwDOA1
+prinbox open PR_kwDOA1                       # open it in the browser
 ```
+
+A tmux status segment: `#(prinbox inbox --format tmux --max-age 60)`. An fzf picker:
+`prinbox inbox --cached --format lines | fzf --delimiter '\t' --with-nth 3..7 | cut -f1 | xargs prinbox open`.
+
+Exit codes: 0 when GitHub answered or the cache was served as asked, 1 when the fetch failed (cached rows are
+still printed, with `error` set), 2 for usage, 3 when gh needs setup. `--format waybar` always exits 0.
+`--notify` delivers arrivals through `notify-send` on Linux; on the Mac the app is the notifier, so run one
+notifier per machine. `--verbose` shows the fetch log on stderr; `--settings <path>` names another settings
+file. In `prinbox print` the fact line and the compact line both show `stack i/n`.
+
+The app binary keeps two flags: `/Applications/PRInbox.app/Contents/MacOS/Prinbox --print` (the same as
+`prinbox print`) and `--demo` (sample data). `--settings <path>` works there too.
 
 ## Privacy and security
 
@@ -175,10 +205,12 @@ the popover, so there is never a window for a tiling window manager to grab.
   GitHub API calls (the pull requests waiting on you in two steps, an ids-only search and the details in
   small batches, every five minutes or when something changed; the latest PRInbox release once a day) and
   avatar downloads from `avatars.githubusercontent.com` (authors and repository owners).
-- **Local data:** avatars are cached in `~/Library/Caches/io.github.creeonix.prinbox`. Settings live in
-  the app's user defaults. Snoozes and the "seen" ledger live in
-  `~/Library/Application Support/prinbox/state.json`, a small JSON file keyed by PR id; `make uninstall`
-  removes all three. [docs/state-file.md](docs/state-file.md) describes `state.json`.
+- **Local data:** settings live in `~/.config/prinbox/settings.json`. Snoozes and the "seen" ledger live in
+  `~/Library/Application Support/prinbox/state.json`, the last fetch in `cache.json` beside it (titles,
+  logins and URLs, never comment text) and the daily release check in `update.json`; avatars are cached in
+  `~/Library/Caches/io.github.creeonix.prinbox`. `make uninstall` removes all of them.
+  [docs/state-file.md](docs/state-file.md) describes the files and the lock that lets the app and the command
+  write them.
 - **What it reads:** PRInbox reads who commented in review threads and who reviewed, and when. It never
   fetches, stores or logs the text of a comment, a review or a description.
 
@@ -203,21 +235,26 @@ Other targets:
 | `make lint` | runs swift-format lint, plus a check for `@State`/`#Preview` |
 | `make coverage` | runs the tests with coverage; fails below 80% for PrinboxCore |
 | `make run` | runs the app from the build directory |
+| `make cli` | builds the `prinbox` command |
+| `make install-cli` | copies the command to `~/.local/bin` (`PREFIX` overrides) |
+| `make cli-tarball VERSION=x.y.z` | builds the command's release asset |
 | `make dmg VERSION=x.y.z` | builds the release DMG into `build/` |
 | `make icon` | rebuilds the app icon from `Resources/AppIcon-source.png` |
 
 ## Development
 
 - **Code layout:**
-  - `Sources/PrinboxCore` holds all the logic (gh access, classification, formatting, state) and is
-    unit tested. It has no AppKit.
-  - `Sources/PrinboxApp` is the thin AppKit and SwiftUI shell.
+  - `Sources/PrinboxCore` holds all the logic (gh access, classification, formatting, state, the command's
+    logic under `CLI/`) and is unit tested. It has no AppKit.
+  - `Sources/PrinboxApp` is the thin AppKit and SwiftUI shell (macOS).
+  - `Sources/PrinboxCLI` is the command's `main.swift` and composition root.
 - **Fixtures:** `scripts/record-fixture.sh <name>` records the live inbox as a two-phase fixture (the
   search and the detail batches). It rebuilds the response from an allowlist of fields and replaces
   repositories, logins, titles, URLs and ids with placeholders, and a test checks every string in every
   fixture.
 - **State file:** [docs/state-file.md](docs/state-file.md) is the contract for
   `~/Library/Application Support/prinbox/state.json`.
+- **The inbox JSON:** [docs/inbox-json.md](docs/inbox-json.md).
 - **UI checks:** things the tests cannot cover are listed in
   [docs/manual-checklist.md](docs/manual-checklist.md).
 - **Releases:** see [RELEASING.md](RELEASING.md).
@@ -226,7 +263,10 @@ Other targets:
     `@Observable` models instead.
   - XCTest, so the tests use Swift Testing.
   - A reliably found swift-testing macro plugin; `make test` passes its path explicitly.
-- **Linux:** CI builds the library and runs the whole test suite in a `swift:6.4` container; the command runs there too, the app does not.
+- **Linux:** CI builds the library and the command and runs the suite in a `swift:6.4` container (`make test`
+  stays macOS; `docker run --rm -v "$PWD":/src -w /src swift:6.4 bash -c 'apt-get update -qq && apt-get
+  install -y -qq jq && swift build --scratch-path .build-linux && swift test --scratch-path .build-linux'`
+  runs it locally).
 
 ## Roadmap
 
