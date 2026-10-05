@@ -51,7 +51,15 @@ mkdir -p "$tap_dir/Casks" "$tap_dir/Formula"
 render prinbox.rb > "$tap_dir/Casks/prinbox.rb"
 render prinbox-cli.rb > "$tap_dir/Formula/prinbox-cli.rb"
 git -C "$tap_dir" add Casks/prinbox.rb Formula/prinbox-cli.rb
-if git -C "$tap_dir" diff --cached --quiet; then echo "tap already at $version"; exit 0; fi
+if git -C "$tap_dir" diff --cached --quiet; then
+    if [ -n "$(git -C "$tap_dir" rev-list @{u}..HEAD 2>/dev/null)" ]; then
+        git -C "$tap_dir" push
+        echo "tap pushed $version"
+        exit 0
+    fi
+    echo "tap already at $version"
+    exit 0
+fi
 git -C "$tap_dir" commit -m "prinbox $version"
 git -C "$tap_dir" push
 echo "tap updated to $version"

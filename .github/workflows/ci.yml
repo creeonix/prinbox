@@ -32,7 +32,7 @@ jobs:
           printf '%064d  prinbox-0.0.0-macos.tar.gz\n' 2 > "$dir/prinbox-0.0.0-macos.tar.gz.sha256"
           out=$(scripts/update-tap.sh 0.0.0 --from-dir "$dir" --dry-run)
           grep -q 'version "0.0.0"' <<<"$out"
-          ! grep -q '@[A-Z0-9_]*@' <<<"$out"
+          if grep -q '@[A-Z0-9_]*@' <<<"$out"; then echo "placeholder left in the rendered tap files" >&2; exit 1; fi
       - name: Test with coverage
         run: make coverage
   linux:
