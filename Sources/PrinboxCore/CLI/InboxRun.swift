@@ -44,15 +44,18 @@ public struct InboxRun: Sendable {
             return outcome(fetched, exitCode: 0, extra: [])
         case .failure(let error):
             let exitCode: Int32 = error.needsSetup ? 3 : 1
+            let guide = SetupGuide.for(error, ghOverride: context.ghOverride)?.plainText
             guard let cached else {
                 return RunOutcome(
                     document: emptyDocument(error: errorInfo(error, lastSuccess: nil)), exitCode: exitCode,
-                    stderr: [stderrLine(error, lastSuccess: nil)])
+                    stderr: [stderrLine(error, lastSuccess: nil)], setupGuide: guide)
             }
             let fallback = Served(
                 result: cached.result, source: "cache", fetchedAt: cached.fetchedAt, checkedAt: cached.checkedAt,
                 error: error)
-            return outcome(fallback, exitCode: exitCode, extra: [stderrLine(error, lastSuccess: cached.checkedAt)])
+            return outcome(
+                fallback, exitCode: exitCode, extra: [stderrLine(error, lastSuccess: cached.checkedAt)],
+                setupGuide: guide)
         }
     }
 
@@ -147,7 +150,7 @@ public struct InboxRun: Sendable {
 
     // MARK: Document
 
-    private func outcome(_ served: Served, exitCode: Int32, extra: [String]) -> RunOutcome {
+    private func outcome(_ served: Served, exitCode: Int32, extra: [String], setupGuide: String? = nil) -> RunOutcome {
         let (state, warning) = loadStateForReading()
         let snoozed = Set(Snooze.reconcile(state.snoozed, with: served.result).keys)
         let inbox = InboxBuilder.build(served.result, snoozed: snoozed)
@@ -155,7 +158,9 @@ public struct InboxRun: Sendable {
             prinbox: context.version, source: served.source, fetchedAt: served.fetchedAt, checkedAt: served.checkedAt,
             viewer: served.result.viewerLogin, error: served.error.map { errorInfo($0, lastSuccess: served.checkedAt) })
         let document = InboxDocument.make(inbox, meta: meta, isNew: state.isNew, now: context.clock())
-        return RunOutcome(document: document, exitCode: exitCode, stderr: extra + (warning ? [Self.stateWarning] : []))
+        return RunOutcome(
+            document: document, exitCode: exitCode, stderr: extra + (warning ? [Self.stateWarning] : []),
+            setupGuide: setupGuide)
     }
 
     private func emptyDocument(error: InboxDocument.ErrorInfo?) -> InboxDocument {
@@ -229,14 +234,18 @@ public struct InboxRun: Sendable {
             pr = found
         }
         let now = context.clock()
-        return writeState { state in
+        let written = writeState { state in
             guard state.snoozed[id] == nil else { return }
             state.snoozed[id] = SnoozeEntry(snoozedAt: now, updatedAt: pr.updatedAt)
         }
+        return CommandOutcome(exitCode: written.exitCode, stderr: written.stderr, pullRequest: pr)
     }
 
+    /// Idempotent; the cached row, when there is one, rides along for the server's report.
     public func unsnooze(id: String) -> CommandOutcome {
-        writeState { $0.snoozed[id] = nil }
+        let written = writeState { $0.snoozed[id] = nil }
+        let pr = context.cache.load()?.result.pullRequests.first { $0.id == id }
+        return CommandOutcome(exitCode: written.exitCode, stderr: written.stderr, pullRequest: pr)
     }
 
     public func open(id: String) async -> CommandOutcome {
@@ -247,7 +256,7 @@ public struct InboxRun: Sendable {
             return CommandOutcome(exitCode: 1, stderr: ["prinbox: \(id) is not in your inbox"])
         case .success(let found?):
             await context.opener.open(found.url)
-            return CommandOutcome(exitCode: 0, stderr: [])
+            return CommandOutcome(exitCode: 0, stderr: [], pullRequest: found)
         }
     }
 

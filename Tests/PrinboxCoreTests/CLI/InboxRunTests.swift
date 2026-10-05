@@ -259,7 +259,7 @@ import Testing
         let run = InboxRun(
             context: makeContext(fetcher: fetcher, cache: MemoryCache(cached([pr1])), persistence: persistence))
         let first = await run.snooze(id: "PR_1")
-        #expect(first == CommandOutcome(exitCode: 0, stderr: []))
+        #expect(first == CommandOutcome(exitCode: 0, stderr: [], pullRequest: pr1))
         #expect(persistence.saved?.snoozed["PR_1"] == SnoozeEntry(snoozedAt: start, updatedAt: pr1.updatedAt))
         #expect(await fetcher.calls == 0)
         let again = await run.snooze(id: "PR_1")

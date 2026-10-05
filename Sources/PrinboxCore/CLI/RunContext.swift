@@ -43,20 +43,27 @@ public struct RunOutcome: Sendable, Equatable {
     public let document: InboxDocument
     public let exitCode: Int32
     public let stderr: [String]
+    /// The setup guide's plain text when gh is missing or signed out; the server puts it in the content.
+    public let setupGuide: String?
 
-    public init(document: InboxDocument, exitCode: Int32, stderr: [String]) {
+    public init(document: InboxDocument, exitCode: Int32, stderr: [String], setupGuide: String? = nil) {
         self.document = document
         self.exitCode = exitCode
         self.stderr = stderr
+        self.setupGuide = setupGuide
     }
 }
 
 public struct CommandOutcome: Sendable, Equatable {
     public let exitCode: Int32
     public let stderr: [String]
+    /// The pull request the command acted on, when it found one (snooze, open: the one fetched or cached;
+    /// unsnooze: the cached row, if any). The server reports it; the command prints nothing on success.
+    public let pullRequest: PullRequest?
 
-    public init(exitCode: Int32, stderr: [String]) {
+    public init(exitCode: Int32, stderr: [String], pullRequest: PullRequest? = nil) {
         self.exitCode = exitCode
         self.stderr = stderr
+        self.pullRequest = pullRequest
     }
 }
