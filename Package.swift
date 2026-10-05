@@ -6,7 +6,7 @@ import PackageDescription
 var products: [Product] = []
 var targets: [Target] = [
     .target(name: "PrinboxCore"),
-    .testTarget(name: "PrinboxCoreTests", dependencies: ["PrinboxCore"], exclude: ["Fixtures"]),
+    .testTarget(name: "PrinboxCoreTests", dependencies: ["PrinboxCore"], exclude: ["Fixtures", "Golden"]),
 ]
 #if os(macOS)
     products.append(.executable(name: "PrinboxApp", targets: ["PrinboxApp"]))
