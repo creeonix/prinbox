@@ -5,8 +5,8 @@ class PrinboxCli < Formula
   sha256 "@CLI_SHA256@"
   license "MIT"
 
-  depends_on :macos
   depends_on "gh"
+  depends_on :macos
 
   def install
     bin.install "prinbox"
