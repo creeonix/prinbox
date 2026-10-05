@@ -21,7 +21,8 @@ import Testing
         store.set(true, forKey: SearchScope.hideDraftsKey)
         #expect(
             SearchScope.read(from: store)
-                == SearchScope(directReviewRequestsOnly: true, repositories: ["acme", "globex/billing"], hideDrafts: true))
+                == SearchScope(
+                    directReviewRequestsOnly: true, repositories: ["acme", "globex/billing"], hideDrafts: true))
     }
 
     @Test func readFallsBackToDefaultsForWrongTypes() {
@@ -36,20 +37,26 @@ import Testing
         for valid in ["acme", "globex/billing", "a-b", "x/y.z_w-1", "Initech/Repo", "7up"] {
             #expect(SearchScope.isValidEntry(valid), "\(valid)")
         }
-        for invalid in ["", "-acme", "acme/", "/web", "acme/web/extra", "acme web", "org:acme", "acme/we b", "é", "acme/"] {
+        for invalid in [
+            "", "-acme", "acme/", "/web", "acme/web/extra", "acme web", "org:acme", "acme/we b", "é", "acme/",
+        ] {
             #expect(!SearchScope.isValidEntry(invalid), "\(invalid)")
         }
     }
 
     @Test func normalizeTrimsDropsAndDeduplicates() {
-        let (kept, dropped) = SearchScope.normalize([" acme ", "", "globex/billing", "org:bad", "ACME", "acme/web", "acme/web"])
+        let (kept, dropped) = SearchScope.normalize([
+            " acme ", "", "globex/billing", "org:bad", "ACME", "acme/web", "acme/web",
+        ])
         #expect(kept == ["acme", "globex/billing", "acme/web"])
         #expect(dropped == 1)
         #expect(SearchScope.normalize([]).kept.isEmpty)
     }
 
     @Test func qualifiersFollowTheKindOfEntry() {
-        #expect(SearchScope(repositories: ["acme", "globex/billing"]).repositoryQualifiers == " user:acme repo:globex/billing")
+        #expect(
+            SearchScope(repositories: ["acme", "globex/billing"]).repositoryQualifiers
+                == " user:acme repo:globex/billing")
         #expect(SearchScope.none.repositoryQualifiers == "")
         #expect(SearchScope(repositories: ["bad entry"]).repositoryQualifiers == "")
     }
