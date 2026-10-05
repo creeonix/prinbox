@@ -9,14 +9,23 @@ public struct FetchRequest: Sendable, Equatable {
     public let includeConversation: Bool
     /// The login `previous` was recorded for; when set, a different viewer never counts as unchanged.
     public let previousViewer: String?
+    /// The scope settings every search honors (spec 4.2).
+    public let scope: SearchScope
 
-    public init(previous: [String: Date]? = nil, includeConversation: Bool = true, previousViewer: String? = nil) {
+    public init(
+        previous: [String: Date]? = nil, includeConversation: Bool = true, previousViewer: String? = nil,
+        scope: SearchScope = .none
+    ) {
         self.previous = previous
         self.includeConversation = includeConversation
         self.previousViewer = previousViewer
+        self.scope = scope
     }
 
     public static let full = FetchRequest()
+
+    /// The request shape a cached fingerprint or baseline must have been recorded for to be trusted.
+    public var shape: FetchShape { FetchShape(includeConversation: includeConversation, scope: scope) }
 }
 
 public enum FetchOutcome: Sendable, Equatable {
@@ -70,9 +79,20 @@ public struct GhClient: InboxFetching {
 
     public func fetch(_ request: FetchRequest) async throws -> FetchOutcome {
         guard let gh = locator.locate() else { throw FetchError.ghNotFound }
+        let dropped = SearchScope.normalize(request.scope.repositories).dropped
+        if dropped > 0 {
+            log.notice(.gh, "repository filter: ignored \(dropped) invalid \(dropped == 1 ? "entry" : "entries")")
+        }
+        let overflow = SearchQuery.overflow(includeInvolved: request.includeConversation, scope: request.scope)
+        if overflow > 0 {
+            throw FetchError.other(
+                "repository filter too long for GitHub search: \(overflow) over the \(SearchQuery.queryLimit)-character limit"
+            )
+        }
         let started = ContinuousClock.now
         let search = try Self.interpretSearch(
-            try await run(gh, query: SearchQuery.text(includeInvolved: request.includeConversation)))
+            try await run(
+                gh, query: SearchQuery.text(includeInvolved: request.includeConversation, scope: request.scope)))
         let fingerprint = PullRequestMapper.fingerprint(search)
         if let previous = request.previous, previous == fingerprint,
             request.previousViewer == nil || request.previousViewer == search.data?.viewer?.login

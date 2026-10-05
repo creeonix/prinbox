@@ -62,11 +62,13 @@ public final class InboxStore {
         guard let cached = cache.load() else { return }
         lastResult = cached.result
         lastSuccess = cached.checkedAt
-        if let fingerprint = cached.trustedFingerprint(now: clock(), includeConversation: includeConversation) {
+        if let fingerprint = cached.trustedFingerprint(
+            now: clock(), shape: FetchShape(includeConversation: includeConversation))
+        {
             self.fingerprint = fingerprint
             lastFullFetch = cached.fetchedAt
         }
-        known = cached.trustedAttention(includeConversation: includeConversation)
+        known = cached.trustedAttention(shape: FetchShape(includeConversation: includeConversation))
         let built = InboxBuilder.build(cached.result, snoozed: state.snoozedIDs)
         inbox = built
         // A poller may have refreshed the fingerprint past the baseline, so the first refresh can be an unchanged

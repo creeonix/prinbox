@@ -73,7 +73,7 @@ public struct InboxRun: Sendable {
     private func fetch(cached: InboxCache?, notify: Bool) async -> Result<Served, FetchError> {
         let now = context.clock()
         let threads = context.followReviewThreads
-        let previous = cached?.trustedFingerprint(now: now, includeConversation: threads)
+        let previous = cached?.trustedFingerprint(now: now, shape: FetchShape(includeConversation: threads))
         let request = FetchRequest(
             previous: previous, includeConversation: threads, previousViewer: previous == nil ? nil : cached?.viewer)
         do {
@@ -86,7 +86,7 @@ public struct InboxRun: Sendable {
                     let snoozed = Set(Snooze.reconcile(state.snoozed, with: cached.result).keys)
                     attention = await announce(
                         InboxBuilder.build(cached.result, snoozed: snoozed), complete: cached.result.isComplete,
-                        baseline: cached.trustedAttention(includeConversation: threads))
+                        baseline: cached.trustedAttention(shape: FetchShape(includeConversation: threads)))
                 }
                 context.cache.update { existing in
                     guard var next = existing else { return nil }
@@ -104,7 +104,7 @@ public struct InboxRun: Sendable {
                 if notify {
                     attention = await announce(
                         inbox, complete: result.isComplete,
-                        baseline: cached?.trustedAttention(includeConversation: threads))
+                        baseline: cached?.trustedAttention(shape: FetchShape(includeConversation: threads)))
                 }
                 context.cache.update { existing in
                     InboxCache(
