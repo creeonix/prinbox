@@ -29,9 +29,12 @@ small shims and passed its suite there (352 of 356 tests; the rest need `jq` or 
 
 ## 0.6.0: the MCP server
 
-A `prinbox-mcp` stdio executable on the same library, so AI agents can read the review queue and snooze from
-it: `get_inbox`, `snooze_pull_request`, `unsnooze_pull_request`. It shares `state.json` and the cache with
-the app and the command, and opens no network port.
+`prinbox mcp`, a subcommand of the command, serves the inbox to AI agents over stdio with the Model Context
+Protocol: `get_inbox` (the JSON of `docs/inbox-json.md`), `snooze_pull_request` and `unsnooze_pull_request`. It
+shares `state.json` and the cache with the app and the command, opens no network port, and is hand-written
+JSON-RPC with no dependency. The release also adds three scope settings for maintainers (only direct review
+requests, a repository filter, hide drafts), honored by the app, the command and the server, and a watcher in
+the app so a snooze made by an agent or the command shows within a second.
 
 ## 0.7.0: editor and terminal adapters
 
@@ -65,3 +68,4 @@ A long-lived daemon can come later without changing the contract; every adapter 
 | Platform differences | Injected adapters | The codebase already works this way (`CommandRunning`, `DataLoading`, `StatePersisting`); conditionals only for imports |
 | Linux process model | Stateless command plus a cache file | Waybar, tmux, editors and a tray script all poll; a daemon adds a moving part without changing what they read |
 | Linux desktops | Hyprland first, KDE second, no GNOME | That is where the author runs Linux; GNOME needs a shell extension for any tray icon |
+| MCP server | A subcommand, hand-written stdio JSON-RPC | One binary and one formula; five methods are not worth the first dependency, and the official Swift SDK pulls swift-nio for a stdio loop |
