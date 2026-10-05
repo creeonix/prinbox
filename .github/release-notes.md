@@ -2,8 +2,9 @@
 
 - **The `prinbox` command.** The same inbox from a terminal, a tmux status line or a picker:
   `prinbox inbox --format json|lines|waybar|tmux`, `prinbox print`, `prinbox snooze <id>`, `prinbox unsnooze <id>`
-  and `prinbox open <id>`. Install it with `brew install creeonix/tap/prinbox-cli`. The JSON is documented in
-  `docs/inbox-json.md` and is the contract the coming editor, tmux and Linux adapters read.
+  and `prinbox open <id>`. Install it with `brew install creeonix/tap/prinbox-cli` once the tap is published,
+  or `make install-cli`. The JSON is documented in `docs/inbox-json.md` and is the contract the coming editor,
+  tmux and Linux adapters read.
 - **One cache for everyone.** The app and the command share `cache.json` next to `state.json`: a command run
   beside the app costs GitHub one request when nothing changed, `--cached` prints without contacting GitHub,
   and the app shows your rows the moment it launches. A banner can now tell you what arrived while the app
@@ -12,7 +13,7 @@
   there); nothing stays in macOS defaults. Point PRInbox at an unusual gh with `ghPath` in that file.
 - **Stacked pull requests.** A PR whose base branch is another open PR's head branch shows `stack 2/3` in its
   fact line, and a chain stays together in its section. Simple chains only; forks and cycles get no badge.
-- **Homebrew.** `brew install --cask creeonix/tap/prinbox` installs the app.
+- **Homebrew.** `brew install --cask creeonix/tap/prinbox` installs the app (the tap follows the release).
 - The library and the command build and pass their tests on Linux, groundwork for 1.0.
 - The fetch log reports the lowest remaining budget across every request, and counts truncated review pages.
 

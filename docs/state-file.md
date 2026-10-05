@@ -29,8 +29,8 @@ popover on its next refresh or open, and a snooze in the popover shows in `prinb
 |---|---|---|---|
 | App | Settings changes, folds, org colors, the one-time migration from defaults | snooze, unsnooze, fetch reconciliation (wake, prune, seed `seen`), popover close | after every full fetch; `checkedAt` on an unchanged check |
 | `prinbox inbox` | never | wake and prune after a complete fetch | after a fetch (`attention` only with `--notify`); `checkedAt` on unchanged; nothing when served from the cache |
-| `prinbox snooze`, `unsnooze` | never | the entry | only when `snooze` had to fetch |
-| `prinbox open` | never | never | only when it had to fetch |
+| `prinbox snooze`, `unsnooze` | never | the entry; wake and prune when it had to fetch | only when `snooze` had to fetch |
+| `prinbox open` | never | wake and prune when it had to fetch | only when it had to fetch |
 | `prinbox print`, `Prinbox --print` | never | never | never |
 | `--demo` | never | never | never |
 
