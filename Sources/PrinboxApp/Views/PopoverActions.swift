@@ -15,4 +15,7 @@ struct PopoverActions {
     let copyLink: @MainActor (URL) -> Void
     let setNotifications: @MainActor (Bool) -> Void
     let setFollowReviewThreads: @MainActor (Bool) -> Void
+    let setDirectReviewRequestsOnly: @MainActor (Bool) -> Void
+    let setHideDrafts: @MainActor (Bool) -> Void
+    let commitRepositories: @MainActor () -> Void
 }

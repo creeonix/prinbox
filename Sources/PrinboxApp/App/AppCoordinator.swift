@@ -82,11 +82,13 @@ final class AppCoordinator {
         notifications = NotificationSettings(defaults: settings)
         fetchSettings = FetchSettings(defaults: settings)
         store.setIncludeConversation(fetchSettings.followReviewThreads)
+        store.setScope(fetchSettings.scope)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.directory(in: directories)))
     }
 
     func start() {
         state.onRecordingEnded = { [weak self] in self?.applyHotKey() }
+        state.onSettingsLeft = { [weak self] in self?.commitRepositories() }
         state.onSettingsOpened = { [weak self] in
             self?.info.refresh()
             self?.loginItem.refresh()
@@ -143,7 +145,10 @@ final class AppCoordinator {
             unsnooze: { [weak self] id in self?.state.unsnooze(id) },
             copyLink: { [weak self] url in self?.copyToPasteboard(url.absoluteString) },
             setNotifications: { [weak self] enabled in self?.setNotifications(enabled) },
-            setFollowReviewThreads: { [weak self] on in self?.setFollowReviewThreads(on) })
+            setFollowReviewThreads: { [weak self] on in self?.setFollowReviewThreads(on) },
+            setDirectReviewRequestsOnly: { [weak self] on in self?.setDirectReviewRequestsOnly(on) },
+            setHideDrafts: { [weak self] on in self?.setHideDrafts(on) },
+            commitRepositories: { [weak self] in self?.commitRepositories() })
     }
 
     private func copy(_ command: String) {
@@ -209,6 +214,26 @@ final class AppCoordinator {
     private func setFollowReviewThreads(_ on: Bool) {
         fetchSettings.setFollowReviewThreads(on)
         store.setIncludeConversation(on)
+        refreshNow()
+    }
+
+    private func setDirectReviewRequestsOnly(_ on: Bool) {
+        fetchSettings.setDirectReviewRequestsOnly(on)
+        applyScope()
+    }
+
+    private func setHideDrafts(_ on: Bool) {
+        fetchSettings.setHideDrafts(on)
+        applyScope()
+    }
+
+    private func commitRepositories() {
+        if fetchSettings.commitRepositories() { applyScope() }
+    }
+
+    /// A scope change changes what a refresh asks for, so the next refresh is a full one, at once.
+    private func applyScope() {
+        store.setScope(fetchSettings.scope)
         refreshNow()
     }
 
