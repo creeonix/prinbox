@@ -60,7 +60,7 @@ public struct GhClient: InboxFetching {
     private let locator: GhLocator
     private let runner: CommandRunning
     private let timeout: Duration
-    private let log: Logging
+    private let logger: Logging
 
     public init(
         locator: GhLocator = GhLocator(), runner: CommandRunning = ProcessCommandRunner(),
@@ -69,7 +69,7 @@ public struct GhClient: InboxFetching {
         self.locator = locator
         self.runner = runner
         self.timeout = timeout
-        log = logger
+        self.logger = logger
     }
 
     public func ghPath() -> String? { locator.locate()?.path }
@@ -81,7 +81,7 @@ public struct GhClient: InboxFetching {
         guard let gh = locator.locate() else { throw FetchError.ghNotFound }
         let dropped = SearchScope.normalize(request.scope.repositories).dropped
         if dropped > 0 {
-            log.notice(.gh, "repository filter: ignored \(dropped) invalid \(dropped == 1 ? "entry" : "entries")")
+            logger.notice(.gh, "repository filter: ignored \(dropped) invalid \(dropped == 1 ? "entry" : "entries")")
         }
         let overflow = SearchQuery.overflow(includeInvolved: request.includeConversation, scope: request.scope)
         if overflow > 0 {
@@ -98,7 +98,7 @@ public struct GhClient: InboxFetching {
             request.previousViewer == nil || request.previousViewer == search.data?.viewer?.login
         {
             let elapsed = Int((ContinuousClock.now - started) / .milliseconds(1))
-            log.info(
+            logger.info(
                 .gh,
                 "fetch unchanged: 1 request, \(search.data?.rateLimit?.cost ?? 0) points, remaining \(Self.remainingText(search.data?.rateLimit?.remaining)), \(elapsed) ms"
             )
@@ -106,7 +106,7 @@ public struct GhClient: InboxFetching {
         }
         let hits = PullRequestMapper.orderedIDs(search).map(\.id)
         let ids = DetailsQuery.validIDs(hits)
-        if ids.count < hits.count { log.notice(.gh, "dropped \(hits.count - ids.count) ids that are not node ids") }
+        if ids.count < hits.count { logger.notice(.gh, "dropped \(hits.count - ids.count) ids that are not node ids") }
         let batches = stride(from: 0, to: ids.count, by: Self.batchSize).map {
             Array(ids[$0..<min($0 + Self.batchSize, ids.count)])
         }
@@ -127,12 +127,12 @@ public struct GhClient: InboxFetching {
         let result = try PullRequestMapper.merge(search: search, details: details)
         let elapsed = (ContinuousClock.now - started) / .milliseconds(1)
         let remaining = Self.remaining(search: search, details: details)
-        log.info(
+        logger.info(
             .gh,
             "fetch: \(1 + details.count) requests, \(result.cost) points, remaining \(Self.remainingText(remaining)), \(result.pullRequests.count) PRs, \(Int(elapsed)) ms"
         )
         let truncated = PullRequestMapper.truncatedPages(details)
-        if truncated > 0 { log.debug(.gh, "fetch: \(truncated) conversation pages truncated at the page size") }
+        if truncated > 0 { logger.debug(.gh, "fetch: \(truncated) conversation pages truncated at the page size") }
         return .result(result)
     }
 
@@ -153,7 +153,8 @@ public struct GhClient: InboxFetching {
             return [try Self.interpretDetails(output)]
         } catch let error as FetchError where maySplit && Self.isRetryable(error) {
             try Task.checkCancellation()
-            log.notice(.gh, "details batch of \(ids.count) failed; retrying split", private: String(describing: error))
+            logger.notice(
+                .gh, "details batch of \(ids.count) failed; retrying split", private: String(describing: error))
             if ids.count == 1 {
                 return try await fetchDetails(gh, ids: ids, includeConversation: includeConversation, maySplit: false)
             }
@@ -182,17 +183,17 @@ public struct GhClient: InboxFetching {
                 executable: gh, arguments: ["api", "graphql", "-f", "query=\(query)"],
                 environment: Self.environment(), timeout: timeout)
         } catch CommandRunnerError.timedOut {
-            log.error(.gh, "gh timed out")
+            logger.error(.gh, "gh timed out")
             throw FetchError.timedOut
         } catch CommandRunnerError.launchFailed(let reason) {
-            log.error(.gh, "gh could not be launched", private: reason)
+            logger.error(.gh, "gh could not be launched", private: reason)
             throw FetchError.other("Could not run gh: \(reason)")
         } catch {
-            log.error(.gh, "gh failed to run", private: String(describing: error))
+            logger.error(.gh, "gh failed to run", private: String(describing: error))
             throw FetchError.other("Could not run gh: \(error.localizedDescription)")
         }
         if output.exitCode != 0 {
-            log.error(.gh, "gh exited \(output.exitCode)", private: String(output.stderr.prefix(500)))
+            logger.error(.gh, "gh exited \(output.exitCode)", private: String(output.stderr.prefix(500)))
         }
         return output
     }

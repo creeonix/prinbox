@@ -2,8 +2,8 @@ import Foundation
 import Observation
 
 /// Once-a-day check for a newer PRInbox release. The last result is kept through `KeyValueStoring`
-/// (update.json in the app) so the notice survives a relaunch, and the attempt time is recorded before the call, so an offline Mac asks again
-/// tomorrow rather than at every refresh.
+/// (update.json in the app) so the notice survives a relaunch, and the attempt time is recorded before the
+/// call, so an offline Mac asks again tomorrow rather than at every refresh.
 @MainActor
 @Observable
 public final class UpdateStore {
