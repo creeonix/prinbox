@@ -449,4 +449,104 @@ final class ReceivedRows {
         #expect(counter.value == 1)
         #expect(store.inbox?.section(.waitingOnOthers)?.rows.first?.id == "PR_1")
     }
+
+    func cached(
+        fetchedAt: Date, checkedAt: Date? = nil, attention: [String]? = [], prs: [PullRequest],
+        includeConversation: Bool = true
+    ) -> InboxCache {
+        InboxCache(
+            fetchedAt: fetchedAt, checkedAt: checkedAt ?? fetchedAt, includeConversation: includeConversation,
+            viewer: testViewer,
+            fingerprint: Dictionary(prs.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { _, new in new }),
+            attention: attention, result: makeResult(prs))
+    }
+
+    @Test func adoptCacheShowsTheRowsBeforeAnyFetch() {
+        let clock = TestClock(start)
+        let counter = Counter()
+        let store = InboxStore(
+            fetcher: ScriptedFetcher { _ in makeResult([]) },
+            cache: MemoryCache(cached(fetchedAt: start - 60, prs: [makePR(id: "PR_1")])), clock: { clock.now })
+        store.onInboxChange = { counter.bump() }
+        store.adoptCache()
+        #expect(store.inbox?.badgeCount == 1)
+        #expect(store.lastSuccess == start - 60)
+        #expect(counter.value == 1)
+    }
+
+    @Test func aFreshCachedFingerprintRidesAlongAndAStaleOneDoesNot() async {
+        for (age, expected) in [(60.0, true), (16 * 60.0, false)] {
+            let clock = TestClock(start)
+            let fetcher = ScriptedFetcher { _ in makeResult([]) }
+            let store = InboxStore(
+                fetcher: fetcher, cache: MemoryCache(cached(fetchedAt: start - age, prs: [makePR(id: "PR_1")])),
+                clock: { clock.now })
+            store.adoptCache()
+            await store.refresh()
+            let request = await fetcher.requests.first
+            #expect((request?.previous != nil) == expected)
+            #expect(request?.previousViewer == (expected ? testViewer : nil))
+        }
+    }
+
+    @Test func aCacheFromTheOtherShapeGivesRowsButNoFingerprintOrBaseline() async {
+        let clock = TestClock(start)
+        let fetcher = ScriptedFetcher { _ in makeResult([makePR(id: "PR_1"), makePR(id: "PR_2")]) }
+        let received = ReceivedRows()
+        let store = InboxStore(
+            fetcher: fetcher,
+            cache: MemoryCache(
+                cached(
+                    fetchedAt: start - 60, attention: ["PR_1"], prs: [makePR(id: "PR_1")], includeConversation: false)),
+            clock: { clock.now })
+        store.onArrivals = { received.ids = $0.map(\.id) }
+        store.adoptCache()
+        #expect(store.inbox?.badgeCount == 1)
+        await store.refresh()
+        #expect(await fetcher.requests.first?.previous == nil)
+        #expect(received.ids == [])
+    }
+
+    @Test func theFirstFetchNotifiesAgainstTheAdoptedBaseline() async {
+        let clock = TestClock(start)
+        let fetcher = ScriptedFetcher { _ in makeResult([makePR(id: "PR_1"), makePR(id: "PR_2")]) }
+        let received = ReceivedRows()
+        let store = InboxStore(
+            fetcher: fetcher,
+            cache: MemoryCache(cached(fetchedAt: start - 60, attention: ["PR_1"], prs: [makePR(id: "PR_1")])),
+            clock: { clock.now })
+        store.onArrivals = { received.ids = $0.map(\.id) }
+        store.adoptCache()
+        await store.refresh()
+        #expect(received.ids == ["PR_2"])
+    }
+
+    @Test func aFullFetchWritesTheCacheAndAnUnchangedCheckBumpsCheckedAt() async throws {
+        let clock = TestClock(start)
+        let memory = MemoryCache()
+        let pr = makePR(id: "PR_1")
+        let fetcher = ScriptedFetcher(outcomes: { call, _ in call == 1 ? .result(makeResult([pr])) : .unchanged })
+        let store = InboxStore(fetcher: fetcher, cache: memory, clock: { clock.now })
+        await store.refresh()
+        let written = try #require(memory.saved)
+        #expect(written.fetchedAt == start)
+        #expect(written.checkedAt == start)
+        #expect(written.includeConversation == true)
+        #expect(written.viewer == testViewer)
+        #expect(written.fingerprint == ["PR_1": pr.updatedAt])
+        #expect(written.attention == ["PR_1"])
+        #expect(written.result.pullRequests == [pr])
+        clock.advance(300)
+        await store.refresh()
+        #expect(memory.saved?.checkedAt == start + 300)
+        #expect(memory.saved?.fetchedAt == start)
+        #expect(memory.writeCount == 2)
+    }
+
+    @Test func nothingIsAdoptedWithoutACache() {
+        let store = InboxStore(fetcher: ScriptedFetcher { _ in makeResult([]) })
+        store.adoptCache()
+        #expect(store.inbox == nil)
+        #expect(store.lastSuccess == nil)
+    }
 }

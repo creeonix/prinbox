@@ -60,7 +60,11 @@ final class AppCoordinator {
         }
         let lock = demo ? nil : FileLock(url: directories.state.appendingPathComponent("prinbox.lock"), logger: logger)
         let store = InboxStore(
-            fetcher: fetcher, state: StateStore(persistence: persistence, lock: lock, logger: logger))
+            fetcher: fetcher, state: StateStore(persistence: persistence, lock: lock, logger: logger),
+            cache: demo
+                ? MemoryCache()
+                : JSONCacheFile(url: directories.state.appendingPathComponent("cache.json"), lock: lock, logger: logger)
+        )
         isDemo = demo
         self.client = client
         info = AppInfo(client: client)
@@ -112,6 +116,7 @@ final class AppCoordinator {
         triggers.start(
             { [weak self] in await self?.refreshAll() },
             retrySetup: { [weak self] in await self?.store.retryIfSetupNeeded() })
+        store.adoptCache()
         refreshNow()
     }
 
