@@ -88,6 +88,7 @@ cli:
 
 install-cli: cli
 	mkdir -p "$(PREFIX)/bin"
+	rm -f "$(PREFIX)/bin/$(CLI_PRODUCT)"
 	cp "$(CLI_BIN)" "$(PREFIX)/bin/$(CLI_PRODUCT)"
 	@echo "installed $(PREFIX)/bin/$(CLI_PRODUCT)"
 
