@@ -137,7 +137,7 @@ import Testing
 
     @Test func aScopeRoundTripsAndAFileWithoutOneReadsAsTheEmptyScope() throws {
         try withCacheFile { file, url in
-            let scope = SearchScope(directReviewRequestsOnly: true, repositories: ["acme"], hideDrafts: true)
+            let scope = SearchScope(directReviewRequestsOnly: true, hideDrafts: true)
             let cached = InboxCache(
                 fetchedAt: now, checkedAt: now, includeConversation: true, scope: scope, viewer: "me", fingerprint: [:],
                 attention: nil, result: makeResult([]))
@@ -146,7 +146,7 @@ import Testing
             #expect(file.load()?.shape == FetchShape(includeConversation: true, scope: scope))
             let text = try String(contentsOf: url, encoding: .utf8)
             #expect(text.contains("\"scope\" : {"))
-            #expect(text.contains("\"repositories\" : ["))
+            #expect(text.contains("\"hideDrafts\" : true"))
             // A 0.5 file is the same object without the scope key.
             var object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
             object["scope"] = nil

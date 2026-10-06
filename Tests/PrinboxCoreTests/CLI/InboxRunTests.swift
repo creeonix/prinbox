@@ -237,6 +237,22 @@ import Testing
         #expect(outcome.document.sections[5].rows.map(\.id) == ["PR_2"])
     }
 
+    @Test func aScopedRunKeepsSnoozesOfHiddenPullRequests() async throws {
+        let parked = SnoozeEntry(snoozedAt: start - 60, updatedAt: pr2.updatedAt)
+        func run(scope: SearchScope) async throws -> MemoryStatePersistence {
+            let persistence = MemoryStatePersistence()
+            try persistence.save(AppState(snoozed: ["PR_2": parked]))
+            let context = makeContext(
+                fetcher: ScriptedFetcher { _ in makeResult([self.pr1]) }, persistence: persistence, scope: scope)
+            _ = await InboxRun(context: context).inbox(InboxOptions())
+            return persistence
+        }
+        let scoped = try await run(scope: SearchScope(hideDrafts: true))
+        #expect(scoped.saved?.snoozed["PR_2"] == parked)
+        let unscoped = try await run(scope: .none)
+        #expect(unscoped.saved?.snoozed.isEmpty == true)
+    }
+
     @Test func theDocumentCarriesNewAndSnoozedFromState() async throws {
         let persistence = MemoryStatePersistence()
         try persistence.save(
@@ -374,7 +390,7 @@ import Testing
     }
 
     @Test func printFetchesWithTheScope() async throws {
-        let scope = SearchScope(repositories: ["acme"])
+        let scope = SearchScope(hideDrafts: true)
         let fetcher = ScriptedFetcher { _ in makeResult([self.pr1]) }
         let printed = await InboxRun(context: makeContext(fetcher: fetcher, scope: scope)).printInbox()
         #expect(printed.exitCode == 0)

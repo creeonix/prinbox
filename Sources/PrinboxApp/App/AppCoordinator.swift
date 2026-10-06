@@ -92,7 +92,6 @@ final class AppCoordinator {
 
     func start() {
         state.onRecordingEnded = { [weak self] in self?.applyHotKey() }
-        state.onSettingsLeft = { [weak self] in self?.commitRepositories() }
         state.onSettingsOpened = { [weak self] in
             self?.info.refresh()
             self?.loginItem.refresh()
@@ -152,8 +151,7 @@ final class AppCoordinator {
             setNotifications: { [weak self] enabled in self?.setNotifications(enabled) },
             setFollowReviewThreads: { [weak self] on in self?.setFollowReviewThreads(on) },
             setDirectReviewRequestsOnly: { [weak self] on in self?.setDirectReviewRequestsOnly(on) },
-            setHideDrafts: { [weak self] on in self?.setHideDrafts(on) },
-            commitRepositories: { [weak self] in self?.commitRepositories() })
+            setHideDrafts: { [weak self] on in self?.setHideDrafts(on) })
     }
 
     private func copy(_ command: String) {
@@ -230,10 +228,6 @@ final class AppCoordinator {
     private func setHideDrafts(_ on: Bool) {
         fetchSettings.setHideDrafts(on)
         applyScope()
-    }
-
-    private func commitRepositories() {
-        if fetchSettings.commitRepositories() { applyScope() }
     }
 
     /// A scope change changes what a refresh asks for, so the next refresh is a full one, at once.

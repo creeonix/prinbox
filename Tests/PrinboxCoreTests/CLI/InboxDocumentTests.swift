@@ -88,7 +88,7 @@ import Testing
     }
 
     @Test func moreUrlFollowsTheInboxScope() {
-        let scope = SearchScope(repositories: ["acme"])
+        let scope = SearchScope(hideDrafts: true)
         let inbox = InboxBuilder.build(makeResult([makePR()]), scope: scope)
         let document = InboxDocument.make(inbox, meta: meta, isNew: { _ in false }, now: now)
         #expect(document.sections[0].moreUrl == SectionKind.needsReview.moreURL(scope: scope))

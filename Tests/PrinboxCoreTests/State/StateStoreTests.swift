@@ -138,6 +138,19 @@ struct FailingPersistence: StatePersisting {
         #expect(store.state.seen == ["a": old])
     }
 
+    @Test func aScopedFetchDoesNotPruneTheLedger() {
+        let (store, _) = makeStore()
+        store.didFetch(makeResult([makePR(id: "PR_1", updatedAt: old), makePR(id: "PR_2", updatedAt: old)]))
+        store.snooze(makePR(id: "PR_2", updatedAt: old))
+        let result = makeResult([makePR(id: "PR_1", updatedAt: old)])
+        store.didFetch(result, scoped: true)
+        #expect(store.state.seen?.keys.sorted() == ["PR_1", "PR_2"])
+        #expect(store.isSnoozed("PR_2"))
+        store.didFetch(result)
+        #expect(store.state.seen == ["PR_1": old])
+        #expect(!store.isSnoozed("PR_2"))
+    }
+
     @Test func emptyInboxSeedsAnEmptyLedgerSoLaterArrivalsAreNew() {
         let (store, _) = makeStore()
         store.didFetch(makeResult([]))

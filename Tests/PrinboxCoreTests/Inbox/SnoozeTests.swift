@@ -32,6 +32,15 @@ import Testing
         #expect(Snooze.reconcile(entries, with: truncated) == entries)
     }
 
+    @Test func aScopedFetchKeepsEntriesForAbsentPullRequests() {
+        let gone = ["PR_gone": SnoozeEntry(snoozedAt: snoozedAt, updatedAt: seen)]
+        let result = makeResult([makePR(id: "PR_1", updatedAt: seen)])
+        #expect(Snooze.reconcile(gone, with: result).isEmpty)
+        #expect(Snooze.reconcile(gone, with: result, scoped: true) == gone)
+        let changed = makeResult([makePR(id: "a", updatedAt: seen.addingTimeInterval(60))])
+        #expect(Snooze.reconcile(entries, with: changed, scoped: true).isEmpty)
+    }
+
     @Test func fetchIsCompleteOnlyWithoutWarningsOrTruncation() {
         #expect(makeResult([makePR()]).isComplete)
         #expect(!makeResult([makePR()], warnings: ["w"]).isComplete)

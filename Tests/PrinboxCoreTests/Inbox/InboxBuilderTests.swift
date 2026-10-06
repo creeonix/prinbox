@@ -242,7 +242,7 @@ import Testing
     }
 
     @Test func theInboxCarriesTheScopeForItsMoreLinks() {
-        let scope = SearchScope(repositories: ["acme"])
+        let scope = SearchScope(hideDrafts: true)
         let inbox = InboxBuilder.build(makeResult([makePR()]), scope: scope)
         #expect(inbox.scope == scope)
         #expect(inbox.moreURL(.needsReview) == SectionKind.needsReview.moreURL(scope: scope))

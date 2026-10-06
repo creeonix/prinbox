@@ -17,5 +17,4 @@ struct PopoverActions {
     let setFollowReviewThreads: @MainActor (Bool) -> Void
     let setDirectReviewRequestsOnly: @MainActor (Bool) -> Void
     let setHideDrafts: @MainActor (Bool) -> Void
-    let commitRepositories: @MainActor () -> Void
 }

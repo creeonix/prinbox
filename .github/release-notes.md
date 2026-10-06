@@ -5,9 +5,9 @@
   Three tools: `get_inbox` (the same JSON as `prinbox inbox`), `snooze_pull_request` and
   `unsnooze_pull_request`. It shares the snoozes and the cache with the app and the command, so a snooze from
   the agent shows in the menu bar within a second. See `docs/mcp.md`.
-- **Scope for maintainers.** Three new settings: **Only direct review requests** leaves out requests that reach
-  you through a team; **Repositories** keeps the inbox to the owners or `owner/name` you list; **Hide draft
-  pull requests** drops other people's drafts. All three act in the GitHub searches, so they cost nothing.
+- **Scope for maintainers.** Two new switches: **Only direct review requests** leaves out requests that reach
+  you through a team; **Hide draft pull requests** drops other people's drafts. Both act in the GitHub
+  searches, so they cost nothing.
 - The app notices a snooze made by the command or an agent at once, instead of at the next refresh.
 - A cache from 0.5.0 is read as is; the first refresh after the upgrade can be an unchanged check.
 - Small fixes from the 0.5.0 review: an unchanged check no longer stamps a cache another writer replaced,

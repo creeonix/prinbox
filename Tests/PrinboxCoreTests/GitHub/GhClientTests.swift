@@ -111,32 +111,14 @@ final class QueryLog: @unchecked Sendable {
         #expect(log.queries.count == 9)
     }
 
-    @Test func theScopeReachesTheSearchAndInvalidEntriesAreCountedInANotice() async throws {
-        let logger = MemoryLogging()
+    @Test func theScopeReachesTheSearch() async throws {
         let log = QueryLog()
-        let client = twoPhase(search: TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")]), log: log, logger: logger)
-        let scope = SearchScope(
-            directReviewRequestsOnly: true, repositories: ["acme", "org:bad", "globex/billing"], hideDrafts: true)
+        let client = twoPhase(search: TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")]), log: log)
+        let scope = SearchScope(directReviewRequestsOnly: true, hideDrafts: true)
         _ = try await client.fetch(FetchRequest(scope: scope))
         let search = try #require(log.queries.first)
-        #expect(search.contains("user-review-requested:@me -is:draft user:acme repo:globex/billing"))
-        #expect(!search.contains("org:bad"))
-        #expect(logger.messages(.notice) == ["repository filter: ignored 1 invalid entry"])
-        #expect(logger.lines.allSatisfy { !$0.message.contains("org:bad") && $0.detail?.contains("org:bad") != true })
+        #expect(search.contains("user-review-requested:@me -is:draft"))
         #expect(FetchRequest(scope: scope).shape == FetchShape(includeConversation: true, scope: scope))
-    }
-
-    @Test func aFilterPastTheSearchLimitFailsBeforeAnyRequest() async {
-        let log = QueryLog()
-        let client = twoPhase(search: TwoPhaseJSON.search(), log: log)
-        let scope = SearchScope(
-            directReviewRequestsOnly: true, repositories: [String(repeating: "a", count: 129)], hideDrafts: true)
-        await #expect(
-            throws: FetchError.other("repository filter too long for GitHub search: 1 over the 256-character limit")
-        ) {
-            try await client.fetch(FetchRequest(scope: scope))
-        }
-        #expect(log.queries.isEmpty)
     }
 
     @Test func conversationOffDropsTheInvolvedSearchAndTheThreadFields() async throws {

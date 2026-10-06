@@ -594,7 +594,7 @@ final class ReceivedRows {
 
     @Test func setScopeClearsTheFingerprintAndTheBaselineAndRidesInTheRequest() async {
         let clock = TestClock(start)
-        let scope = SearchScope(directReviewRequestsOnly: true, repositories: ["acme"])
+        let scope = SearchScope(directReviewRequestsOnly: true)
         let pr1 = makePR(id: "PR_1")
         let pr2 = makePR(id: "PR_2")
         let fetcher = ScriptedFetcher(outcomes: { call, _ in .result(makeResult(call == 1 ? [pr1] : [pr1, pr2])) })

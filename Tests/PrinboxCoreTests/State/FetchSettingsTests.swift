@@ -26,10 +26,11 @@ import Testing
 
     @Test func theScopeStartsFromTheStoreAndWritesOneKeyPerChange() {
         let defaults = MemoryDefaults()
-        defaults.set(["acme", "globex/billing"], forKey: SearchScope.repositoriesKey)
+        defaults.set(true, forKey: SearchScope.directKey)
         let settings = FetchSettings(defaults: defaults)
-        #expect(settings.scope == SearchScope(repositories: ["acme", "globex/billing"]))
-        #expect(settings.repositoriesDraft == "acme, globex/billing")
+        #expect(settings.scope == SearchScope(directReviewRequestsOnly: true))
+        settings.setDirectReviewRequestsOnly(false)
+        #expect(defaults.object(forKey: SearchScope.directKey) as? Bool == false)
         settings.setDirectReviewRequestsOnly(true)
         settings.setHideDrafts(true)
         #expect(settings.scope.directReviewRequestsOnly)
@@ -37,24 +38,6 @@ import Testing
         #expect(defaults.object(forKey: SearchScope.directKey) as? Bool == true)
         #expect(defaults.object(forKey: SearchScope.hideDraftsKey) as? Bool == true)
         #expect(
-            FetchSettings(defaults: defaults).scope
-                == SearchScope(
-                    directReviewRequestsOnly: true, repositories: ["acme", "globex/billing"], hideDrafts: true))
-    }
-
-    @Test func commitNormalizesTheDraftAndWritesOnlyOnAChange() {
-        let defaults = MemoryDefaults()
-        let settings = FetchSettings(defaults: defaults)
-        settings.repositoriesDraft = " acme,globex/billing  org:bad acme "
-        #expect(settings.commitRepositories())
-        #expect(settings.scope.repositories == ["acme", "globex/billing"])
-        #expect(settings.repositoriesDraft == "acme, globex/billing")
-        #expect(defaults.object(forKey: SearchScope.repositoriesKey) as? [String] == ["acme", "globex/billing"])
-        settings.repositoriesDraft = "acme, globex/billing"
-        #expect(settings.commitRepositories() == false)
-        settings.repositoriesDraft = ""
-        #expect(settings.commitRepositories())
-        #expect(settings.scope.repositories == [])
-        #expect(defaults.object(forKey: SearchScope.repositoriesKey) as? [String] == [])
+            FetchSettings(defaults: defaults).scope == SearchScope(directReviewRequestsOnly: true, hideDrafts: true))
     }
 }

@@ -58,8 +58,8 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
 - **Stacked pull requests:** a PR whose base branch is another open PR's head branch says `stack 2/3` in its
   fact line, and the chain stays together in its section. Simple chains only; a fork or a cycle gets no badge.
 - **Scope for maintainers** (Settings): only direct review requests (requests that reach you through a team are
-  left out), a repository filter (`acme`, `globex/billing`), and hide other people's drafts. All three act in
-  the GitHub searches, so a narrowed inbox costs nothing extra and the search window goes to what you asked for.
+  left out) and hide other people's drafts. Both act in the GitHub searches, so a narrowed inbox costs nothing
+  extra and the search window goes to what you asked for.
 - **New since your last look:** rows that appeared or changed since you last closed the popover carry an accent
   bar at their left edge, and the header counts them.
 - **Notifications** (off by default): one banner per refresh when a PR enters Needs your review, Replies to
@@ -158,16 +158,14 @@ When this is set, PRInbox and `prinbox` use only that path. Remove the key to go
 ### Settings
 
 Open Settings with the gear in the popover. It holds the global shortcut, launch at login, **Group by
-organization**, **Show organization avatars**, **Compact rows**, **Follow review threads**, **Only direct
-review requests**, **Repositories**, **Hide draft pull requests**, **Notify about new review requests and
-replies**, the detected `gh` path, the version and Quit. Turning notifications on asks macOS for permission
-once; if you decline, Settings says where to turn them on. The Scope group narrows what the searches ask
-GitHub for: the Repositories field takes owners or `owner/name`, comma-separated, and is committed on Return
-or when you leave Settings; its keys are `directReviewRequestsOnly`, `repositories` and `hideDrafts`. A filter
-GitHub cannot take (more than about ten entries) shows a plain error in the popover instead of a silently
-shortened list. Settings stay inside the popover, so there is never a window for a tiling window manager to
-grab. Every setting lives in `~/.config/prinbox/settings.json`, one key per switch; a hand edit takes effect
-at the next launch, and the first 0.5.0 launch moves your 0.4 settings there out of macOS defaults.
+organization**, **Show organization avatars**, **Compact rows**, **Follow review threads**, **Only direct review
+requests**, **Hide draft pull requests**, **Notify about new review requests and replies**, the detected `gh` path,
+the version and Quit. Turning notifications on asks macOS for permission once; if you decline, Settings says where
+to turn them on. The Scope group narrows what the searches ask GitHub for with two switches, **Only direct review
+requests** and **Hide draft pull requests**; their keys are `directReviewRequestsOnly` and `hideDrafts`. Settings
+stay inside the popover, so there is never a window for a tiling window manager to grab. Every setting lives in
+`~/.config/prinbox/settings.json`, one key per switch; a hand edit takes effect at the next launch, and the first
+0.5.0 launch moves your 0.4 settings there out of macOS defaults.
 
 <p align="center">
   <img src="docs/images/popover-compact.png" width="460" alt="The same inbox with Compact rows on">

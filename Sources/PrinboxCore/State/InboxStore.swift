@@ -209,7 +209,7 @@ public final class InboxStore {
                     return next
                 }
             case .result(let result):
-                state.didFetch(result)
+                state.didFetch(result, scoped: !request.scope.isEmpty)
                 let built = InboxBuilder.build(result, snoozed: state.snoozedIDs, scope: request.scope)
                 let arrived = Arrivals.compute(previous: known, current: built)
                 let baseline = Arrivals.baseline(after: built, complete: result.isComplete, extending: known)

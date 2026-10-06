@@ -21,23 +21,6 @@ import Testing
         return state
     }
 
-    @Test func leavingSettingsFiresTheHookAndClosingWhileInSettingsLeavesThem() async {
-        let prs = [a]
-        let state = await makeState { _ in makeResult(prs) }
-        let left = Counter()
-        state.onSettingsLeft = { left.bump() }
-        state.openSettings()
-        state.leaveSettings()
-        #expect(left.value == 1)
-        #expect(state.showingSettings == false)
-        state.openSettings()
-        state.popoverDidClose()
-        #expect(left.value == 2)
-        #expect(state.showingSettings == false)
-        state.popoverDidClose()
-        #expect(left.value == 2)
-    }
-
     @Test func popoverOpensOnTheFirstRow() async {
         let prs = [a, b]
         let state = await makeState { _ in makeResult(prs) }

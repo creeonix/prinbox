@@ -87,7 +87,8 @@ public struct InboxRun: Sendable {
                 var attention: [String]?
                 if notify {
                     let (state, _) = loadStateForReading()
-                    let snoozed = Set(Snooze.reconcile(state.snoozed, with: cached.result).keys)
+                    let snoozed = Set(
+                        Snooze.reconcile(state.snoozed, with: cached.result, scoped: !context.scope.isEmpty).keys)
                     let announced = InboxBuilder.build(cached.result, snoozed: snoozed, scope: context.scope)
                     attention = await announce(
                         announced, complete: cached.result.isComplete,
@@ -142,7 +143,7 @@ public struct InboxRun: Sendable {
         locked {
             guard let state = loadState() else { return [] }
             var next = state
-            next.snoozed = Snooze.reconcile(state.snoozed, with: result)
+            next.snoozed = Snooze.reconcile(state.snoozed, with: result, scoped: !context.scope.isEmpty)
             if next != state {
                 do {
                     try context.persistence.save(next)
@@ -158,7 +159,7 @@ public struct InboxRun: Sendable {
 
     private func outcome(_ served: Served, exitCode: Int32, extra: [String], setupGuide: String? = nil) -> RunOutcome {
         let (state, warning) = loadStateForReading()
-        let snoozed = Set(Snooze.reconcile(state.snoozed, with: served.result).keys)
+        let snoozed = Set(Snooze.reconcile(state.snoozed, with: served.result, scoped: !context.scope.isEmpty).keys)
         let inbox = InboxBuilder.build(served.result, snoozed: snoozed, scope: context.scope)
         let meta = DocumentMeta(
             prinbox: context.version, source: served.source, fetchedAt: served.fetchedAt, checkedAt: served.checkedAt,
@@ -282,7 +283,7 @@ public struct InboxRun: Sendable {
                 throw FetchError.badResponse
             }
             let (state, warning) = loadStateForReading()
-            let snoozed = Set(Snooze.reconcile(state.snoozed, with: result).keys)
+            let snoozed = Set(Snooze.reconcile(state.snoozed, with: result, scoped: !context.scope.isEmpty).keys)
             let inbox = InboxBuilder.build(result, snoozed: snoozed, scope: context.scope)
             return (InboxPrinter.render(inbox, now: context.clock()), warning ? [Self.stateWarning] : [], 0)
         } catch let error as FetchError {

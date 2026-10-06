@@ -85,17 +85,6 @@ struct SettingsView: View {
                 .labelsHidden()
             }
             Text("Requests that reach you through a team are left out").font(.caption).foregroundStyle(.secondary)
-            SettingRow(title: "Repositories") {
-                TextField(
-                    "all",
-                    text: Binding(
-                        get: { fetchSettings.repositoriesDraft }, set: { fetchSettings.repositoriesDraft = $0 })
-                )
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 220)
-                .onSubmit { actions.commitRepositories() }
-            }
-            Text("Owners or owner/name, comma-separated; empty means all").font(.caption).foregroundStyle(.secondary)
             SettingRow(title: "Hide draft pull requests") {
                 Toggle("", isOn: Binding(get: { fetchSettings.scope.hideDrafts }, set: { actions.setHideDrafts($0) }))
                     .toggleStyle(.switch)

@@ -6,13 +6,16 @@ import Foundation
 /// viewer; without it (Follow review threads off, or details missing) any `updatedAt` change wakes it, so
 /// the viewer's own activity counts too.
 public enum Snooze {
-    /// Entries that survive a fetch. An entry whose PR woke is dropped. When the fetch is complete, entries
-    /// for PRs it did not return are dropped as well; an incomplete fetch keeps them, because the PR may only
-    /// be missing from this response.
-    public static func reconcile(_ entries: [String: SnoozeEntry], with result: FetchResult) -> [String: SnoozeEntry] {
+    /// Entries that survive a fetch. An entry whose PR woke is dropped. When the fetch is complete and
+    /// unscoped, entries for PRs it did not return are dropped as well; an incomplete fetch keeps them, because
+    /// the PR may only be missing from this response, and so does a `scoped` one, which leaves out team requests
+    /// or drafts by design.
+    public static func reconcile(
+        _ entries: [String: SnoozeEntry], with result: FetchResult, scoped: Bool = false
+    ) -> [String: SnoozeEntry] {
         let byID = Dictionary(result.pullRequests.map { ($0.id, $0) }, uniquingKeysWith: { _, new in new })
         return entries.filter { id, entry in
-            guard let pr = byID[id] else { return !result.isComplete }
+            guard let pr = byID[id] else { return !result.isComplete || scoped }
             return !wakes(pr, entry: entry, viewer: result.viewerLogin)
         }
     }

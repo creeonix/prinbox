@@ -32,8 +32,8 @@ small shims and passed its suite there (352 of 356 tests; the rest need `jq` or 
 `prinbox mcp`, a subcommand of the command, serves the inbox to AI agents over stdio with the Model Context
 Protocol: `get_inbox` (the JSON of `docs/inbox-json.md`), `snooze_pull_request` and `unsnooze_pull_request`. It
 shares `state.json` and the cache with the app and the command, opens no network port, and is hand-written
-JSON-RPC with no dependency. The release also adds three scope settings for maintainers (only direct review
-requests, a repository filter, hide drafts), honored by the app, the command and the server, and a watcher in
+JSON-RPC with no dependency. The release also adds two scope settings for maintainers (only direct review
+requests, hide drafts), honored by the app, the command and the server, and a watcher in
 the app so a snooze made by an agent or the command shows within a second.
 
 ## 0.7.0: editor and terminal adapters
@@ -45,6 +45,9 @@ Thin clients of `prinbox inbox --format json`, all usable on the Mac before any 
 - Emacs: a package with a `tabulated-list` buffer by section, `browse-url` on RET, snooze keys, a mode-line count.
 - tmux: `#(prinbox inbox --format tmux)` in the status line and a key bound to `display-popup` running an fzf
   picker.
+- Pinned repositories: a filter control at the top of the popover with a picker over the owners and repositories
+  of the current inbox and a clear button, writing a `repositories` key the command and the server honor in their
+  searches.
 
 ## 1.0.0: Linux
 

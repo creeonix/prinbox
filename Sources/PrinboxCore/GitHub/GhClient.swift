@@ -79,16 +79,6 @@ public struct GhClient: InboxFetching {
 
     public func fetch(_ request: FetchRequest) async throws -> FetchOutcome {
         guard let gh = locator.locate() else { throw FetchError.ghNotFound }
-        let dropped = SearchScope.normalize(request.scope.repositories).dropped
-        if dropped > 0 {
-            logger.notice(.gh, "repository filter: ignored \(dropped) invalid \(dropped == 1 ? "entry" : "entries")")
-        }
-        let overflow = SearchQuery.overflow(includeInvolved: request.includeConversation, scope: request.scope)
-        if overflow > 0 {
-            throw FetchError.other(
-                "repository filter too long for GitHub search: \(overflow) over the \(SearchQuery.queryLimit)-character limit"
-            )
-        }
         let started = ContinuousClock.now
         let search = try Self.interpretSearch(
             try await run(

@@ -26,9 +26,6 @@ public final class PopoverState {
     @ObservationIgnored public var onRecordingEnded: (@MainActor () -> Void)?
     /// Called after a URL was handed to the opener, so the shell can close the popover.
     @ObservationIgnored public var onDidOpenURL: (@MainActor () -> Void)?
-    /// Called when Settings are left (the back button, Esc, or the popover closing over them), so the shell
-    /// commits the Repositories field.
-    @ObservationIgnored public var onSettingsLeft: (@MainActor () -> Void)?
     @ObservationIgnored private var lastItems: [InboxItemID] = []
 
     public init(
@@ -125,10 +122,8 @@ public final class PopoverState {
     /// Rows marked new in every section, folded or not; the header shows it.
     public var newCount: Int { allRows.filter(isNew).count }
 
-    /// The popover closed: the rows it showed are now seen, and a recording in progress ends. Closing over
-    /// Settings leaves them first, which commits the Repositories field.
+    /// The popover closed: the rows it showed are now seen, and a recording in progress ends.
     public func popoverDidClose() {
-        if showingSettings { leaveSettings() }
         if isRecordingShortcut { stopRecording() }
         store.state.markSeen(allRows.map(\.pullRequest))
     }
@@ -165,7 +160,6 @@ public final class PopoverState {
     public func leaveSettings() {
         showingSettings = false
         if isRecordingShortcut { stopRecording() }
-        onSettingsLeft?()
     }
 
     /// The shell unregisters the shortcut before calling this, or Carbon would swallow the new keys.
