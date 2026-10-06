@@ -48,9 +48,9 @@ the cache and got it.
 
 ## Files and the lock
 
-The server is one more writer of `state.json` and `cache.json`, under the same advisory lock as the app and
-the command: every write re-reads the file, applies one change and replaces it. It writes snooze and unsnooze
-entries, wakes and prunes snoozes after a complete fetch, writes the cache after a fetch (leaving the arrivals
+The server is one more writer of `state.json` and `cache.json`, under the same advisory lock as the app and the
+command: every write re-reads the file, applies one change and replaces it. It writes snooze and unsnooze entries,
+wakes and prunes snoozes after a complete, unscoped fetch, writes the cache after a fetch (leaving the arrivals
 baseline as it found it) and bumps `checkedAt` on an unchanged check. It never writes the seen ledger or the
 baseline, so it never affects which arrivals the app announces. Requests are handled one at a time.
 

@@ -28,10 +28,10 @@ popover on its next refresh or open, and a snooze in the popover shows in `prinb
 | Writer | `settings.json` | `state.json` | `cache.json` |
 |---|---|---|---|
 | App | Settings changes, folds, org colors, the one-time migration from defaults | snooze, unsnooze, fetch reconciliation (wake, prune, seed `seen`), popover close | after every full fetch; `checkedAt` on an unchanged check |
-| `prinbox inbox` | never | wake and prune after a complete fetch | after a fetch (`attention` only with `--notify`); `checkedAt` on unchanged; nothing when served from the cache |
-| `prinbox snooze`, `unsnooze` | never | the entry; wake and prune when it had to fetch | only when `snooze` had to fetch |
-| `prinbox open` | never | wake and prune when it had to fetch | only when it had to fetch |
-| `prinbox mcp` | never | snooze and unsnooze entries; wake and prune after a complete fetch | after a fetch (`attention` left as found); `checkedAt` on unchanged; nothing when served |
+| `prinbox inbox` | never | wake and prune after a complete, unscoped fetch | after a fetch (`attention` only with `--notify`); `checkedAt` on unchanged; nothing when served from the cache |
+| `prinbox snooze`, `unsnooze` | never | the entry; when it had to fetch, wake and prune after a complete, unscoped fetch | only when `snooze` had to fetch |
+| `prinbox open` | never | when it had to fetch, wake and prune after a complete, unscoped fetch | only when it had to fetch |
+| `prinbox mcp` | never | snooze and unsnooze entries; wake and prune after a complete, unscoped fetch | after a fetch (`attention` left as found); `checkedAt` on unchanged; nothing when served |
 | `prinbox print`, `Prinbox --print` | never | never | never |
 | `--demo` | never | never | never |
 
@@ -107,7 +107,7 @@ place), so a reader never sees a partial file.
 ## Who writes when
 
 The app writes on snooze and unsnooze, after every fetch that woke or pruned a snooze or pruned the ledger, and
-when the popover closes (the rows shown become seen). The `prinbox` command writes on `snooze` and `unsnooze`,
-and wakes and prunes after a complete fetch; it never writes `seen`. `prinbox mcp` writes as the command does,
-on the agent's snooze and unsnooze and after its own fetches. `Prinbox --print` never writes. `--demo`
-never touches the file.
+when the popover closes (the rows shown become seen). The `prinbox` command writes on `snooze` and `unsnooze`, and
+wakes and prunes after a complete, unscoped fetch; it never writes `seen`. `prinbox mcp` writes as the command
+does, on the agent's snooze and unsnooze and after its own fetches. `Prinbox --print` never writes. `--demo` never
+touches the file.
