@@ -8,6 +8,8 @@ public struct RunContext: Sendable {
     public let persistence: StatePersisting
     public let lock: FileLock?
     public let followReviewThreads: Bool
+    /// The scope settings every fetch of this run honors (spec 4.1).
+    public let scope: SearchScope
     public let ghOverride: String?
     public let delivery: NotificationDelivering
     public let opener: URLOpening
@@ -19,7 +21,8 @@ public struct RunContext: Sendable {
 
     public init(
         fetcher: InboxFetching, cache: CacheStoring, persistence: StatePersisting, lock: FileLock?,
-        followReviewThreads: Bool, ghOverride: String?, delivery: NotificationDelivering, opener: URLOpening,
+        followReviewThreads: Bool, scope: SearchScope = .none, ghOverride: String?, delivery: NotificationDelivering,
+        opener: URLOpening,
         notifyNote: String?, clock: @escaping @Sendable () -> Date, logger: Logging, version: String
     ) {
         self.fetcher = fetcher
@@ -27,6 +30,7 @@ public struct RunContext: Sendable {
         self.persistence = persistence
         self.lock = lock
         self.followReviewThreads = followReviewThreads
+        self.scope = scope
         self.ghOverride = ghOverride
         self.delivery = delivery
         self.opener = opener
@@ -43,20 +47,27 @@ public struct RunOutcome: Sendable, Equatable {
     public let document: InboxDocument
     public let exitCode: Int32
     public let stderr: [String]
+    /// The setup guide's plain text when gh is missing or signed out; the server puts it in the content.
+    public let setupGuide: String?
 
-    public init(document: InboxDocument, exitCode: Int32, stderr: [String]) {
+    public init(document: InboxDocument, exitCode: Int32, stderr: [String], setupGuide: String? = nil) {
         self.document = document
         self.exitCode = exitCode
         self.stderr = stderr
+        self.setupGuide = setupGuide
     }
 }
 
 public struct CommandOutcome: Sendable, Equatable {
     public let exitCode: Int32
     public let stderr: [String]
+    /// The pull request the command acted on, when it found one (snooze, open: the one fetched or cached;
+    /// unsnooze: the cached row, if any). The server reports it; the command prints nothing on success.
+    public let pullRequest: PullRequest?
 
-    public init(exitCode: Int32, stderr: [String]) {
+    public init(exitCode: Int32, stderr: [String], pullRequest: PullRequest? = nil) {
         self.exitCode = exitCode
         self.stderr = stderr
+        self.pullRequest = pullRequest
     }
 }

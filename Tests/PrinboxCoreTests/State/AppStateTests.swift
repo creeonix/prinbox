@@ -29,6 +29,33 @@ import Testing
         }
     }
 
+    @Test func aFileOverTheSizeLimitIsUnreadable() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("prinbox-state-size-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("state.json")
+        let entry = SnoozeEntry(snoozedAt: date("2026-08-10T11:00:00Z"), updatedAt: date("2026-08-01T10:00:00Z"))
+        let small = JSONStateFile(url: url, sizeLimit: 64)
+        try small.save(AppState(snoozed: ["PR_1": entry]))
+        #expect(throws: StateFileTooLarge.self) { try small.load() }
+        let reloaded = try JSONStateFile(url: url).load()
+        #expect(reloaded?.snoozed.keys.contains("PR_1") == true)
+        let missing = try JSONStateFile(url: directory.appendingPathComponent("missing.json"), sizeLimit: 64).load()
+        #expect(missing == nil)
+        #expect(JSONStateFile.sizeLimit == 8 * 1024 * 1024)
+        // A symbolic link is measured by what it points at, not by its own few bytes.
+        let real = directory.appendingPathComponent("real.json")
+        try JSONStateFile(url: real).save(AppState(snoozed: ["PR_1": entry]))
+        let link = directory.appendingPathComponent("linked").appendingPathComponent("state.json")
+        try FileManager.default.createDirectory(
+            at: link.deletingLastPathComponent(), withIntermediateDirectories: true)
+        // A relative target keeps the link's own size (the target's path length) under the limit.
+        try FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: "../real.json")
+        #expect(throws: StateFileTooLarge.self) { try JSONStateFile(url: link, sizeLimit: 64).load() }
+        let throughLink = try JSONStateFile(url: link).load()
+        #expect(throughLink?.snoozed.keys.contains("PR_1") == true)
+    }
+
     @Test func saveCreatesTheDirectoryAndRoundTrips() throws {
         try withStateFile { file in
             let state = AppState(

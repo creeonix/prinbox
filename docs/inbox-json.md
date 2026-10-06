@@ -6,6 +6,8 @@ contract every adapter reads (the editor plugins, the tmux and Waybar modules, t
 they do not know. Dates are ISO 8601 UTC with whole seconds and a `Z` suffix. Every optional is written as
 `null`, never left out. The document is pretty-printed with sorted keys.
 
+`prinbox mcp`'s `get_inbox` tool returns this same document as its structured result (see `docs/mcp.md`).
+
 The other formats derive from it: `lines` (one tab-separated row per line: id, kind, number, title,
 repository, reasonText, age, flags, url; a `more:<kind>` line per capped section), `waybar` (Waybar's
 custom-module object: `text`, `alt`, `class`, `tooltip`, always exit 0) and `tmux` (the count, empty when

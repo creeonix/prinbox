@@ -44,15 +44,18 @@ public struct InboxRun: Sendable {
             return outcome(fetched, exitCode: 0, extra: [])
         case .failure(let error):
             let exitCode: Int32 = error.needsSetup ? 3 : 1
+            let guide = SetupGuide.for(error, ghOverride: context.ghOverride)?.plainText
             guard let cached else {
                 return RunOutcome(
                     document: emptyDocument(error: errorInfo(error, lastSuccess: nil)), exitCode: exitCode,
-                    stderr: [stderrLine(error, lastSuccess: nil)])
+                    stderr: [stderrLine(error, lastSuccess: nil)], setupGuide: guide)
             }
             let fallback = Served(
                 result: cached.result, source: "cache", fetchedAt: cached.fetchedAt, checkedAt: cached.checkedAt,
                 error: error)
-            return outcome(fallback, exitCode: exitCode, extra: [stderrLine(error, lastSuccess: cached.checkedAt)])
+            return outcome(
+                fallback, exitCode: exitCode, extra: [stderrLine(error, lastSuccess: cached.checkedAt)],
+                setupGuide: guide)
         }
     }
 
@@ -62,6 +65,9 @@ public struct InboxRun: Sendable {
         )
     }
 
+    /// The request shape this run fetches under; the cache is trusted for it alone.
+    private var shape: FetchShape { FetchShape(includeConversation: context.followReviewThreads, scope: context.scope) }
+
     /// Phase 1 with the cached fingerprint when trusted. `.unchanged` serves the cached result and bumps
     /// `checkedAt`; a result reconciles the state and replaces the cache. With `--notify` both branches announce
     /// arrivals against the cached baseline and advance it, so what a poller fetched (refreshing the fingerprint,
@@ -69,10 +75,11 @@ public struct InboxRun: Sendable {
     /// finds in the cache at write time, so a poller never eats an arrival nor undoes a notifier's advance.
     private func fetch(cached: InboxCache?, notify: Bool) async -> Result<Served, FetchError> {
         let now = context.clock()
-        let threads = context.followReviewThreads
-        let previous = cached?.trustedFingerprint(now: now, includeConversation: threads)
+        let shape = self.shape
+        let previous = cached?.trustedFingerprint(now: now, shape: shape)
         let request = FetchRequest(
-            previous: previous, includeConversation: threads, previousViewer: previous == nil ? nil : cached?.viewer)
+            previous: previous, includeConversation: shape.includeConversation,
+            previousViewer: previous == nil ? nil : cached?.viewer, scope: shape.scope)
         do {
             switch try await context.fetcher.fetch(request) {
             case .unchanged:
@@ -80,13 +87,17 @@ public struct InboxRun: Sendable {
                 var attention: [String]?
                 if notify {
                     let (state, _) = loadStateForReading()
-                    let snoozed = Set(Snooze.reconcile(state.snoozed, with: cached.result).keys)
+                    let snoozed = Set(
+                        Snooze.reconcile(state.snoozed, with: cached.result, scoped: !context.scope.isEmpty).keys)
+                    let announced = InboxBuilder.build(cached.result, snoozed: snoozed, scope: context.scope)
                     attention = await announce(
-                        InboxBuilder.build(cached.result, snoozed: snoozed), complete: cached.result.isComplete,
-                        baseline: cached.trustedAttention(includeConversation: threads))
+                        announced, complete: cached.result.isComplete,
+                        baseline: cached.trustedAttention(shape: shape))
                 }
                 context.cache.update { existing in
-                    guard var next = existing else { return nil }
+                    // Spec 7.3: stamp only the cache this check confirmed; a notifier's baseline advance is
+                    // dropped with it, and announced again next time (two notifiers are unsupported anyway).
+                    guard var next = existing, next.shape == shape, next.fingerprint == previous else { return nil }
                     next.checkedAt = now
                     if let attention { next.attention = attention }
                     return next
@@ -96,19 +107,18 @@ public struct InboxRun: Sendable {
                         result: cached.result, source: "unchanged", fetchedAt: cached.fetchedAt, checkedAt: now,
                         error: nil))
             case .result(let result):
-                let inbox = InboxBuilder.build(result, snoozed: reconcile(result))
+                let inbox = InboxBuilder.build(result, snoozed: reconcile(result), scope: context.scope)
                 var attention: [String]?
                 if notify {
                     attention = await announce(
-                        inbox, complete: result.isComplete,
-                        baseline: cached?.trustedAttention(includeConversation: threads))
+                        inbox, complete: result.isComplete, baseline: cached?.trustedAttention(shape: shape))
                 }
                 context.cache.update { existing in
                     InboxCache(
-                        fetchedAt: now, checkedAt: now, includeConversation: threads, viewer: result.viewerLogin,
-                        fingerprint: result.fingerprint,
-                        attention: notify
-                            ? attention : (existing?.includeConversation == threads ? existing?.attention : nil),
+                        fetchedAt: now, checkedAt: now, includeConversation: shape.includeConversation,
+                        scope: shape.scope,
+                        viewer: result.viewerLogin, fingerprint: result.fingerprint,
+                        attention: notify ? attention : (existing?.shape == shape ? existing?.attention : nil),
                         result: result)
                 }
                 return .success(Served(result: result, source: "fetch", fetchedAt: now, checkedAt: now, error: nil))
@@ -133,7 +143,7 @@ public struct InboxRun: Sendable {
         locked {
             guard let state = loadState() else { return [] }
             var next = state
-            next.snoozed = Snooze.reconcile(state.snoozed, with: result)
+            next.snoozed = Snooze.reconcile(state.snoozed, with: result, scoped: !context.scope.isEmpty)
             if next != state {
                 do {
                     try context.persistence.save(next)
@@ -147,15 +157,17 @@ public struct InboxRun: Sendable {
 
     // MARK: Document
 
-    private func outcome(_ served: Served, exitCode: Int32, extra: [String]) -> RunOutcome {
+    private func outcome(_ served: Served, exitCode: Int32, extra: [String], setupGuide: String? = nil) -> RunOutcome {
         let (state, warning) = loadStateForReading()
-        let snoozed = Set(Snooze.reconcile(state.snoozed, with: served.result).keys)
-        let inbox = InboxBuilder.build(served.result, snoozed: snoozed)
+        let snoozed = Set(Snooze.reconcile(state.snoozed, with: served.result, scoped: !context.scope.isEmpty).keys)
+        let inbox = InboxBuilder.build(served.result, snoozed: snoozed, scope: context.scope)
         let meta = DocumentMeta(
             prinbox: context.version, source: served.source, fetchedAt: served.fetchedAt, checkedAt: served.checkedAt,
             viewer: served.result.viewerLogin, error: served.error.map { errorInfo($0, lastSuccess: served.checkedAt) })
         let document = InboxDocument.make(inbox, meta: meta, isNew: state.isNew, now: context.clock())
-        return RunOutcome(document: document, exitCode: exitCode, stderr: extra + (warning ? [Self.stateWarning] : []))
+        return RunOutcome(
+            document: document, exitCode: exitCode, stderr: extra + (warning ? [Self.stateWarning] : []),
+            setupGuide: setupGuide)
     }
 
     private func emptyDocument(error: InboxDocument.ErrorInfo?) -> InboxDocument {
@@ -229,14 +241,18 @@ public struct InboxRun: Sendable {
             pr = found
         }
         let now = context.clock()
-        return writeState { state in
+        let written = writeState { state in
             guard state.snoozed[id] == nil else { return }
             state.snoozed[id] = SnoozeEntry(snoozedAt: now, updatedAt: pr.updatedAt)
         }
+        return CommandOutcome(exitCode: written.exitCode, stderr: written.stderr, pullRequest: pr)
     }
 
+    /// Idempotent; the cached row, when there is one, rides along for the server's report.
     public func unsnooze(id: String) -> CommandOutcome {
-        writeState { $0.snoozed[id] = nil }
+        let written = writeState { $0.snoozed[id] = nil }
+        let pr = context.cache.load()?.result.pullRequests.first { $0.id == id }
+        return CommandOutcome(exitCode: written.exitCode, stderr: written.stderr, pullRequest: pr)
     }
 
     public func open(id: String) async -> CommandOutcome {
@@ -247,7 +263,7 @@ public struct InboxRun: Sendable {
             return CommandOutcome(exitCode: 1, stderr: ["prinbox: \(id) is not in your inbox"])
         case .success(let found?):
             await context.opener.open(found.url)
-            return CommandOutcome(exitCode: 0, stderr: [])
+            return CommandOutcome(exitCode: 0, stderr: [], pullRequest: found)
         }
     }
 
@@ -263,9 +279,12 @@ public struct InboxRun: Sendable {
     /// Today's `--print`: a full fetch with the conversation on, snoozes read-only, nothing written.
     public func printInbox() async -> (stdout: String, stderr: [String], exitCode: Int32) {
         do {
-            let result = try await context.fetcher.fetch()
+            guard case .result(let result) = try await context.fetcher.fetch(FetchRequest(scope: context.scope)) else {
+                throw FetchError.badResponse
+            }
             let (state, warning) = loadStateForReading()
-            let inbox = InboxBuilder.build(result, snoozed: Set(Snooze.reconcile(state.snoozed, with: result).keys))
+            let snoozed = Set(Snooze.reconcile(state.snoozed, with: result, scoped: !context.scope.isEmpty).keys)
+            let inbox = InboxBuilder.build(result, snoozed: snoozed, scope: context.scope)
             return (InboxPrinter.render(inbox, now: context.clock()), warning ? [Self.stateWarning] : [], 0)
         } catch let error as FetchError {
             return ("", [stderrLine(error, lastSuccess: nil)], error.needsSetup ? 3 : 1)

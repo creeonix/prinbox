@@ -6,10 +6,10 @@ public enum SearchQuery {
     public static let pageSize = 30
 
     /// `includeInvolved` adds the search behind Replies to you (Follow review threads on). The four searches
-    /// are disjoint: `involved` excludes the other three qualifiers.
-    public static func text(includeInvolved: Bool) -> String {
+    /// are disjoint: `involved` excludes the other three qualifiers. `scope` changes every qualifier (spec 4.2).
+    public static func text(includeInvolved: Bool, scope: SearchScope = .none) -> String {
         let searches = SearchSource.allCases.filter { includeInvolved || $0 != .involved }.map { source in
-            "  \(source.rawValue): search(query: \"is:pr is:open archived:false \(qualifier(source)) sort:updated-desc\","
+            "  \(source.rawValue): search(query: \"\(query(source, scope: scope))\","
                 + " type: ISSUE, first: \(pageSize)) { issueCount nodes { ... on PullRequest { id updatedAt } } }"
         }
         return
@@ -17,12 +17,22 @@ public enum SearchQuery {
             .joined(separator: "\n")
     }
 
-    static func qualifier(_ source: SearchSource) -> String {
+    /// The whole search string for one source, as GitHub sees it.
+    public static func query(_ source: SearchSource, scope: SearchScope = .none) -> String {
+        "is:pr is:open archived:false \(qualifier(source, scope: scope)) sort:updated-desc"
+    }
+
+    /// Direct-only swaps `review-requested` for `user-review-requested` in the inclusion and the exclusions
+    /// alike, so the searches stay disjoint and a team-requested PR can reach Mentions or Replies to you on its
+    /// own merits. Hidden drafts apply to other people's PRs only; the user's own search keeps them.
+    static func qualifier(_ source: SearchSource, scope: SearchScope = .none) -> String {
+        let requested = scope.directReviewRequestsOnly ? "user-review-requested" : "review-requested"
+        let draft = scope.hideDrafts ? " -is:draft" : ""
         switch source {
-        case .review: "review-requested:@me"
-        case .mentions: "mentions:@me -author:@me -review-requested:@me"
-        case .mine: "author:@me"
-        case .involved: "involves:@me -author:@me -review-requested:@me -mentions:@me"
+        case .review: return "\(requested):@me\(draft)"
+        case .mentions: return "mentions:@me -author:@me -\(requested):@me\(draft)"
+        case .mine: return "author:@me"
+        case .involved: return "involves:@me -author:@me -\(requested):@me -mentions:@me\(draft)"
         }
     }
 }

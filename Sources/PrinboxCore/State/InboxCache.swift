@@ -15,8 +15,10 @@ public struct InboxCache: Codable, Equatable, Sendable {
     public var fetchedAt: Date
     /// The last time GitHub confirmed it, including an unchanged check.
     public var checkedAt: Date
-    /// The request shape `fingerprint` and `result` came from.
+    /// The request shape `fingerprint` and `result` came from: the conversation flag and the scope. A 0.5
+    /// file has no `scope`, which decodes as the empty scope, the meaning it had.
     public var includeConversation: Bool
+    public var scope: SearchScope
     public var viewer: String
     /// `id -> updatedAt` over every search node.
     public var fingerprint: [String: Date]
@@ -24,31 +26,51 @@ public struct InboxCache: Codable, Equatable, Sendable {
     public var attention: [String]?
     public var result: FetchResult
 
+    enum CodingKeys: String, CodingKey {
+        case version, fetchedAt, checkedAt, includeConversation, scope, viewer, fingerprint, attention, result
+    }
+
     public init(
-        fetchedAt: Date, checkedAt: Date, includeConversation: Bool, viewer: String, fingerprint: [String: Date],
-        attention: [String]?, result: FetchResult
+        fetchedAt: Date, checkedAt: Date, includeConversation: Bool, scope: SearchScope = .none, viewer: String,
+        fingerprint: [String: Date], attention: [String]?, result: FetchResult
     ) {
         version = InboxCache.currentVersion
         self.fetchedAt = fetchedAt
         self.checkedAt = checkedAt
         self.includeConversation = includeConversation
+        self.scope = scope
         self.viewer = viewer
         self.fingerprint = fingerprint
         self.attention = attention
         self.result = result
     }
 
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decode(Int.self, forKey: .version)
+        fetchedAt = try container.decode(Date.self, forKey: .fetchedAt)
+        checkedAt = try container.decode(Date.self, forKey: .checkedAt)
+        includeConversation = try container.decode(Bool.self, forKey: .includeConversation)
+        scope = try container.decodeIfPresent(SearchScope.self, forKey: .scope) ?? .none
+        viewer = try container.decode(String.self, forKey: .viewer)
+        fingerprint = try container.decode([String: Date].self, forKey: .fingerprint)
+        attention = try container.decodeIfPresent([String].self, forKey: .attention)
+        result = try container.decode(FetchResult.self, forKey: .result)
+    }
+
+    public var shape: FetchShape { FetchShape(includeConversation: includeConversation, scope: scope) }
+
     /// The fingerprint a fetch may send as `previous`: same request shape, younger than the ceiling.
-    public func trustedFingerprint(now: Date, includeConversation: Bool) -> [String: Date]? {
-        guard self.includeConversation == includeConversation else { return nil }
+    public func trustedFingerprint(now: Date, shape: FetchShape) -> [String: Date]? {
+        guard self.shape == shape else { return nil }
         let age = now.timeIntervalSince(fetchedAt)
         guard age >= 0, age < Self.fingerprintCeiling else { return nil }
         return fingerprint
     }
 
     /// The baseline arrivals are computed against: same request shape, and one was recorded.
-    public func trustedAttention(includeConversation: Bool) -> Set<String>? {
-        guard self.includeConversation == includeConversation, let attention else { return nil }
+    public func trustedAttention(shape: FetchShape) -> Set<String>? {
+        guard self.shape == shape, let attention else { return nil }
         return Set(attention)
     }
 }

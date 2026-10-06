@@ -103,4 +103,15 @@ import Testing
         let details = try DetailsResponse.decode(TwoPhaseJSON.details([node]))
         #expect(PullRequestMapper.truncatedPages([details]) == 1)
     }
+
+    @Test func truncatedPagesCountsAReviewsPageOnANodeWithoutThreads() throws {
+        // Conversation off still asks for nothing; a node may carry `reviews` and no `reviewThreads` when a
+        // fixture or a partial response leaves the threads out. The reviews page alone counts.
+        let review: [String: Any] = ["author": ["login": "a"], "state": "APPROVED", "submittedAt": NSNull()]
+        let truncated = TwoPhaseJSON.node(
+            "PR_1", ["reviews": ["totalCount": 60, "nodes": Array(repeating: review, count: 50)]])
+        let plain = TwoPhaseJSON.node("PR_2")
+        let details = try DetailsResponse.decode(TwoPhaseJSON.details([truncated, plain]))
+        #expect(PullRequestMapper.truncatedPages([details]) == 1)
+    }
 }

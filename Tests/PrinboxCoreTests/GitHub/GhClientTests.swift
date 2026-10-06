@@ -111,6 +111,16 @@ final class QueryLog: @unchecked Sendable {
         #expect(log.queries.count == 9)
     }
 
+    @Test func theScopeReachesTheSearch() async throws {
+        let log = QueryLog()
+        let client = twoPhase(search: TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")]), log: log)
+        let scope = SearchScope(directReviewRequestsOnly: true, hideDrafts: true)
+        _ = try await client.fetch(FetchRequest(scope: scope))
+        let search = try #require(log.queries.first)
+        #expect(search.contains("user-review-requested:@me -is:draft"))
+        #expect(FetchRequest(scope: scope).shape == FetchShape(includeConversation: true, scope: scope))
+    }
+
     @Test func conversationOffDropsTheInvolvedSearchAndTheThreadFields() async throws {
         let log = QueryLog()
         let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("a")])
@@ -346,5 +356,10 @@ final class QueryLog: @unchecked Sendable {
         await #expect(throws: CancellationError.self) { try await task.value }
         #expect(log.detailsQueries.count == 1)
         #expect(logger.messages(.notice).isEmpty)
+    }
+
+    @Test func remainingTextPrintsAQuestionMarkWhenUnknown() {
+        #expect(GhClient.remainingText(nil) == "?")
+        #expect(GhClient.remainingText(4890) == "4890")
     }
 }

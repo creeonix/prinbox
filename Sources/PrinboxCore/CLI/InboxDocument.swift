@@ -220,7 +220,7 @@ public struct InboxDocument: Codable, Equatable, Sendable {
             let rows = (section?.rows ?? []).map { Row.make($0, isNew: isNew($0.pullRequest), now: now) }
             return Section(
                 kind: kind.rawValue, title: kind.title, count: section?.count ?? 0, moreCount: section?.moreCount ?? 0,
-                moreUrl: kind.moreURL, rows: rows)
+                moreUrl: (inbox ?? .empty).moreURL(kind), rows: rows)
         }
         return InboxDocument(
             version: currentVersion, prinbox: meta.prinbox, source: meta.source, fetchedAt: meta.fetchedAt,

@@ -1,3 +1,18 @@
+## What's new in 0.6.0
+
+- **An inbox for AI agents.** `prinbox mcp` serves the inbox over the Model Context Protocol, on standard input
+  and output with no network port: `claude mcp add prinbox -- prinbox mcp` and ask what is waiting on you.
+  Three tools: `get_inbox` (the same JSON as `prinbox inbox`), `snooze_pull_request` and
+  `unsnooze_pull_request`. It shares the snoozes and the cache with the app and the command, so a snooze from
+  the agent shows in the menu bar within a second. See `docs/mcp.md`.
+- **Scope for maintainers.** Two new switches: **Only direct review requests** leaves out requests that reach
+  you through a team; **Hide draft pull requests** drops other people's drafts. Both act in the GitHub
+  searches, so they cost nothing.
+- The app notices a snooze made by the command or an agent at once, instead of at the next refresh.
+- A cache from 0.5.0 is read as is; the first refresh after the upgrade can be an unchanged check.
+- Small fixes from the 0.5.0 review: an unchanged check no longer stamps a cache another writer replaced,
+  `state.json` deleted on disk empties the app's memory too, and a few more edge cases are pinned by tests.
+
 ## What's new in 0.5.0
 
 - **The `prinbox` command.** The same inbox from a terminal, a tmux status line or a picker:

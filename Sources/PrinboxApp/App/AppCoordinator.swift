@@ -24,6 +24,7 @@ final class AppCoordinator {
     private var hotKeyCenter: HotKeyCenter?
     private var closingForBrowser = false
     private let isDemo: Bool
+    private var stateWatcher: StateFileWatcher?
 
     /// In demo mode the inbox comes from `DemoFetcher`, settings live in memory with every section open, the
     /// state (one snooze, four new rows) stays in memory, and no global shortcut is registered, so a demo never
@@ -82,7 +83,11 @@ final class AppCoordinator {
         notifications = NotificationSettings(defaults: settings)
         fetchSettings = FetchSettings(defaults: settings)
         store.setIncludeConversation(fetchSettings.followReviewThreads)
+        store.setScope(fetchSettings.scope)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.directory(in: directories)))
+        if !demo {
+            stateWatcher = StateFileWatcher(directory: directories.state) { [weak self] in self?.store.reloadState() }
+        }
     }
 
     func start() {
@@ -123,6 +128,7 @@ final class AppCoordinator {
         triggers.start(
             { [weak self] in await self?.refreshAll() },
             retrySetup: { [weak self] in await self?.store.retryIfSetupNeeded() })
+        stateWatcher?.start()
         store.adoptCache()
         refreshNow()
     }
@@ -143,7 +149,9 @@ final class AppCoordinator {
             unsnooze: { [weak self] id in self?.state.unsnooze(id) },
             copyLink: { [weak self] url in self?.copyToPasteboard(url.absoluteString) },
             setNotifications: { [weak self] enabled in self?.setNotifications(enabled) },
-            setFollowReviewThreads: { [weak self] on in self?.setFollowReviewThreads(on) })
+            setFollowReviewThreads: { [weak self] on in self?.setFollowReviewThreads(on) },
+            setDirectReviewRequestsOnly: { [weak self] on in self?.setDirectReviewRequestsOnly(on) },
+            setHideDrafts: { [weak self] on in self?.setHideDrafts(on) })
     }
 
     private func copy(_ command: String) {
@@ -209,6 +217,22 @@ final class AppCoordinator {
     private func setFollowReviewThreads(_ on: Bool) {
         fetchSettings.setFollowReviewThreads(on)
         store.setIncludeConversation(on)
+        refreshNow()
+    }
+
+    private func setDirectReviewRequestsOnly(_ on: Bool) {
+        fetchSettings.setDirectReviewRequestsOnly(on)
+        applyScope()
+    }
+
+    private func setHideDrafts(_ on: Bool) {
+        fetchSettings.setHideDrafts(on)
+        applyScope()
+    }
+
+    /// A scope change changes what a refresh asks for, so the next refresh is a full one, at once.
+    private func applyScope() {
+        store.setScope(fetchSettings.scope)
         refreshNow()
     }
 

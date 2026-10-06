@@ -83,4 +83,22 @@ import Testing
         #expect(printCode == 0)
         #expect(printed.standardOutput.hasPrefix("waiting on you: 0\n"))
     }
+
+    @Test func mcpServesStdinUntilItCloses() async throws {
+        let lines = [#"{"jsonrpc": "2.0", "id": 1, "method": "ping"}"#]
+        final class Feed: @unchecked Sendable {
+            private let lock = NSLock()
+            private var remaining: [String]
+            init(_ lines: [String]) { remaining = lines }
+            func next() -> String? { lock.withLock { remaining.isEmpty ? nil : remaining.removeFirst() } }
+        }
+        let feed = Feed(lines)
+        let output = Output()
+        let code = await CLI.run(
+            try CLIArguments.parse(["mcp"]), context: makeContext(fetcher: ScriptedFetcher { _ in makeResult([]) }),
+            stdout: { output.stdout($0) }, stderr: { output.stderr($0) }, readLine: feed.next)
+        #expect(code == 0)
+        #expect(output.standardOutput == #"{"id":1,"jsonrpc":"2.0","result":{}}"# + "\n")
+        #expect(output.standardError == "")
+    }
 }

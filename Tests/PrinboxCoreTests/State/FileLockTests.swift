@@ -74,12 +74,17 @@ final class OrderLog: @unchecked Sendable {
         #expect(logger.messages(.notice) == ["lock file not opened, writing without it"])
     }
 
-    @Test func theBodyValueAndErrorsPassThrough() throws {
+    /// A leaked descriptor would keep the lock, so the next `withLock` on the same path would wait out its
+    /// patience and log a notice: no notice means every descriptor was released.
+    @Test func theBodyValueAndErrorsPassThroughWithoutLeakingTheLock() throws {
         let url = lockURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-        let lock = FileLock(url: url)
+        let logger = MemoryLogging()
+        let lock = FileLock(url: url, patience: 0.2, logger: logger)
         #expect(lock.withLock { 42 } == 42)
         #expect(throws: FetchError.offline) { try lock.withLock { throw FetchError.offline } }
         #expect(lock.withLock { 1 } == 1)
+        #expect(FileLock(url: url, patience: 0.2, logger: logger).withLock { 2 } == 2)
+        #expect(logger.lines.isEmpty)
     }
 }

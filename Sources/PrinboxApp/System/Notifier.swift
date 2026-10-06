@@ -13,7 +13,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     /// One identifier for every arrivals banner, so a new one replaces any earlier arrivals banner still in
     /// Notification Center instead of stacking.
     static let arrivalsIdentifier = "io.github.creeonix.prinbox.arrivals"
-    nonisolated private static let log = Logger(subsystem: "io.github.creeonix.prinbox", category: "notifications")
+    nonisolated private static let logger = Logger(subsystem: OSLogging.subsystem, category: "notifications")
 
     private(set) var status: NotificationStatus = Notifier.isAvailable ? .notDetermined : .unavailable
     /// A click: the PR to open, or nil to show the popover.
@@ -48,7 +48,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let request = UNNotificationRequest(identifier: Self.arrivalsIdentifier, content: content, trigger: nil)
         center.add(request) { error in
             if let error {
-                Self.log.error("notification not delivered: \(String(describing: error), privacy: .private)")
+                Self.logger.error("notification not delivered: \(String(describing: error), privacy: .private)")
             }
         }
     }

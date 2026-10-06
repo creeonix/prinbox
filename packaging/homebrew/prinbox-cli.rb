@@ -12,6 +12,13 @@ class PrinboxCli < Formula
     bin.install "prinbox"
   end
 
+  def caveats
+    <<~EOS
+      To serve the inbox to AI agents over the Model Context Protocol:
+        claude mcp add prinbox -- prinbox mcp
+    EOS
+  end
+
   test do
     assert_match version.to_s, shell_output("#{bin}/prinbox --version")
   end

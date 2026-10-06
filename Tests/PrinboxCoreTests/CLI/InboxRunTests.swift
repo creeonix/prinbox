@@ -64,6 +64,14 @@ import Testing
         #expect(cache.saved?.attention == nil)
     }
 
+    @Test func aNonNotifierCarriesTheBaselineWhenTheShapeMatches() async {
+        let cache = MemoryCache(cached([pr1], attention: ["PR_1"]))
+        let fetcher = ScriptedFetcher { _ in makeResult([self.pr1, self.pr2]) }
+        _ = await InboxRun(context: makeContext(fetcher: fetcher, cache: cache)).inbox(InboxOptions())
+        #expect(cache.saved?.attention == ["PR_1"])
+        #expect(cache.saved?.result.pullRequests.count == 2)
+    }
+
     /// Answers `.unchanged` only when the request's fingerprint matches `current`, as GitHub would.
     func github(_ current: FetchResult) -> ScriptedFetcher {
         ScriptedFetcher(outcomes: { _, request in
@@ -229,6 +237,22 @@ import Testing
         #expect(outcome.document.sections[5].rows.map(\.id) == ["PR_2"])
     }
 
+    @Test func aScopedRunKeepsSnoozesOfHiddenPullRequests() async throws {
+        let parked = SnoozeEntry(snoozedAt: start - 60, updatedAt: pr2.updatedAt)
+        func run(scope: SearchScope) async throws -> MemoryStatePersistence {
+            let persistence = MemoryStatePersistence()
+            try persistence.save(AppState(snoozed: ["PR_2": parked]))
+            let context = makeContext(
+                fetcher: ScriptedFetcher { _ in makeResult([self.pr1]) }, persistence: persistence, scope: scope)
+            _ = await InboxRun(context: context).inbox(InboxOptions())
+            return persistence
+        }
+        let scoped = try await run(scope: SearchScope(hideDrafts: true))
+        #expect(scoped.saved?.snoozed["PR_2"] == parked)
+        let unscoped = try await run(scope: .none)
+        #expect(unscoped.saved?.snoozed.isEmpty == true)
+    }
+
     @Test func theDocumentCarriesNewAndSnoozedFromState() async throws {
         let persistence = MemoryStatePersistence()
         try persistence.save(
@@ -259,7 +283,7 @@ import Testing
         let run = InboxRun(
             context: makeContext(fetcher: fetcher, cache: MemoryCache(cached([pr1])), persistence: persistence))
         let first = await run.snooze(id: "PR_1")
-        #expect(first == CommandOutcome(exitCode: 0, stderr: []))
+        #expect(first == CommandOutcome(exitCode: 0, stderr: [], pullRequest: pr1))
         #expect(persistence.saved?.snoozed["PR_1"] == SnoozeEntry(snoozedAt: start, updatedAt: pr1.updatedAt))
         #expect(await fetcher.calls == 0)
         let again = await run.snooze(id: "PR_1")
@@ -335,5 +359,70 @@ import Testing
                 "ghNotFound", "loggedOut", "offline", "timedOut", "rateLimited", "badResponse", "githubUnavailable",
                 "other",
             ])
+    }
+
+    @Test func theScopeRidesInTheRequestAndGatesTheCache() async {
+        let scope = SearchScope(directReviewRequestsOnly: true)
+        let fetcher = ScriptedFetcher { _ in makeResult([self.pr1]) }
+        let cache = MemoryCache(cached([pr1], attention: ["PR_1"]))
+        let context = makeContext(fetcher: fetcher, cache: cache, scope: scope)
+        _ = await InboxRun(context: context).inbox(InboxOptions())
+        let request = await fetcher.requests.first
+        #expect(request?.scope == scope)
+        #expect(request?.previous == nil)
+        #expect(cache.saved?.scope == scope)
+        #expect(cache.saved?.attention == nil)
+        _ = await InboxRun(context: context).inbox(InboxOptions())
+        #expect(await fetcher.requests.last?.previous == ["PR_1": pr1.updatedAt])
+        #expect(await fetcher.requests.count == 2)
+    }
+
+    @Test func anUnchangedBumpIsDroppedWhenTheCacheMovedUnderneath() async {
+        let cache = MemoryCache(cached([pr1]))
+        let fetcher = ScriptedFetcher(outcomes: { _, _ in
+            cache.update { _ in self.cached([self.pr2], fetchedAt: self.start - 10, checkedAt: self.start - 10) }
+            return .unchanged
+        })
+        let outcome = await InboxRun(context: makeContext(fetcher: fetcher, cache: cache)).inbox(InboxOptions())
+        #expect(outcome.document.source == "unchanged")
+        #expect(cache.saved?.checkedAt == start - 10)
+        #expect(cache.saved?.result.pullRequests.map(\.id) == ["PR_2"])
+    }
+
+    @Test func printFetchesWithTheScope() async throws {
+        let scope = SearchScope(hideDrafts: true)
+        let fetcher = ScriptedFetcher { _ in makeResult([self.pr1]) }
+        let printed = await InboxRun(context: makeContext(fetcher: fetcher, scope: scope)).printInbox()
+        #expect(printed.exitCode == 0)
+        #expect(await fetcher.requests.first == FetchRequest(scope: scope))
+    }
+
+    @Test func writeStateFailurePathsReportOnStderr() async {
+        let cache = MemoryCache(cached([pr1]))
+        let unreadable = InboxRun(
+            context: makeContext(
+                fetcher: ScriptedFetcher { _ in makeResult([]) }, cache: cache,
+                persistence: FailingPersistence(loadFails: true, saveFails: true)))
+        #expect(
+            await unreadable.snooze(id: "PR_1")
+                == CommandOutcome(
+                    exitCode: 1, stderr: ["prinbox: state.json is unreadable, nothing written"], pullRequest: pr1))
+        let unsaveable = InboxRun(
+            context: makeContext(
+                fetcher: ScriptedFetcher { _ in makeResult([]) }, cache: cache,
+                persistence: FailingPersistence(loadFails: false, saveFails: true)))
+        let outcome = await unsaveable.snooze(id: "PR_1")
+        #expect(outcome.exitCode == 1)
+        #expect(outcome.stderr.first?.hasPrefix("prinbox: state.json not saved: ") == true)
+    }
+
+    @Test func snoozeAndOpenExit3WhenSetupIsNeeded() async {
+        let run = InboxRun(context: makeContext(fetcher: ScriptedFetcher { _ in throw FetchError.loggedOut }))
+        let snoozed = await run.snooze(id: "PR_1")
+        #expect(snoozed.exitCode == 3)
+        #expect(snoozed.stderr == [SetupGuide.signedOut.plainText])
+        let opened = await run.open(id: "PR_1")
+        #expect(opened.exitCode == 3)
+        #expect(opened.stderr == [SetupGuide.signedOut.plainText])
     }
 }

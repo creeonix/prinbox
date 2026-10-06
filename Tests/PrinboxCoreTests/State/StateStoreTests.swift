@@ -138,6 +138,19 @@ struct FailingPersistence: StatePersisting {
         #expect(store.state.seen == ["a": old])
     }
 
+    @Test func aScopedFetchDoesNotPruneTheLedger() {
+        let (store, _) = makeStore()
+        store.didFetch(makeResult([makePR(id: "PR_1", updatedAt: old), makePR(id: "PR_2", updatedAt: old)]))
+        store.snooze(makePR(id: "PR_2", updatedAt: old))
+        let result = makeResult([makePR(id: "PR_1", updatedAt: old)])
+        store.didFetch(result, scoped: true)
+        #expect(store.state.seen?.keys.sorted() == ["PR_1", "PR_2"])
+        #expect(store.isSnoozed("PR_2"))
+        store.didFetch(result)
+        #expect(store.state.seen == ["PR_1": old])
+        #expect(!store.isSnoozed("PR_2"))
+    }
+
     @Test func emptyInboxSeedsAnEmptyLedgerSoLaterArrivalsAreNew() {
         let (store, _) = makeStore()
         store.didFetch(makeResult([]))
@@ -169,6 +182,16 @@ struct FailingPersistence: StatePersisting {
         #expect(!store.isSnoozed("PR_2"))
         store.reload()
         #expect(store.isSnoozed("PR_2"))
+    }
+
+    @Test func reloadTreatsADeletedFileAsEmpty() {
+        let persistence = MemoryStatePersistence(AppState(snoozed: ["PR_1": entry]))
+        let store = StateStore(persistence: persistence)
+        #expect(store.isSnoozed("PR_1"))
+        persistence.clear()
+        store.reload()
+        #expect(store.state == AppState())
+        #expect(persistence.saveCount == 0)
     }
 
     @Test func anUnreadableFileKeepsTheMemoryCopyOnWriteAndReload() {

@@ -14,5 +14,7 @@ do {
 let code = await CLI.run(
     invocation, context: Composition.context(for: invocation),
     stdout: { FileHandle.standardOutput.write(Data($0.utf8)) },
-    stderr: { FileHandle.standardError.write(Data($0.utf8)) })
+    stderr: { FileHandle.standardError.write(Data($0.utf8)) },
+    readLine: { Swift.readLine(strippingNewline: true) },
+    makeContext: { Composition.context(for: invocation) })
 exit(code)

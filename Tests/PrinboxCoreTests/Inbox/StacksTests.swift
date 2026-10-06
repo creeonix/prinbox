@@ -87,4 +87,24 @@ import Testing
         let b = makePR(id: "b", number: 2, baseRef: "main")
         #expect(Stacks.compute([a, b]).isEmpty)
     }
+
+    @Test func duplicateIDsTaintTheirGroup() {
+        // Two entries with one id both register the head "f1", so the child sees two candidates and the group
+        // {a, b} is tainted, exactly like a shared head. The mapper dedupes upstream; this pins the safe side.
+        let a = pr("a", 1, head: "f1", base: "main")
+        let b = pr("b", 2, head: "f2", base: "f1")
+        #expect(Stacks.compute([a, a, b]).isEmpty)
+    }
+
+    @Test func aCrossRepositoryPullRequestInTheMiddleEndsTheChainBelowIt() {
+        // m's head lives in a fork, so it is nobody's parent: c has no parent and is a line of one. m itself
+        // has a parent (its base is a's head), so a and m form a chain of two.
+        let a = pr("a", 1, head: "f1", base: "main")
+        let m = pr("m", 2, head: "f2", base: "f1", cross: true)
+        let c = pr("c", 3, head: "f3", base: "f2")
+        let positions = Stacks.compute([a, m, c])
+        #expect(positions["a"] == StackPosition(position: 1, size: 2, parentID: nil, parentNumber: nil, rootID: "a"))
+        #expect(positions["m"] == StackPosition(position: 2, size: 2, parentID: "a", parentNumber: 1, rootID: "a"))
+        #expect(positions["c"] == nil)
+    }
 }

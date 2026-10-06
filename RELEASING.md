@@ -26,7 +26,7 @@ Releases are built by `.github/workflows/release.yml` when a version tag is push
 
    ```sh
    git clone git@github.com:creeonix/homebrew-tap.git ../homebrew-tap   # once
-   scripts/update-tap.sh 0.5.0
+   scripts/update-tap.sh 0.6.0
    ```
 
    `brew install --cask creeonix/tap/prinbox` and `brew install creeonix/tap/prinbox-cli` then serve the

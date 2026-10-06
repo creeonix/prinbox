@@ -44,13 +44,14 @@ public final class StateStore {
     }
 
     /// Wakes snoozes whose PR changed, seeds the ledger on the first fetch ever (so nothing is new after an
-    /// install), and on a complete fetch forgets PRs GitHub no longer returns.
-    public func didFetch(_ result: FetchResult) {
+    /// install), and on a complete fetch forgets PRs GitHub no longer returns. A `scoped` fetch leaves out PRs by
+    /// design, so it forgets nothing: neither snoozes nor ledger entries.
+    public func didFetch(_ result: FetchResult, scoped: Bool = false) {
         update { state in
-            state.snoozed = Snooze.reconcile(state.snoozed, with: result)
+            state.snoozed = Snooze.reconcile(state.snoozed, with: result, scoped: scoped)
             if state.seen == nil {
                 state.seen = Self.snapshot(result.pullRequests)
-            } else if result.isComplete {
+            } else if result.isComplete && !scoped {
                 let present = Set(result.pullRequests.map(\.id))
                 state.seen = state.seen?.filter { present.contains($0.key) }
             }
@@ -73,10 +74,16 @@ public final class StateStore {
         Dictionary(prs.map { ($0.id, $0.updatedAt) }, uniquingKeysWith: { _, new in new })
     }
 
-    /// Picks up what another writer, the command, put in the file; nothing happens when it is unchanged or
-    /// unreadable.
+    /// Picks up what another writer (the command, the server) put in the file. A missing file is the empty
+    /// state, the rule `update` applies; an unreadable one keeps the memory copy; an unchanged one does nothing.
     public func reload() {
-        guard let loaded = try? persistence.load(), loaded != state else { return }
+        let loaded: AppState
+        do {
+            loaded = try persistence.load() ?? AppState()
+        } catch {
+            return
+        }
+        guard loaded != state else { return }
         state = loaded
     }
 

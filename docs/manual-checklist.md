@@ -67,4 +67,13 @@ Run them before a release.
 - [ ] With the network off: `prinbox inbox --format json` prints the cached rows with `"error"` set and exits 1; `--format waybar` exits 0 with the `error` class.
 - [ ] Signed out (`GH_CONFIG_DIR=$(mktemp -d) prinbox inbox`): exit 3 and the sign-in steps on stderr.
 - [ ] On the live account, a stacked pair (if one exists) shows `· stack 1/2` and `· stack 2/2` on adjacent rows, and the tooltip of the upper one says "stacked on #N".
-- [ ] After the release: `brew install --cask creeonix/tap/prinbox` and `brew install creeonix/tap/prinbox-cli` install, and `prinbox --version` prints 0.5.0.
+- [ ] `claude mcp add prinbox -- prinbox mcp`, then ask Claude Code what is waiting on you: the rows match the popover and `--verbose` (or the unified log) shows one request.
+- [ ] Ask twice within a minute: the second answer says `"source" : "cache"` and GitHub was not contacted.
+- [ ] With the popover open, ask the agent to snooze a PR: the row moves to Waiting on others and the count drops within a second; `U` on it in the popover shows `"snoozed" : false` in the agent's next `get_inbox`.
+- [ ] Signed out (`GH_CONFIG_DIR=$(mktemp -d)` in the server's environment), ask for the inbox: the agent reports the sign-in steps.
+- [ ] Settings > Only direct review requests: a PR requested through a team leaves Needs your review on the next refresh (when the live account has one); off brings it back.
+- [ ] Settings > Hide draft pull requests: other people's drafts disappear, yours stay in Waiting on others.
+- [ ] After upgrading from 0.5.0, the first refresh is an unchanged check (the log says `fetch unchanged: 1 request`), not a full fetch: the old `cache.json` is still trusted.
+- [ ] Open Settings: a Scope group follows Follow review threads with "Only direct review requests" and "Hide draft pull requests", each with its caption.
+- [ ] With the popover open, run `prinbox snooze <id>` in a terminal: the row moves to Waiting on others and the count drops within a second (the directory watcher), without reopening the popover.
+- [ ] After the release: `brew install creeonix/tap/prinbox-cli` prints the registration line in its caveats and `prinbox --version` says 0.6.0.

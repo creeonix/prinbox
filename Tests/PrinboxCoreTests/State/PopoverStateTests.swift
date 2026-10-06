@@ -55,6 +55,17 @@ import Testing
         #expect(state.handle(.enter) == .open(SectionKind.needsReview.moreURL))
     }
 
+    @Test func theMoreRowOpensTheScopedSearch() async {
+        let prs = (1...9).map { makePR(id: "p\($0)", number: $0) }
+        let scope = SearchScope(hideDrafts: true)
+        let state = await makeState { _ in makeResult(prs) }
+        state.store.setScope(scope)
+        await state.refresh()
+        state.select(.more(.needsReview))
+        #expect(state.handle(.enter) == .open(SectionKind.needsReview.moreURL(scope: scope)))
+        #expect(state.moreURL(.needsReview) == SectionKind.needsReview.moreURL(scope: scope))
+    }
+
     @Test func foldingASectionMovesTheSelectionToItsHeader() async {
         let prs = [a, b]
         let state = await makeState { _ in makeResult(prs) }

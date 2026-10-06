@@ -57,6 +57,9 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
   `state.json` (see Privacy).
 - **Stacked pull requests:** a PR whose base branch is another open PR's head branch says `stack 2/3` in its
   fact line, and the chain stays together in its section. Simple chains only; a fork or a cycle gets no badge.
+- **Scope for maintainers** (Settings): only direct review requests (requests that reach you through a team are
+  left out) and hide other people's drafts. Both act in the GitHub searches, so a narrowed inbox costs nothing
+  extra and the search window goes to what you asked for.
 - **New since your last look:** rows that appeared or changed since you last closed the popover carry an accent
   bar at their left edge, and the header counts them.
 - **Notifications** (off by default): one banner per refresh when a PR enters Needs your review, Replies to
@@ -155,12 +158,14 @@ When this is set, PRInbox and `prinbox` use only that path. Remove the key to go
 ### Settings
 
 Open Settings with the gear in the popover. It holds the global shortcut, launch at login, **Group by
-organization**, **Show organization avatars**, **Compact rows**, **Follow review threads**, **Notify about
-new review requests and replies**, the detected `gh` path, the version and Quit. Turning notifications on
-asks macOS for permission once; if you decline, Settings says where to turn them on. Settings stay inside
-the popover, so there is never a window for a tiling window manager to grab. Every setting lives in
-`~/.config/prinbox/settings.json`, one key per switch; a hand edit takes effect at the next launch, and the
-first 0.5.0 launch moves your 0.4 settings there out of macOS defaults.
+organization**, **Show organization avatars**, **Compact rows**, **Follow review threads**, **Only direct review
+requests**, **Hide draft pull requests**, **Notify about new review requests and replies**, the detected `gh` path,
+the version and Quit. Turning notifications on asks macOS for permission once; if you decline, Settings says where
+to turn them on. The Scope group narrows what the searches ask GitHub for with two switches, **Only direct review
+requests** and **Hide draft pull requests**; their keys are `directReviewRequestsOnly` and `hideDrafts`. Settings
+stay inside the popover, so there is never a window for a tiling window manager to grab. Every setting lives in
+`~/.config/prinbox/settings.json`, one key per switch; a hand edit takes effect at the next launch, and the first
+0.5.0 launch moves your 0.4 settings there out of macOS defaults.
 
 <p align="center">
   <img src="docs/images/popover-compact.png" width="460" alt="The same inbox with Compact rows on">
@@ -183,6 +188,7 @@ prinbox print                                # the inbox as text, a full fetch t
 prinbox snooze PR_kwDOA1                     # park a pull request (ids come from the JSON or the lines)
 prinbox unsnooze PR_kwDOA1
 prinbox open PR_kwDOA1                       # open it in the browser
+prinbox mcp                                  # serve the inbox to AI agents over stdio (see AI agents)
 ```
 
 A tmux status segment: `#(prinbox inbox --format tmux --max-age 60)`. An fzf picker:
@@ -198,6 +204,28 @@ The app binary keeps two flags: `/Applications/PRInbox.app/Contents/MacOS/Prinbo
 `prinbox print`) and `--demo` (sample data). `--settings <path>` applies to the app itself (and to `--demo`);
 `prinbox print --settings <path>` is the command's equivalent.
 
+### AI agents
+
+`prinbox mcp` serves the same inbox to AI agents over the [Model Context Protocol](https://modelcontextprotocol.io):
+standard input and output, no network port, the same `state.json` and cache as the app and the command.
+Register it once:
+
+```sh
+claude mcp add prinbox -- prinbox mcp
+```
+
+or, for Claude Desktop, in `claude_desktop_config.json`:
+
+```json
+{ "mcpServers": { "prinbox": { "command": "prinbox", "args": ["mcp"] } } }
+```
+
+Three tools. `get_inbox` returns the JSON document of [docs/inbox-json.md](docs/inbox-json.md), served from the
+cache when GitHub confirmed it within the last 60 seconds (`max_age_seconds` changes that; 0 fetches now).
+`snooze_pull_request` and `unsnooze_pull_request` take a row's `id`; a snooze made by an agent shows in the
+menu bar and an open popover within a second. The server is never a notifier and writes nothing an agent did
+not ask for. Details, the error rules and the log in [docs/mcp.md](docs/mcp.md).
+
 ## Privacy and security
 
 - **No token handling:** GitHub access goes only through `gh api graphql`. PRInbox has no OAuth app,
@@ -206,6 +234,9 @@ The app binary keeps two flags: `/Applications/PRInbox.app/Contents/MacOS/Prinbo
   GitHub API calls (the pull requests waiting on you in two steps, an ids-only search and the details in
   small batches, every five minutes or when something changed; the latest PRInbox release once a day) and
   avatar downloads from `avatars.githubusercontent.com` (authors and repository owners).
+- **AI agents:** `prinbox mcp` hands the agent that launched it the same fields the popover shows (titles,
+  logins, URLs, counts, dates), over its own standard input and output. It opens no port and never carries
+  comment text.
 - **Local data:** settings live in `~/.config/prinbox/settings.json`. Snoozes and the "seen" ledger live in
   `~/Library/Application Support/prinbox/state.json`, the last fetch in `cache.json` beside it (titles,
   logins and URLs, never comment text) and the daily release check in `update.json`; avatars are cached in
@@ -246,7 +277,7 @@ Other targets:
 
 - **Code layout:**
   - `Sources/PrinboxCore` holds all the logic (gh access, classification, formatting, state, the command's
-    logic under `CLI/`) and is unit tested. It has no AppKit.
+    logic under `CLI/`, the MCP server under `MCP/`) and is unit tested. It has no AppKit.
   - `Sources/PrinboxApp` is the thin AppKit and SwiftUI shell (macOS).
   - `Sources/PrinboxCLI` is the command's `main.swift` and composition root.
 - **Fixtures:** `scripts/record-fixture.sh <name>` records the live inbox as a two-phase fixture (the

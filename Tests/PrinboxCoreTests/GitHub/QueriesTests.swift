@@ -64,4 +64,37 @@ import Testing
     @Test func validIDsFiltersWhatTextWouldDrop() {
         #expect(DetailsQuery.validIDs(["PR_1", "", "bad id", "PR_2=="]) == ["PR_1", "PR_2=="])
     }
+
+    @Test func scopeChangesTheQualifiersOfEverySearch() {
+        let scope = SearchScope(directReviewRequestsOnly: true, hideDrafts: true)
+        #expect(SearchQuery.qualifier(.review, scope: scope) == "user-review-requested:@me -is:draft")
+        #expect(
+            SearchQuery.qualifier(.mentions, scope: scope)
+                == "mentions:@me -author:@me -user-review-requested:@me -is:draft")
+        #expect(SearchQuery.qualifier(.mine, scope: scope) == "author:@me")
+        #expect(
+            SearchQuery.qualifier(.involved, scope: scope)
+                == "involves:@me -author:@me -user-review-requested:@me -mentions:@me -is:draft")
+        #expect(
+            SearchQuery.qualifier(.review, scope: SearchScope(hideDrafts: true)) == "review-requested:@me -is:draft")
+        #expect(SearchQuery.qualifier(.mine, scope: SearchScope(hideDrafts: true)) == "author:@me")
+        #expect(
+            SearchQuery.qualifier(.mentions, scope: SearchScope(directReviewRequestsOnly: true))
+                == "mentions:@me -author:@me -user-review-requested:@me")
+        let text = SearchQuery.text(includeInvolved: true, scope: scope)
+        #expect(text.components(separatedBy: " -is:draft").count - 1 == 3)
+        #expect(!text.contains(" review-requested:@me"))
+        #expect(SearchQuery.text(includeInvolved: true) == SearchQuery.text(includeInvolved: true, scope: .none))
+    }
+
+    @Test func theQueryStringIsTheOneGitHubSees() {
+        #expect(SearchQuery.query(.review) == "is:pr is:open archived:false review-requested:@me sort:updated-desc")
+        let longest = SearchScope(directReviewRequestsOnly: true, hideDrafts: true)
+        #expect(
+            SearchQuery.query(.involved, scope: longest)
+                == "is:pr is:open archived:false involves:@me -author:@me -user-review-requested:@me -mentions:@me -is:draft sort:updated-desc"
+        )
+        #expect(SearchQuery.query(.involved, scope: longest).count == 122)
+        #expect(SearchQuery.query(.mentions, scope: longest).count == 108)
+    }
 }

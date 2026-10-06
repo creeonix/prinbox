@@ -74,6 +74,23 @@ struct SettingsView: View {
             )
             .font(.caption)
             .foregroundStyle(.secondary)
+            SettingRow(title: "Only direct review requests") {
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { fetchSettings.scope.directReviewRequestsOnly },
+                        set: { actions.setDirectReviewRequestsOnly($0) })
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
+            }
+            Text("Requests that reach you through a team are left out").font(.caption).foregroundStyle(.secondary)
+            SettingRow(title: "Hide draft pull requests") {
+                Toggle("", isOn: Binding(get: { fetchSettings.scope.hideDrafts }, set: { actions.setHideDrafts($0) }))
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+            }
+            Text("Your own drafts stay").font(.caption).foregroundStyle(.secondary)
             SettingRow(title: "Notify about new review requests and replies") {
                 Toggle("", isOn: Binding(get: { notifications.isEnabled }, set: { actions.setNotifications($0) }))
                     .toggleStyle(.switch)
