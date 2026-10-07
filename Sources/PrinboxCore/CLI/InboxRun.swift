@@ -119,7 +119,9 @@ public struct InboxRun: Sendable {
                         scope: shape.scope,
                         viewer: result.viewerLogin, fingerprint: result.fingerprint,
                         attention: notify ? attention : (existing?.shape == shape ? existing?.attention : nil),
-                        result: result)
+                        result: result,
+                        knownRepositories: InboxCache.knownRepositories(
+                            after: result, scope: shape.scope, carrying: existing?.knownRepositories))
                 }
                 return .success(Served(result: result, source: "fetch", fetchedAt: now, checkedAt: now, error: nil))
             }

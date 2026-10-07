@@ -185,4 +185,66 @@ import Testing
             #expect(logger.lines.isEmpty)
         }
     }
+
+    @Test func repositoryNamesAreTheDistinctSortedNonArchivedRepositories() {
+        let result = makeResult([
+            makePR(id: "PR_1", repository: "globex/billing"), makePR(id: "PR_2", repository: "acme/web"),
+            makePR(id: "PR_3", repository: "acme/web"), makePR(id: "PR_4", repository: "acme/old", isArchived: true),
+        ])
+        #expect(result.repositoryNames == ["acme/web", "globex/billing"])
+        #expect(makeResult([]).repositoryNames == [])
+    }
+
+    @Test func knownRepositoriesAreReplacedByAnUnfilteredFetchAndCarriedByAFilteredOne() {
+        let result = makeResult([makePR(id: "PR_1", repository: "acme/web")])
+        #expect(InboxCache.knownRepositories(after: result, scope: .none, carrying: ["x/y"]) == ["acme/web"])
+        #expect(InboxCache.knownRepositories(after: result, scope: .none, carrying: nil) == ["acme/web"])
+        let filtered = SearchScope(repositories: ["acme/*"])
+        #expect(InboxCache.knownRepositories(after: result, scope: filtered, carrying: ["x/y"]) == ["x/y"])
+        #expect(InboxCache.knownRepositories(after: result, scope: filtered, carrying: nil) == nil)
+        // The other two switches do not make a fetch "filtered" for this rule.
+        let drafts = SearchScope(hideDrafts: true)
+        #expect(InboxCache.knownRepositories(after: result, scope: drafts, carrying: nil) == ["acme/web"])
+    }
+
+    @Test func knownRepositoriesRoundTripAndAreAbsentFromASixPointZeroFile() throws {
+        try withCacheFile { file, url in
+            var cached = cache(result: makeResult([]))
+            cached.knownRepositories = ["acme/web"]
+            file.update { _ in cached }
+            #expect(file.load()?.knownRepositories == ["acme/web"])
+            let text = try String(contentsOf: url, encoding: .utf8)
+            #expect(text.contains("\"knownRepositories\" : ["))
+            file.update { _ in cache(result: makeResult([])) }
+            #expect(file.load()?.knownRepositories == nil)
+            let absent = try String(contentsOf: url, encoding: .utf8)
+            #expect(!absent.contains("knownRepositories"))
+        }
+    }
+
+    @Test func aSixPointZeroCacheReadsAsTheCacheItWas() throws {
+        try withCacheFile { file, url in
+            let scope = SearchScope(directReviewRequestsOnly: true, repositories: ["acme/*"], hideDrafts: true)
+            let cached = InboxCache(
+                fetchedAt: now, checkedAt: now, includeConversation: true, scope: scope, viewer: "me", fingerprint: [:],
+                attention: nil, result: makeResult([]), knownRepositories: ["acme/web"])
+            file.update { _ in cached }
+            let text = try String(contentsOf: url, encoding: .utf8)
+            #expect(text.contains("\"defaultRepositories\" : ["))
+            // A 0.6.0 file: the scope holds the two switches, and there is no known list.
+            var object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+            object["scope"] = ["directReviewRequestsOnly": true, "hideDrafts": true]
+            object["knownRepositories"] = nil
+            try JSONSerialization.data(withJSONObject: object).write(to: url)
+            let loaded = try #require(file.load())
+            #expect(loaded.version == 1)
+            #expect(loaded.scope == SearchScope(directReviewRequestsOnly: true, hideDrafts: true))
+            #expect(loaded.knownRepositories == nil)
+            #expect(
+                loaded.shape
+                    == FetchShape(
+                        includeConversation: true, scope: SearchScope(directReviewRequestsOnly: true, hideDrafts: true))
+            )
+        }
+    }
 }

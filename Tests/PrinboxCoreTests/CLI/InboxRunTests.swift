@@ -425,4 +425,23 @@ import Testing
         #expect(opened.exitCode == 3)
         #expect(opened.stderr == [SetupGuide.signedOut.plainText])
     }
+
+    @Test func theRunRecordsKnownRepositoriesByTheSameRule() async {
+        let cache = MemoryCache()
+        let two = makeResult([
+            makePR(id: "PR_1", repository: "acme/web"), makePR(id: "PR_2", repository: "globex/billing"),
+        ])
+        let one = makeResult([makePR(id: "PR_1", repository: "acme/web")])
+        _ = await InboxRun(context: makeContext(fetcher: ScriptedFetcher { _ in two }, cache: cache)).inbox(
+            InboxOptions())
+        #expect(cache.saved?.knownRepositories == ["acme/web", "globex/billing"])
+        let filtered = makeContext(
+            fetcher: ScriptedFetcher { _ in one }, cache: cache, scope: SearchScope(repositories: ["acme/*"]))
+        _ = await InboxRun(context: filtered).inbox(InboxOptions())
+        #expect(cache.saved?.knownRepositories == ["acme/web", "globex/billing"])
+        #expect(cache.saved?.result.pullRequests.count == 1)
+        _ = await InboxRun(context: makeContext(fetcher: ScriptedFetcher { _ in one }, cache: cache)).inbox(
+            InboxOptions())
+        #expect(cache.saved?.knownRepositories == ["acme/web"])
+    }
 }
