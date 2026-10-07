@@ -26,6 +26,9 @@ nothing at all when the app or another adapter refreshed within the minute.
 (the `+N more on GitHub` line opens its page), `ctrl-s` snoozes it, `ctrl-u` wakes it, `ctrl-r` fetches now. The
 header shows the count and the keys, or the error when the last fetch failed.
 
+The popup and the status segment follow your default repositories without saying so (the `lines` and `tmux`
+formats carry no filter); the popover's strip shows them.
+
 ## Options
 
 Set these before the plugin runs:
