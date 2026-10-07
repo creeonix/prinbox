@@ -154,8 +154,7 @@ final class AppCoordinator {
             setDirectReviewRequestsOnly: { [weak self] on in self?.setDirectReviewRequestsOnly(on) },
             setHideDrafts: { [weak self] on in self?.setHideDrafts(on) },
             toggleRepository: { [weak self] entry in self?.toggleRepository(entry) },
-            clearRepositories: { [weak self] in self?.setRepositories([]) },
-            pickRepositories: { [weak self] in self?.menuAnchor.popUp() })
+            clearRepositories: { [weak self] in self?.setRepositories([]) })
     }
 
     private func copy(_ command: String) {

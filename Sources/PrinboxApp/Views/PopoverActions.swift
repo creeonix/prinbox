@@ -19,5 +19,4 @@ struct PopoverActions {
     let setHideDrafts: @MainActor (Bool) -> Void
     let toggleRepository: @MainActor (String) -> Void
     let clearRepositories: @MainActor () -> Void
-    let pickRepositories: @MainActor () -> Void
 }
