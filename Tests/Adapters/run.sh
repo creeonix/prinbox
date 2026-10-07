@@ -27,7 +27,13 @@ else
     echo "neovim: skipped (nvim not installed)"
 fi
 
-# Tasks 10 and 11 add their suites here, each guarded by `command -v <tool>`.
+# Task 10 adds the Emacs suite here, guarded by `command -v emacs`.
+
+if command -v tmux >/dev/null 2>&1; then
+    run_suite tmux bash "$root/Tests/Adapters/tmux/run.sh"
+else
+    echo "tmux: skipped (tmux not installed)"
+fi
 
 [ "$failed" -eq 0 ] || exit 1
 echo "adapter suites run: $ran"

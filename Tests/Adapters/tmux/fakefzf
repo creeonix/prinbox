@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Stands in for fzf: records its arguments one per line in $FAKE_FZF_ARGS, prints the input line FAKE_FZF_PICK
+# names (1-based, default 1), or nothing and exit 130 when it is 0 (Esc).
+printf '%s\n' "$@" > "${FAKE_FZF_ARGS:-/dev/null}"
+pick=${FAKE_FZF_PICK:-1}
+[ "$pick" -gt 0 ] || exit 130
+sed -n "${pick}p"
