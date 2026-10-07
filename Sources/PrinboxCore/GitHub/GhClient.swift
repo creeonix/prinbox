@@ -96,7 +96,8 @@ public struct GhClient: InboxFetching {
             let elapsed = Int((ContinuousClock.now - started) / .milliseconds(1))
             logger.info(
                 .gh,
-                "fetch unchanged: 1 request, \(search.data?.rateLimit?.cost ?? 0) points, remaining \(Self.remainingText(search.data?.rateLimit?.remaining)), \(elapsed) ms"
+                "fetch unchanged: 1 request, \(search.data?.rateLimit?.cost ?? 0) points, "
+                    + "remaining \(Self.remainingText(search.data?.rateLimit?.remaining)), \(elapsed) ms"
             )
             return .unchanged
         }
@@ -125,7 +126,8 @@ public struct GhClient: InboxFetching {
         let remaining = Self.remaining(search: search, details: details)
         logger.info(
             .gh,
-            "fetch: \(1 + details.count) requests, \(result.cost) points, remaining \(Self.remainingText(remaining)), \(result.pullRequests.count) PRs, \(Int(elapsed)) ms"
+            "fetch: \(1 + details.count) requests, \(result.cost) points, "
+                + "remaining \(Self.remainingText(remaining)), \(result.pullRequests.count) PRs, \(Int(elapsed)) ms"
         )
         let truncated = PullRequestMapper.truncatedPages(details)
         if truncated > 0 { logger.debug(.gh, "fetch: \(truncated) conversation pages truncated at the page size") }

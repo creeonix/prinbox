@@ -20,6 +20,7 @@ final class StateFileWatcher {
     }
 
     func start() {
+        guard source == nil else { return }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let descriptor = open(directory.path, O_EVTONLY)
         guard descriptor >= 0 else { return }
@@ -57,5 +58,10 @@ final class StateFileWatcher {
         pending = nil
         source?.cancel()
         source = nil
+    }
+
+    deinit {
+        pending?.cancel()
+        source?.cancel()
     }
 }

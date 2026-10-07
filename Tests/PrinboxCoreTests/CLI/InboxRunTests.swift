@@ -317,12 +317,35 @@ import Testing
         #expect(persistence.saveCount == 2)
     }
 
+    /// Spec 0.6 amendment 12.4: a poller refreshed the fingerprint to [pr1, pr2] while the baseline still says
+    /// ["PR_1"]; a --notify run gets .unchanged, announces PR_2, and goes to advance the baseline, but another
+    /// writer replaced the cache meanwhile (a different fingerprint), so the bump and the advance are dropped.
+    @Test func aRejectedBumpUnderNotifyStillDeliversAndDropsItsAdvance() async {
+        let cache = MemoryCache(cached([pr1, pr2], attention: ["PR_1"]))
+        let delivery = FakeDelivery()
+        let replaced = cached([pr1], fetchedAt: start - 10, checkedAt: start - 10, attention: ["PR_1"])
+        let fetcher = ScriptedFetcher(outcomes: { _, _ in
+            cache.update { _ in replaced }
+            return .unchanged
+        })
+        let outcome = await InboxRun(context: makeContext(fetcher: fetcher, cache: cache, delivery: delivery))
+            .inbox(InboxOptions(notify: true))
+        #expect(outcome.document.source == "unchanged")
+        #expect(delivery.notices.map(\.title) == ["#2 Add feature"])
+        #expect(cache.saved?.attention == ["PR_1"])
+        #expect(cache.saved?.checkedAt == start - 10)
+        #expect(cache.saved?.result.pullRequests.map(\.id) == ["PR_1"])
+    }
+
     @Test func openOpensTheCachedURL() async {
         let opener = FakeOpener()
         let run = InboxRun(
             context: makeContext(
                 fetcher: ScriptedFetcher { _ in makeResult([]) }, cache: MemoryCache(cached([pr1])), opener: opener))
-        #expect(await run.open(id: "PR_1").exitCode == 0)
+        let opened = await run.open(id: "PR_1")
+        #expect(opened.exitCode == 0)
+        #expect(opened.pullRequest == pr1)
+        #expect(opened.stderr == [])
         #expect(opener.opened == [pr1.url])
         #expect(
             await run.open(id: "PR_9") == CommandOutcome(exitCode: 1, stderr: ["prinbox: PR_9 is not in your inbox"]))
