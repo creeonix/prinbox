@@ -12,7 +12,7 @@ import Testing
     }
 
     @Test func aScopeMakesASearchURLWithTheSectionsQualifier() throws {
-        let scope = SearchScope(directReviewRequestsOnly: true, hideDrafts: true)
+        let scope = SearchScope(directReviewRequestsOnly: true, repositories: ["acme"], hideDrafts: true)
         func query(_ kind: SectionKind) throws -> String {
             let url = kind.moreURL(scope: scope)
             #expect(url.host == "github.com")
@@ -27,17 +27,17 @@ import Testing
         let replies = try query(.repliesToYou)
         let yours = try query(.yourPRs)
         let waiting = try query(.waitingOnOthers)
-        #expect(needsReview == "is:open is:pr user-review-requested:@me -is:draft sort:updated-desc")
+        #expect(needsReview == "is:open is:pr user-review-requested:@me -is:draft user:acme sort:updated-desc")
         #expect(takeAnotherLook == needsReview)
         #expect(
             mentions
-                == "is:open is:pr mentions:@me -author:@me -user-review-requested:@me -is:draft sort:updated-desc"
+                == "is:open is:pr mentions:@me -author:@me -user-review-requested:@me -is:draft user:acme sort:updated-desc"
         )
         #expect(
             replies
-                == "is:open is:pr involves:@me -author:@me -user-review-requested:@me -mentions:@me -is:draft sort:updated-desc"
+                == "is:open is:pr involves:@me -author:@me -user-review-requested:@me -mentions:@me -is:draft user:acme sort:updated-desc"
         )
-        #expect(yours == "is:open is:pr author:@me sort:updated-desc")
+        #expect(yours == "is:open is:pr author:@me user:acme sort:updated-desc")
         #expect(waiting == yours)
         let text = SectionKind.needsReview.moreURL(scope: scope).absoluteString
         #expect(!text.contains(" "))

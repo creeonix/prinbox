@@ -114,11 +114,25 @@ final class QueryLog: @unchecked Sendable {
     @Test func theScopeReachesTheSearch() async throws {
         let log = QueryLog()
         let client = twoPhase(search: TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("PR_1")]), log: log)
-        let scope = SearchScope(directReviewRequestsOnly: true, hideDrafts: true)
+        let scope = SearchScope(
+            directReviewRequestsOnly: true, repositories: ["acme", "globex/billing"], hideDrafts: true)
         _ = try await client.fetch(FetchRequest(scope: scope))
         let search = try #require(log.queries.first)
-        #expect(search.contains("user-review-requested:@me -is:draft"))
+        #expect(search.contains("user-review-requested:@me -is:draft user:acme repo:globex/billing"))
         #expect(FetchRequest(scope: scope).shape == FetchShape(includeConversation: true, scope: scope))
+    }
+
+    @Test func aFilterPastTheSearchLimitFailsBeforeAnyRequest() async {
+        let log = QueryLog()
+        let client = twoPhase(search: TwoPhaseJSON.search(), log: log)
+        let scope = SearchScope(
+            directReviewRequestsOnly: true, repositories: [String(repeating: "a", count: 129)], hideDrafts: true)
+        await #expect(
+            throws: FetchError.other("default repositories too long for GitHub search: 1 over the 256-character limit")
+        ) {
+            try await client.fetch(FetchRequest(scope: scope))
+        }
+        #expect(log.queries.isEmpty)
     }
 
     @Test func conversationOffDropsTheInvolvedSearchAndTheThreadFields() async throws {
