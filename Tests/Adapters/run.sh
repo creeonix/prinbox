@@ -27,7 +27,15 @@ else
     echo "neovim: skipped (nvim not installed)"
 fi
 
-# Task 10 adds the Emacs suite here, guarded by `command -v emacs`.
+if command -v emacs >/dev/null 2>&1; then
+    run_suite emacs-compile emacs --batch -Q --eval "(setq byte-compile-error-on-warn t)" \
+        -f batch-byte-compile "$root/prinbox.el"
+    rm -f "$root/prinbox.elc"
+    run_suite emacs emacs --batch -Q -L "$root" -l ert -l "$root/Tests/Adapters/emacs/prinbox-test.el" \
+        -f ert-run-tests-batch-and-exit
+else
+    echo "emacs: skipped (emacs not installed)"
+fi
 
 if command -v tmux >/dev/null 2>&1; then
     run_suite tmux bash "$root/Tests/Adapters/tmux/run.sh"
