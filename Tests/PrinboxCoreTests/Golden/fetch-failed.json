@@ -4,7 +4,11 @@
   "defaultRepositories" : [
 
   ],
-  "error" : null,
+  "error" : {
+    "code" : "timedOut",
+    "help" : null,
+    "message" : "GitHub did not answer in time"
+  },
   "fetchedAt" : "2026-08-10T12:00:00Z",
   "newCount" : 4,
   "prinbox" : "0.5.0-test",
@@ -556,7 +560,7 @@
       "title" : "Waiting on others"
     }
   ],
-  "source" : "fetch",
+  "source" : "cache",
   "version" : 1,
   "viewer" : "me",
   "warnings" : [

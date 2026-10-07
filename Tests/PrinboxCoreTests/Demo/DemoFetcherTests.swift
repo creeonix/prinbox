@@ -99,4 +99,22 @@ import Testing
         #expect(RowText.help(top) == "acme/web · stacked on #1298")
         #expect(box.sections.flatMap(\.rows).filter { $0.stack != nil }.count == 4)
     }
+
+    @Test func defaultRepositoriesNarrowTheSampleInbox() async throws {
+        let clock = now
+        let request = FetchRequest(scope: SearchScope(repositories: ["acme/*", "globex/billing"]))
+        guard case .result(let result) = try await DemoFetcher(now: { clock }).fetch(request) else {
+            Issue.record("the demo answered unchanged")
+            return
+        }
+        // 17 sample PRs; globex/sync (#917), initech/docs (#58) and initech/tps (#612, #33) fall outside.
+        let repositories = Set(result.pullRequests.map(\.repository))
+        #expect(repositories == ["acme/web", "acme/api", "acme/shop", "globex/billing"])
+        #expect(result.pullRequests.count == 13)
+        #expect(result.totals == result.fetched)
+        #expect(result.isComplete)
+        let drafts = FetchRequest(scope: SearchScope(hideDrafts: true))
+        guard case .result(let unfiltered) = try await DemoFetcher(now: { clock }).fetch(drafts) else { return }
+        #expect(unfiltered.pullRequests.count == 17)
+    }
 }

@@ -444,4 +444,25 @@ import Testing
             InboxOptions())
         #expect(cache.saved?.knownRepositories == ["acme/web"])
     }
+
+    @Test func everyDocumentOfAFilteredRunNamesTheFilter() async {
+        let scope = SearchScope(repositories: ["acme/*"])
+        let fetched = await InboxRun(
+            context: makeContext(fetcher: ScriptedFetcher { _ in makeResult([self.pr1]) }, scope: scope)
+        )
+        .inbox(InboxOptions())
+        #expect(fetched.document.defaultRepositories == ["acme/*"])
+        let served = await InboxRun(
+            context: makeContext(
+                fetcher: ScriptedFetcher { _ in makeResult([]) }, cache: MemoryCache(cached([pr1])), scope: scope)
+        )
+        .inbox(InboxOptions(cacheMode: .cached))
+        #expect(served.document.defaultRepositories == ["acme/*"])
+        let empty = await InboxRun(
+            context: makeContext(fetcher: ScriptedFetcher { _ in throw FetchError.offline }, scope: scope)
+        )
+        .inbox(InboxOptions())
+        #expect(empty.exitCode == 1)
+        #expect(empty.document.defaultRepositories == ["acme/*"])
+    }
 }
