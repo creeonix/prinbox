@@ -204,4 +204,17 @@ import Testing
         let fetchFailed = try golden("fetch-failed")
         #expect(InboxJSON.render(failed.document) == fetchFailed)
     }
+
+    /// The document `prinbox inbox --cached` prints before any fetch: exit 1, no rows, no error, the stderr line.
+    @Test func theNoCacheDocumentMatchesItsGoldenFile() async throws {
+        let clock = now
+        let outcome = await InboxRun(
+            context: makeContext(fetcher: ScriptedFetcher { _ in makeResult([]) }, clock: { clock })
+        )
+        .inbox(InboxOptions(cacheMode: .cached))
+        #expect(outcome.exitCode == 1)
+        #expect(outcome.stderr == ["prinbox: no cache yet, run prinbox inbox"])
+        let noCache = try golden("no-cache")
+        #expect(InboxJSON.render(outcome.document) == noCache)
+    }
 }

@@ -32,7 +32,7 @@ function M.setup(opts)
     timer = vim.uv.new_timer()
     timer:start(M.config.poll * 1000, M.config.poll * 1000, function()
       vim.schedule(function()
-        cli.inbox({ max_age = M.config.poll }, function(report)
+        cli.inbox({ max_age = math.max(M.config.poll, M.config.max_age) }, function(report)
           if view.is_open() then
             view.render(report)
           end
@@ -60,10 +60,11 @@ function M.refresh()
   end)
 end
 
---- vim.ui.select over the rows; the choice opens in the browser.
+--- vim.ui.select over the rows; the choice opens in the browser. A cached run with no rows and no error (an empty
+--- cache, or none yet) falls through to a run with max_age.
 function M.pick()
   cli.inbox({ cached = true }, function(report)
-    if #cli.rows(report.document) == 0 and not report.message then
+    if report.document ~= nil and #cli.rows(report.document) == 0 and report.document.error == nil then
       cli.inbox({ max_age = M.config.max_age }, pick.select)
     else
       pick.select(report)

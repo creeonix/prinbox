@@ -40,6 +40,9 @@ require("prinbox").setup({
 })
 ```
 
+The poll never fetches more often than the list would: it serves the cache up to the larger of `poll` and `max_age`
+seconds.
+
 ## Statusline
 
 `require("prinbox").count()` returns the count as `prinbox inbox --format tmux` prints it: `"8"`, `""` when nothing

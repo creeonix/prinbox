@@ -27,6 +27,7 @@ end
 function M.report(code, stdout, stderr)
   local document = decode(stdout)
   local err = (stderr or ""):gsub("%s+$", "")
+  local detail = err:gsub("^prinbox: ", "")
   if document and document.version ~= 1 then
     local text = "prinbox prints JSON version %s; this plugin reads version 1"
     return { message = text:format(tostring(document.version)) }
@@ -37,14 +38,14 @@ function M.report(code, stdout, stderr)
     end
     return { document = document }
   elseif code == 1 then
-    local message = document and document.error and document.error.message or err
+    local message = document and document.error and document.error.message or detail
     return { document = document, message = message }
   elseif code == 3 then
     return { document = document, setup = true, message = err ~= "" and err or "prinbox needs setup: gh auth login" }
   elseif code == 127 then
     return { message = install }
   end
-  return { message = err ~= "" and err or ("prinbox exited with " .. tostring(code)) }
+  return { message = detail ~= "" and detail or ("prinbox exited with " .. tostring(code)) }
 end
 
 local function run(args, on_done)

@@ -37,6 +37,14 @@ grep -q 'did not answer' "$err"
 PRINBOX_STUB_VERSION=2 "$stub" inbox | grep -q '"version" : 2,'
 
 set +e
+out=$(PRINBOX_STUB_NOCACHE=1 "$stub" inbox --cached --format json 2> "$err"); code=$?
+set -e
+[ "$code" -eq 1 ]
+[ "$out" = "$(cat "$golden/no-cache.json")" ]
+[ "$(cat "$err")" = "prinbox: no cache yet, run prinbox inbox" ]
+diff <(PRINBOX_STUB_NOCACHE=1 "$stub" inbox --format json) "$golden/demo-inbox.json"
+
+set +e
 "$stub" inbox --format waybar 2>/dev/null; code=$?
 set -e
 [ "$code" -eq 2 ]

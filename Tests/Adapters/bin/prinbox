@@ -4,6 +4,7 @@
 #   PRINBOX_STUB_LOG      a file every inbox, snooze, unsnooze and open call appends its line to
 #   PRINBOX_STUB_EXIT     3 (signed out) or 1 (the fetch failed) makes `inbox` answer as the command would
 #   PRINBOX_STUB_VERSION  rewrites the document's top-level version (an adapter must refuse what it cannot read)
+#   PRINBOX_STUB_NOCACHE  1 makes `inbox --cached` answer as a first run does: the empty document, exit 1
 set -euo pipefail
 golden="$(cd "$(dirname "$0")/../../PrinboxCoreTests/Golden" && pwd)"
 command=${1:-}
@@ -22,11 +23,13 @@ case "$command" in
 esac
 
 format=json
+cached=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --format) format=$2; shift 2 ;;
         --format=*) format=${1#--format=}; shift ;;
-        --cached|--notify) shift ;;
+        --cached) cached=1; shift ;;
+        --notify) shift ;;
         --max-age) shift 2 ;;
         *) echo "prinbox: unknown option $1" >&2; exit 2 ;;
     esac
@@ -40,6 +43,12 @@ rewrite() {
         cat
     fi
 }
+
+if [ "${PRINBOX_STUB_NOCACHE:-}" = 1 ] && [ "$cached" = 1 ]; then
+    [ "$format" = json ] && rewrite < "$golden/no-cache.json"
+    echo "prinbox: no cache yet, run prinbox inbox" >&2
+    exit 1
+fi
 
 case "${PRINBOX_STUB_EXIT:-0}" in
     3)

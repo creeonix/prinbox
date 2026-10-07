@@ -162,11 +162,14 @@ wait_for(function() return #log_lines() == 1 end, "the fallback open")
 assert(log_lines()[1] == "open DEMO_1290", log_lines()[1])
 open_error = nil
 
--- 10. poll runs the command on its own; q closes the window.
+-- 10. poll runs the command on its own (with max_age the larger of poll and max_age); q closes the window.
 reset_log()
 prinbox.setup({ cmd = stub, poll = 1 })
 wait_for(function() return #log_lines() >= 1 end, "the poll")
 assert(log_lines()[1] == "inbox json", log_lines()[1])
+for _, line in ipairs(log_lines()) do
+  assert(line == "inbox json", line)
+end
 prinbox.setup({ cmd = stub, poll = 0 })
 view.close()
 assert(not view.is_open())
@@ -189,5 +192,18 @@ assert(
   vim.deep_equal(setup_lines, { "1 waiting on you · acme/*", "Sign in to the GitHub CLI", "     gh auth login" }),
   vim.inspect(setup_lines)
 )
+
+-- 13. pick on a first run: the cached run finds no cache, so pick fetches and lists the rows; the message has no
+-- "prinbox: " prefix.
+vim.env.PRINBOX_STUB_NOCACHE = "1"
+reset_log()
+shown = nil
+prinbox.pick()
+wait_for(function() return shown ~= nil end, "the picker after the fallback")
+assert(vim.deep_equal(log_lines(), { "inbox json", "inbox json" }), vim.inspect(log_lines()))
+assert(#shown.items == 17, #shown.items)
+vim.env.PRINBOX_STUB_NOCACHE = nil
+local nocache = cli.report(1, "", "prinbox: no cache yet, run prinbox inbox\n")
+assert(nocache.message == "no cache yet, run prinbox inbox", nocache.message)
 
 print("neovim: ok")
