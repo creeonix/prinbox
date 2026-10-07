@@ -30,7 +30,9 @@ local function hhmm(iso)
     hour = tonumber(h), min = tonumber(mi), sec = tonumber(s),
   }
   local as_local = os.time(fields)
-  local zone = as_local - os.time(os.date("!*t", as_local))
+  local utc = os.date("!*t", as_local)
+  utc.isdst = os.date("*t", as_local).isdst
+  local zone = as_local - os.time(utc)
   return os.date("%H:%M", as_local + zone)
 end
 
@@ -87,7 +89,9 @@ function M.layout(report)
       table.insert(marks, { #lines, "PrinboxMessage" })
     end
   end
-  for _, section in ipairs(report.document and report.document.sections or {}) do
+  -- Setup needed: the steps replace the rows, which are the cache's at best.
+  local sections = (report.document and not report.setup) and report.document.sections or {}
+  for _, section in ipairs(sections) do
     local rows = section.rows or {}
     if #rows > 0 or (section.moreCount or 0) > 0 then
       table.insert(lines, "")

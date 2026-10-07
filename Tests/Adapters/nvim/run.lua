@@ -114,16 +114,21 @@ assert(lines()[4] == "Needs your review (5)", lines()[4])
 assert(prinbox.count() == "!8", prinbox.count())
 vim.env.PRINBOX_STUB_EXIT = nil
 
--- 7. A missing command shows the install line; a newer JSON version is refused.
+-- 7. A missing command shows the install line; a newer JSON version is refused. Either turns the count to "!8".
+prinbox.refresh()
+wait_for(function() return lines()[3] == "Needs your review (5)" end, "the healthy rows")
+assert(prinbox.count() == "8", prinbox.count())
 prinbox.setup({ cmd = root .. "/Tests/Adapters/bin/no-such-prinbox" })
 prinbox.refresh()
 wait_for(function() return (lines()[1] or ""):match("^prinbox not found") ~= nil end, "the install line")
 assert(lines()[1] == "prinbox not found: brew install creeonix/tap/prinbox-cli", lines()[1])
+assert(prinbox.count() == "!8", prinbox.count())
 prinbox.setup({ cmd = stub })
 vim.env.PRINBOX_STUB_VERSION = "2"
 prinbox.refresh()
 wait_for(function() return (lines()[1] or ""):match("version 2") ~= nil end, "the version line")
 assert(lines()[1] == "prinbox prints JSON version 2; this plugin reads version 1", lines()[1])
+assert(prinbox.count() == "!8", prinbox.count())
 vim.env.PRINBOX_STUB_VERSION = nil
 
 -- 8. layout flattens titles: a newline or a tab in a title never reaches nvim_buf_set_lines.
@@ -148,6 +153,7 @@ assert(odd_map[4].row.id == "x" and odd_map[5].more.moreUrl == "https://example.
 -- 9. open falls back to the command when vim.ui.open cannot open.
 prinbox.refresh()
 wait_for(function() return lines()[3] == "Needs your review (5)" end, "the rows again")
+assert(prinbox.count() == "8", prinbox.count())
 reset_log()
 open_error = "no opener"
 vim.api.nvim_win_set_cursor(0, { 4, 0 })
@@ -164,5 +170,24 @@ assert(log_lines()[1] == "inbox json", log_lines()[1])
 prinbox.setup({ cmd = stub, poll = 0 })
 view.close()
 assert(not view.is_open())
+
+-- 11. The header's hour is local time, daylight saving included (checkedAt is 2026-08-10T12:00:00Z).
+local zone = vim.env.TZ
+for tz, hour in pairs({ ["Europe/Berlin"] = "14:00", ["America/New_York"] = "08:00", UTC = "12:00" }) do
+  vim.env.TZ = tz
+  local header = view.layout(view.last())[1]
+  assert(vim.startswith(header, "8 waiting on you · updated " .. hour), tz .. ": " .. header)
+end
+vim.env.TZ = zone
+
+-- 12. Setup needed: the steps replace the rows, even when the document carries cached ones.
+local setup = vim.deepcopy(odd)
+setup.setup = true
+setup.message = "Sign in to the GitHub CLI\n     gh auth login"
+local setup_lines = view.layout(setup)
+assert(
+  vim.deep_equal(setup_lines, { "1 waiting on you · acme/*", "Sign in to the GitHub CLI", "     gh auth login" }),
+  vim.inspect(setup_lines)
+)
 
 print("neovim: ok")

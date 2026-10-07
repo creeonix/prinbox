@@ -4,6 +4,7 @@ local M = {}
 
 local config = { cmd = "prinbox" }
 local last = nil
+local failed = false
 
 local install = "prinbox not found: brew install creeonix/tap/prinbox-cli"
 
@@ -39,7 +40,7 @@ function M.report(code, stdout, stderr)
     local message = document and document.error and document.error.message or err
     return { document = document, message = message }
   elseif code == 3 then
-    return { document = document, message = err ~= "" and err or "prinbox needs setup: gh auth login" }
+    return { document = document, setup = true, message = err ~= "" and err or "prinbox needs setup: gh auth login" }
   elseif code == 127 then
     return { message = install }
   end
@@ -73,6 +74,7 @@ function M.inbox(opts, cb)
     if report.document then
       last = report
     end
+    failed = report.document == nil
     cb(report)
   end)
 end
@@ -113,15 +115,13 @@ function M.rows(document)
   return items
 end
 
---- The count as `--format tmux` prints it: the badge, nothing when idle, `!` first when the last answer failed.
+--- The count as `--format tmux` prints it: the badge, nothing when idle, `!` first when the last answer failed
+--- (a document with an error, or a run that printed no document: then the last known badge follows the `!`).
 function M.count()
-  if not last or not last.document then
-    return ""
-  end
-  local document = last.document
-  local badge = document.badge or 0
+  local document = last and last.document
+  local badge = document and document.badge or 0
   local text = badge > 0 and tostring(badge) or ""
-  if document.error ~= nil then
+  if failed or (document and document.error ~= nil) then
     return "!" .. text
   end
   return text
