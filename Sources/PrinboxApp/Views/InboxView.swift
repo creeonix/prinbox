@@ -17,6 +17,7 @@ struct InboxView: View {
     let fetchSettings: FetchSettings
     let notifier: Notifier
     let actions: PopoverActions
+    let menuAnchor: MenuAnchor
 
     var body: some View {
         VStack(spacing: 0) {
@@ -25,7 +26,8 @@ struct InboxView: View {
                     state: state, hotKeys: hotKeys, loginItem: loginItem, info: info, notifications: notifications,
                     fetchSettings: fetchSettings, notifier: notifier, actions: actions)
             } else {
-                HeaderView(state: state, actions: actions)
+                HeaderView(state: state, actions: actions, anchor: menuAnchor)
+                RepositoryStripView(state: state, actions: actions)
                 WarningLinesView(lines: state.store.warningLines, link: state.store.warningLink, open: actions.open)
                 UpdateLineView(updates: updates, actions: actions)
                 Divider()
@@ -42,7 +44,7 @@ struct InboxView: View {
         } else if let inbox = state.store.inbox, !inbox.isEmpty {
             InboxListView(state: state, inbox: inbox, avatars: avatars, actions: actions)
         } else if state.store.inbox != nil {
-            EmptyStateView()
+            EmptyStateView(repositories: state.defaultRepositories)
         } else if state.store.error != nil {
             UnavailableView()
         } else {
@@ -97,11 +99,14 @@ struct UnavailableView: View {
 }
 
 struct EmptyStateView: View {
+    let repositories: [String]
+
     var body: some View {
         VStack(spacing: 6) {
             Image(systemName: "checkmark.circle").font(.system(size: 24)).foregroundStyle(.secondary)
             Text("Inbox zero").font(.headline)
-            Text("Nothing waiting on you.").font(.subheadline).foregroundStyle(.secondary)
+            Text(RowText.emptyState(repositories: repositories)).font(.subheadline).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(28)

@@ -14,6 +14,7 @@ final class AppCoordinator {
     private let notifications: NotificationSettings
     private let fetchSettings: FetchSettings
     private let notifier = Notifier()
+    private let menuAnchor = MenuAnchor()
     private let loginItem = LoginItem()
     private let avatars: AvatarImages
     private let info: AppInfo
@@ -81,7 +82,7 @@ final class AppCoordinator {
             opener: WorkspaceURLOpener())
         hotKeys = HotKeySettings(defaults: settings)
         notifications = NotificationSettings(defaults: settings)
-        fetchSettings = FetchSettings(defaults: settings)
+        fetchSettings = FetchSettings(defaults: settings, logger: logger)
         store.setIncludeConversation(fetchSettings.followReviewThreads)
         store.setScope(fetchSettings.scope)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.directory(in: directories)))
@@ -114,7 +115,7 @@ final class AppCoordinator {
         let root = InboxView(
             state: state, avatars: avatars, hotKeys: hotKeys, loginItem: loginItem,
             info: info, updates: updates, notifications: notifications, fetchSettings: fetchSettings,
-            notifier: notifier, actions: makeActions())
+            notifier: notifier, actions: makeActions(), menuAnchor: menuAnchor)
         popover = PopoverController(
             rootView: root,
             keyHandler: { [weak self] event in self?.handleKey(event) ?? false },
@@ -151,7 +152,10 @@ final class AppCoordinator {
             setNotifications: { [weak self] enabled in self?.setNotifications(enabled) },
             setFollowReviewThreads: { [weak self] on in self?.setFollowReviewThreads(on) },
             setDirectReviewRequestsOnly: { [weak self] on in self?.setDirectReviewRequestsOnly(on) },
-            setHideDrafts: { [weak self] on in self?.setHideDrafts(on) })
+            setHideDrafts: { [weak self] on in self?.setHideDrafts(on) },
+            toggleRepository: { [weak self] entry in self?.toggleRepository(entry) },
+            clearRepositories: { [weak self] in self?.setRepositories([]) },
+            pickRepositories: { [weak self] in self?.menuAnchor.popUp() })
     }
 
     private func copy(_ command: String) {
@@ -230,6 +234,17 @@ final class AppCoordinator {
         applyScope()
     }
 
+    /// One click in the menu pins or unpins one entry (spec 4.2); the key is written and the refresh is a full,
+    /// quiet one.
+    private func toggleRepository(_ entry: String) {
+        setRepositories(RepositoryPicker.toggled(entry, in: fetchSettings.scope.repositories))
+    }
+
+    private func setRepositories(_ entries: [String]) {
+        fetchSettings.setRepositories(entries)
+        applyScope()
+    }
+
     /// A scope change changes what a refresh asks for, so the next refresh is a full one, at once.
     private func applyScope() {
         store.setScope(fetchSettings.scope)
@@ -272,7 +287,7 @@ final class AppCoordinator {
         case .open(let url): open(url)
         case .refresh: refreshNow()
         case .close: popover?.close()
-        case .pickRepositories: break  // The menu arrives with the shell's picker.
+        case .pickRepositories: menuAnchor.popUp()
         }
     }
 
