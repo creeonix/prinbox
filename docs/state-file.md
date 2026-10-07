@@ -27,11 +27,11 @@ popover on its next refresh or open, and a snooze in the popover shows in `prinb
 
 | Writer | `settings.json` | `state.json` | `cache.json` |
 |---|---|---|---|
-| App | Settings changes, folds, org colors, the one-time migration from defaults | snooze, unsnooze, fetch reconciliation (wake, prune, seed `seen`), popover close | after every full fetch; `checkedAt` on an unchanged check |
-| `prinbox inbox` | never | wake and prune after a complete, unscoped fetch | after a fetch (`attention` only with `--notify`); `checkedAt` on unchanged; nothing when served from the cache |
+| App | Settings changes, folds, org colors, the one-time migration from defaults | snooze, unsnooze, fetch reconciliation (wake, prune, seed `seen`), popover close | after every full fetch; `checkedAt` on an unchanged check; `knownRepositories` after a fetch (the result's repositories when no default repositories were set, else carried) |
+| `prinbox inbox` | never | wake and prune after a complete, unscoped fetch | after a fetch (`attention` only with `--notify`); `checkedAt` on unchanged; nothing when served from the cache; `knownRepositories` after a fetch (the result's repositories when no default repositories were set, else carried) |
 | `prinbox snooze`, `unsnooze` | never | the entry; when it had to fetch, wake and prune after a complete, unscoped fetch | only when `snooze` had to fetch |
 | `prinbox open` | never | when it had to fetch, wake and prune after a complete, unscoped fetch | only when it had to fetch |
-| `prinbox mcp` | never | snooze and unsnooze entries; wake and prune after a complete, unscoped fetch | after a fetch (`attention` left as found); `checkedAt` on unchanged; nothing when served |
+| `prinbox mcp` | never | snooze and unsnooze entries; wake and prune after a complete, unscoped fetch | after a fetch (`attention` left as found); `checkedAt` on unchanged; nothing when served; `knownRepositories` after a fetch (the result's repositories when no default repositories were set, else carried) |
 | `prinbox print`, `Prinbox --print` | never | never | never |
 | `--demo` | never | never | never |
 
@@ -53,9 +53,9 @@ means "no cache". Other programs read the inbox through `prinbox inbox --format 
 `docs/inbox-json.md`). For transparency, its keys: `version` (1), `fetchedAt` (when `result` was fetched),
 `checkedAt` (the last time GitHub confirmed it, including an unchanged check), `includeConversation` (the
 request shape it came from), `scope` (the three scope settings the request had; absent in a 0.5 file, which
-means none), `knownRepositories` (the repositories of the last fetch made with no default
-repositories, what the picker offers; carried through a filtered fetch; absent in a 0.6 file; every `.result`
-writer records it, by the one rule), `viewer`, `fingerprint` (id to `updatedAt` over every search hit),
+means none), `knownRepositories` (what the picker offers, absent in a 0.6 file: it holds the repositories of
+the last fetch made with no default repositories; a fetch made with some carries the list it found; an unchanged
+check leaves it alone), `viewer`, `fingerprint` (id to `updatedAt` over every search hit),
 `attention` (the arrivals baseline: the non-draft ids of the attention sections, written only by a
 notifier), `result` (the fetch: `viewerLogin`, `pullRequests`, `totals`, `fetched`, `warnings`). Nothing in it
 is body text: the same fields the popover shows, titles, logins and URLs included. Readers trust the
