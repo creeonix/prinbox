@@ -32,4 +32,10 @@ import Testing
         #expect(command(1, "s", [.command]) == nil)
         #expect(command(32, "u", [.option]) == nil)
     }
+
+    @Test func plainFOpensThePicker() {
+        #expect(command(3, "f") == .repositories)
+        #expect(command(3, "F", [.shift]) == .repositories)
+        #expect(command(3, "f", [.command]) == nil)
+    }
 }

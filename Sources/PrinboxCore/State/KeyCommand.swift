@@ -8,9 +8,10 @@ public enum KeyCommand: Equatable, Sendable {
     case refresh
     case snooze
     case unsnooze
+    case repositories
     case escape
 
-    /// Returns nil for keys the popover leaves alone. R, S and U count only without ⌘, ⌃ or ⌥.
+    /// Returns nil for keys the popover leaves alone. R, S, U and F count only without ⌘, ⌃ or ⌥.
     public init?(keyCode: UInt16, characters: String?, modifiers: HotKeyModifiers) {
         switch keyCode {
         case 126: self = .up
@@ -23,6 +24,7 @@ public enum KeyCommand: Equatable, Sendable {
             case "r": self = .refresh
             case "s": self = .snooze
             case "u": self = .unsnooze
+            case "f": self = .repositories
             default: return nil
             }
         }
@@ -35,4 +37,6 @@ public enum KeyAction: Equatable, Sendable {
     case open(URL)
     case refresh
     case close
+    /// open the default-repositories menu (spec 4.4)
+    case pickRepositories
 }

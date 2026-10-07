@@ -272,6 +272,7 @@ final class AppCoordinator {
         case .open(let url): open(url)
         case .refresh: refreshNow()
         case .close: popover?.close()
+        case .pickRepositories: break  // The menu arrives with the shell's picker.
         }
     }
 
