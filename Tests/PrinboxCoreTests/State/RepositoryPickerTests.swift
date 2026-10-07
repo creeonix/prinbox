@@ -40,6 +40,10 @@ import Testing
         #expect(upper.groups[0].owner == "acme")
         #expect(upper.groups[0].items.map(\.isPinned) == [true, false, false])
         #expect(upper.groups[0].items.map(\.isCovered) == [false, true, true])
+        // A pin spelled in another case than GitHub's name is the same repository, listed once.
+        let mixed = self.picker(["ACME/web"])
+        #expect(mixed.groups[0].items.map(\.entry) == ["acme/*", "acme/api", "acme/web"])
+        #expect(mixed.groups[0].items.map(\.isPinned) == [false, false, true])
     }
 
     @Test func anEntryThatWouldOverflowIsDimmedWithTheCount() {

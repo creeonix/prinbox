@@ -31,7 +31,10 @@ public struct RepositoryPicker: Equatable, Sendable {
             pinned.filter(RepositoryEntries.isWildcard).map { RepositoryEntries.owner(of: $0).lowercased() })
         var repositoriesByOwner: [String: Set<String>] = [:]
         var ownerSpelling: [String: String] = [:]
-        let repositories = known.union(pinned.filter { !RepositoryEntries.isWildcard($0) })
+        // A pinned `owner/name` joins only when GitHub's spelling of it is not known (spec 4.2).
+        let knownLower = Set(known.map { $0.lowercased() })
+        let repositories = known.union(
+            pinned.filter { !RepositoryEntries.isWildcard($0) && !knownLower.contains($0.lowercased()) })
         for repository in repositories.sorted() {
             let owner = RepositoryEntries.owner(of: repository)
             let key = owner.lowercased()
