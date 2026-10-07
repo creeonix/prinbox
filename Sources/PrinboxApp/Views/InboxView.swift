@@ -106,7 +106,7 @@ struct EmptyStateView: View {
             Image(systemName: "checkmark.circle").font(.system(size: 24)).foregroundStyle(.secondary)
             Text("Inbox zero").font(.headline)
             Text(RowText.emptyState(repositories: repositories)).font(.subheadline).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
         .padding(28)
