@@ -216,22 +216,35 @@ when setup is needed."
             (push (list (format "message-%d" index)
                         (vector "" "" (propertize line 'face 'prinbox-message) "" "" "" ""))
                   entries)))
-      (dolist (item rows)
-        (let* ((section (car item))
-               (row (cdr item))
-               (face (cond ((alist-get 'snoozed row) 'prinbox-snoozed)
-                           ((alist-get 'isNew row) 'prinbox-new)
-                           (t 'default))))
-          (push (list (alist-get 'id row)
-                      (vector (propertize (alist-get 'title section) 'face 'prinbox-section)
-                              (propertize (number-to-string (alist-get 'number row)) 'face face)
-                              (propertize (prinbox--flatten (alist-get 'title row)) 'face face)
-                              (propertize (alist-get 'repository row) 'face face)
-                              (propertize (alist-get 'reasonText row) 'face face)
-                              (propertize (alist-get 'age row) 'face face)
-                              (prinbox--flags row)))
-                entries))))
+      (dolist (section (alist-get 'sections document))
+        (dolist (row (alist-get 'rows section))
+          (push (prinbox--row-entry section row) entries))
+        (when (> (or (alist-get 'moreCount section) 0) 0)
+          (push (prinbox--more-entry section) entries))))
     (nreverse entries)))
+
+(defun prinbox--row-entry (section row)
+  "The entry for ROW of SECTION."
+  (let ((face (cond ((alist-get 'snoozed row) 'prinbox-snoozed)
+                    ((alist-get 'isNew row) 'prinbox-new)
+                    (t 'default))))
+    (list (alist-get 'id row)
+          (vector (propertize (alist-get 'title section) 'face 'prinbox-section)
+                  (propertize (number-to-string (alist-get 'number row)) 'face face)
+                  (propertize (prinbox--flatten (alist-get 'title row)) 'face face)
+                  (propertize (alist-get 'repository row) 'face face)
+                  (propertize (alist-get 'reasonText row) 'face face)
+                  (propertize (alist-get 'age row) 'face face)
+                  (prinbox--flags row)))))
+
+(defun prinbox--more-entry (section)
+  "The `+N more on GitHub' entry of the capped SECTION."
+  (list (format "more-%s" (alist-get 'kind section))
+        (vector (propertize (alist-get 'title section) 'face 'prinbox-section)
+                ""
+                (propertize (format "+%d more on GitHub" (alist-get 'moreCount section))
+                            'face 'prinbox-message)
+                "" "" "" "")))
 
 (defvar-keymap prinbox-mode-map
   :doc "Keys of `prinbox-mode'."
@@ -285,17 +298,27 @@ when setup is needed."
   (prinbox-refresh))
 
 (defun prinbox--current-row ()
-  "The row at point, or nil on a message line."
+  "The row at point, or nil on a message line or a more line."
   (let ((id (tabulated-list-get-id)))
-    (and id (not (string-prefix-p "message-" id))
+    (and id (not (string-prefix-p "message-" id)) (not (string-prefix-p "more-" id))
          (cdr (seq-find (lambda (item) (equal (alist-get 'id (cdr item)) id))
                         (prinbox--rows (plist-get prinbox--report :document)))))))
 
+(defun prinbox--current-more ()
+  "The section whose more line is at point, or nil."
+  (when-let* ((id (tabulated-list-get-id))
+              ((string-prefix-p "more-" id)))
+    (seq-find (lambda (section) (equal (format "more-%s" (alist-get 'kind section)) id))
+              (alist-get 'sections (plist-get prinbox--report :document)))))
+
 (defun prinbox-open ()
-  "Open the pull request at point in the browser."
+  "Open the pull request at point in the browser.
+On a more line, open the section's page on GitHub."
   (interactive)
-  (when-let* ((row (prinbox--current-row)))
-    (browse-url (alist-get 'url row))))
+  (if-let* ((row (prinbox--current-row)))
+      (browse-url (alist-get 'url row))
+    (when-let* ((section (prinbox--current-more)))
+      (browse-url (alist-get 'moreUrl section)))))
 
 (defun prinbox--act (verb)
   "Run `prinbox VERB <id>' for the row at point, then re-read the cache."

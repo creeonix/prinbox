@@ -156,6 +156,30 @@ count cannot leak into this one."
   (prinbox--remember (list :document '((version . 1) (badge . 8))))
   (should (equal (prinbox--count) "8")))
 
+(ert-deftest prinbox-test-more-line-opens-the-section-page ()
+  "A capped section ends with its more line, which opens the section's page."
+  (prinbox-test--reset)
+  (let* ((row '((id . "x") (number . 7) (title . "T") (repository . "acme/web")
+                (reasonText . "Review requested") (age . "1h") (url . "https://example.test/7")))
+         (section `((kind . "needsReview") (title . "Needs your review") (count . 3) (moreCount . 2)
+                    (moreUrl . "https://example.test/more") (rows . (,row))))
+         (document `((version . 1) (badge . 3) (sections . (,section)))))
+    (prinbox--render (list :document document)))
+  (with-current-buffer "*prinbox*"
+    (should (equal (length tabulated-list-entries) 2))
+    (let ((more (nth 1 tabulated-list-entries)))
+      (should (equal (car more) "more-needsReview"))
+      (should (equal (prinbox-test--cell more 2) "+2 more on GitHub")))
+    (goto-char (point-min))
+    (forward-line 1)
+    (should (equal (tabulated-list-get-id) "more-needsReview"))
+    (cl-letf (((symbol-function 'browse-url) (lambda (url &rest _) (push url prinbox-test--opened))))
+      (prinbox-open))
+    (should (equal prinbox-test--opened '("https://example.test/more")))
+    (prinbox-snooze)
+    (accept-process-output nil 0.3)
+    (should (equal (prinbox-test--log-lines) nil))))
+
 (ert-deftest prinbox-test-setup-replaces-the-rows ()
   "Exit 3 shows the setup steps in place of the rows, even cached ones."
   (let* ((row '((id . "DEMO_1290") (number . 1290) (title . "Migrate the settings page")
