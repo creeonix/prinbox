@@ -21,7 +21,13 @@ run_suite() {
 
 run_suite stub bash "$root/Tests/Adapters/stub/run.sh"
 
-# Tasks 9 to 11 add their suites here, each guarded by `command -v <tool>`.
+if command -v nvim >/dev/null 2>&1; then
+    run_suite neovim nvim --clean -l "$root/Tests/Adapters/nvim/run.lua"
+else
+    echo "neovim: skipped (nvim not installed)"
+fi
+
+# Tasks 10 and 11 add their suites here, each guarded by `command -v <tool>`.
 
 [ "$failed" -eq 0 ] || exit 1
 echo "adapter suites run: $ran"
