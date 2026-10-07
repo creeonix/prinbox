@@ -39,6 +39,7 @@ the state instead.
 | `newCount` | rows new since the last look at the popover, from the app's seen ledger (0 where no app runs) |
 | `error` | null, or `{"code", "message", "help"}`: `code` is one of `ghNotFound`, `loggedOut`, `offline`, `timedOut`, `rateLimited`, `badResponse`, `githubUnavailable`, `other`; `message` the text printed on stderr (for the two setup errors the guide's title); `help` the GitHub status page for a 5xx, the gh install page for `ghNotFound`, else null |
 | `warnings` | partial-data warnings from GitHub |
+| `defaultRepositories` | the run's default repositories, `owner/*` or `owner/name`, `[]` when none |
 | `sections` | all six, always, in display order, empty ones with `rows: []` |
 | `sections[].kind`, `title` | `needsReview`, `repliesToYou`, `takeAnotherLook`, `mentions`, `yourPRs`, `waitingOnOthers`, and the display title |
 | `sections[].count`, `moreCount`, `moreUrl` | rows the section holds, rows beyond the cap, the section's GitHub page |

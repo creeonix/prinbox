@@ -37,13 +37,14 @@ popover on its next refresh or open, and a snooze in the popover shows in `prinb
 
 ### Settings
 
-`settings.json` is one JSON object of the keys the app's stores keep: `compactRows`, `directReviewRequestsOnly`,
-`foldedSections`, `followReviewThreads`, `ghPath`, `globalShortcut`, `groupByOrganization`, `hideDrafts`,
-`notifyOnNewReviewRequests`, `orgColors`, `showOrganizationAvatars`. A missing key means its default. The app
-rewrites one key at a time after re-reading the file, so a hand edit made while the app runs survives; the edit
-itself takes effect at the next launch. The command and the server read `followReviewThreads`, `ghPath`,
-`directReviewRequestsOnly` and `hideDrafts`; the server reads them at every call. On the first 0.5.0 launch the app
-copies every known key out of the `io.github.creeonix.prinbox` defaults domain into the file and removes it there.
+`settings.json` is one JSON object of the keys the app's stores keep: `compactRows`, `defaultRepositories`,
+`directReviewRequestsOnly`, `foldedSections`, `followReviewThreads`, `ghPath`, `globalShortcut`,
+`groupByOrganization`, `hideDrafts`, `notifyOnNewReviewRequests`, `orgColors`, `showOrganizationAvatars`. A missing
+key means its default. The app rewrites one key at a time after re-reading the file, so a hand edit made while the app
+runs survives; the edit itself takes effect at the next launch. The command and the server read `defaultRepositories`,
+`followReviewThreads`, `ghPath`, `directReviewRequestsOnly` and `hideDrafts`; the server reads them at every call. On
+the first 0.5.0 launch the app copies every known key out of the `io.github.creeonix.prinbox` defaults domain into the
+file and removes it there.
 
 ### Cache
 
@@ -51,8 +52,10 @@ copies every known key out of the `io.github.creeonix.prinbox` defaults domain i
 means "no cache". Other programs read the inbox through `prinbox inbox --format json` (see
 `docs/inbox-json.md`). For transparency, its keys: `version` (1), `fetchedAt` (when `result` was fetched),
 `checkedAt` (the last time GitHub confirmed it, including an unchanged check), `includeConversation` (the
-request shape it came from), `scope` (the two scope settings the request had; absent in a 0.5 file, which
-means none), `viewer`, `fingerprint` (id to `updatedAt` over every search hit),
+request shape it came from), `scope` (the three scope settings the request had; absent in a 0.5 file, which
+means none), `knownRepositories` (the repositories of the last fetch made with no default
+repositories, what the picker offers; carried through a filtered fetch; absent in a 0.6 file; every `.result`
+writer records it, by the one rule), `viewer`, `fingerprint` (id to `updatedAt` over every search hit),
 `attention` (the arrivals baseline: the non-draft ids of the attention sections, written only by a
 notifier), `result` (the fetch: `viewerLogin`, `pullRequests`, `totals`, `fetched`, `warnings`). Nothing in it
 is body text: the same fields the popover shows, titles, logins and URLs included. Readers trust the

@@ -37,6 +37,9 @@ Set these before the plugin runs:
 | `@prinbox_key` | `P` | the key after the prefix that opens the popup |
 | `@prinbox_popup_width`, `@prinbox_popup_height` | `80%`, `70%` | the popup's size |
 
+The popup script also reads `PRINBOX_FZF` (the fzf executable, default `fzf`) and `PRINBOX_OPENER` (default `open` on
+macOS, `xdg-open` elsewhere) from the environment, for a non-standard install.
+
 ## When something is wrong
 
 | What you see | Why |

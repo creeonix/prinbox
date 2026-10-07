@@ -38,16 +38,16 @@ the app so a snooze made by an agent or the command shows within a second.
 
 ## 0.7.0: editor and terminal adapters
 
-Thin clients of `prinbox inbox --format json`, all usable on the Mac before any Linux work:
+Thin clients of `prinbox inbox --format json`, in this repository, usable on the Mac before any Linux work:
 
-- Neovim: a picker (telescope, fzf-lua or snacks) over the six sections, Enter opens the PR, keys to snooze and
-  unsnooze, an optional statusline count.
+- Neovim: a list buffer (`:Prinbox`) with keys to open, snooze and wake, `:Prinbox pick` through `vim.ui.select`
+  so telescope, fzf-lua, snacks or mini.pick take it over, and a statusline count.
 - Emacs: a package with a `tabulated-list` buffer by section, `browse-url` on RET, snooze keys, a mode-line count.
-- tmux: `#(prinbox inbox --format tmux)` in the status line and a key bound to `display-popup` running an fzf
-  picker.
-- Pinned repositories: a filter control at the top of the popover with a picker over the owners and repositories
-  of the current inbox and a clear button, writing a `repositories` key the command and the server honor in their
-  searches.
+- tmux: `#{prinbox_status}` in the status line and a key bound to `display-popup` running an fzf picker with
+  snooze keys.
+- Default repositories: a menu in the popover's header over the owners and repositories the inbox knows, a strip
+  naming the choice with an [x] to clear it, and a `defaultRepositories` key the command and the server honor in
+  their searches. The 0.6.0 text field was held back because a typed filter with no feedback blanked the inbox.
 
 ## 1.0.0: Linux
 
@@ -72,3 +72,4 @@ A long-lived daemon can come later without changing the contract; every adapter 
 | Linux process model | Stateless command plus a cache file | Waybar, tmux, editors and a tray script all poll; a daemon adds a moving part without changing what they read |
 | Linux desktops | Hyprland first, KDE second, no GNOME | That is where the author runs Linux; GNOME needs a shell extension for any tray icon |
 | MCP server | A subcommand, hand-written stdio JSON-RPC | One binary and one formula; five methods are not worth the first dependency, and the official Swift SDK pulls swift-nio for a stdio loop |
+| Plugin files | At the repository root | lazy.nvim, TPM and use-package clone a repository and expect the plugin at its root; one version, one release |

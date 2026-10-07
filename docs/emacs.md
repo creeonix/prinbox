@@ -21,7 +21,7 @@ Repository, Reason, Age, Flags (`new`, `draft`, `snoozed`, `stack i/n`); rows in
 
 | Key | Does |
 |---|---|
-| `RET` | open the pull request with `browse-url` |
+| `RET` | open the pull request with `browse-url`; on a `+N more on GitHub` line, the section on GitHub |
 | `s` | snooze it until something happens on it (a push, a reply in your thread, a new review request) |
 | `u` | wake it |
 | `g` | fetch now |

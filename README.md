@@ -60,6 +60,10 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
 - **Scope for maintainers** (Settings): only direct review requests (requests that reach you through a team are
   left out) and hide other people's drafts. Both act in the GitHub searches, so a narrowed inbox costs nothing
   extra and the search window goes to what you asked for.
+- **Default repositories.** The filter icon in the popover's header opens a menu over the owners and repositories
+  your inbox knows; pick `acme/*` or `globex/billing` and every search narrows to them, the strip under the header
+  names them, and the [x] on it brings everything back. The command and the agent follow the same choice
+  (`defaultRepositories` in `settings.json`).
 - **New since your last look:** rows that appeared or changed since you last closed the popover carry an accent
   bar at their left edge, and the header counts them.
 - **Notifications** (off by default): one banner per refresh when a PR enters Needs your review, Replies to
@@ -129,6 +133,7 @@ Left-click opens the popover. Right-click offers Refresh now and Quit.
 | S | snooze the selected PR until someone replies, pushes or re-requests |
 | U | unsnooze the selected PR |
 | R | refresh now |
+| F | open the default-repositories menu |
 | Esc | close the popover, or leave Settings |
 | ⌃⌥P | open the popover from anywhere (change it in Settings) |
 
@@ -157,18 +162,23 @@ When this is set, PRInbox and `prinbox` use only that path. Remove the key to go
 
 ### Settings
 
-Open Settings with the gear in the popover. It holds the global shortcut, launch at login, **Group by
-organization**, **Show organization avatars**, **Compact rows**, **Follow review threads**, **Only direct review
-requests**, **Hide draft pull requests**, **Notify about new review requests and replies**, the detected `gh` path,
-the version and Quit. Turning notifications on asks macOS for permission once; if you decline, Settings says where
-to turn them on. The Scope group narrows what the searches ask GitHub for with two switches, **Only direct review
-requests** and **Hide draft pull requests**; their keys are `directReviewRequestsOnly` and `hideDrafts`. Settings
-stay inside the popover, so there is never a window for a tiling window manager to grab. Every setting lives in
-`~/.config/prinbox/settings.json`, one key per switch; a hand edit takes effect at the next launch, and the first
+Open Settings with the gear in the popover. It holds the global shortcut, launch at login, **Group by organization**,
+**Show organization avatars**, **Compact rows**, **Follow review threads**, **Only direct review requests**, **Hide
+draft pull requests**, **Notify about new review requests and replies**, the detected `gh` path, the version and Quit.
+Turning notifications on asks macOS for permission once; if you decline, Settings says where to turn them on. The
+Scope group narrows what the searches ask GitHub for with two switches, **Only direct review requests** and **Hide
+draft pull requests**; their keys are `directReviewRequestsOnly` and `hideDrafts`. The default repositories are not in
+Settings: the filter icon in the header and the strip under it hold them, under the key `defaultRepositories`.
+Settings stay inside the popover, so there is never a window for a tiling window manager to grab. Every setting lives
+in `~/.config/prinbox/settings.json`, one key per switch; a hand edit takes effect at the next launch, and the first
 0.5.0 launch moves your 0.4 settings there out of macOS defaults.
 
 <p align="center">
   <img src="docs/images/popover-compact.png" width="460" alt="The same inbox with Compact rows on">
+</p>
+
+<p align="center">
+  <img src="docs/images/popover-filtered.png" width="460" alt="The inbox narrowed to two default repositories">
 </p>
 
 ### Command line
@@ -226,6 +236,33 @@ cache when GitHub confirmed it within the last 60 seconds (`max_age_seconds` cha
 menu bar and an open popover within a second. The server is never a notifier and writes nothing an agent did
 not ask for. Details, the error rules and the log in [docs/mcp.md](docs/mcp.md).
 
+### Editors and tmux
+
+Three plugins read the same inbox through `prinbox inbox --format json`; each shows the rows, opens a pull request,
+snoozes and wakes it, and shows the count. They live in this repository, so the repository is the plugin.
+
+Neovim 0.10 ([docs/neovim.md](docs/neovim.md)): a list buffer with `Enter`, `s`, `u`, `r` and `q`, `:Prinbox pick`
+through `vim.ui.select`, and a statusline count.
+
+```lua
+{ "creeonix/prinbox", cmd = "Prinbox", opts = {} }   -- lazy.nvim
+```
+
+Emacs 29.1 ([docs/emacs.md](docs/emacs.md)): `M-x prinbox`, a `tabulated-list` buffer with `RET`, `s`, `u` and `g`,
+and `prinbox-mode-line-mode`.
+
+```elisp
+(use-package prinbox :vc (:url "https://github.com/creeonix/prinbox" :rev :newest) :commands (prinbox))
+```
+
+tmux 3.2 with fzf ([docs/tmux.md](docs/tmux.md)): `#{prinbox_status}` in the status line and `prefix + P` for a
+popup picker with `Enter`, `ctrl-s`, `ctrl-u` and `ctrl-r`.
+
+```tmux
+set -g @plugin 'creeonix/prinbox'
+set -g status-right '#{prinbox_status} | %H:%M'
+```
+
 ## Privacy and security
 
 - **No token handling:** GitHub access goes only through `gh api graphql`. PRInbox has no OAuth app,
@@ -237,6 +274,8 @@ not ask for. Details, the error rules and the log in [docs/mcp.md](docs/mcp.md).
 - **AI agents:** `prinbox mcp` hands the agent that launched it the same fields the popover shows (titles,
   logins, URLs, counts, dates), over its own standard input and output. It opens no port and never carries
   comment text.
+- **Editors and tmux:** the plugins read only what the command prints
+  (titles, logins, URLs, counts, dates) and never comment text.
 - **Local data:** settings live in `~/.config/prinbox/settings.json`. Snoozes and the "seen" ledger live in
   `~/Library/Application Support/prinbox/state.json`, the last fetch in `cache.json` beside it (titles,
   logins and URLs, never comment text) and the daily release check in `update.json`; avatars are cached in
@@ -264,6 +303,7 @@ Other targets:
 | Target | What it does |
 |---|---|
 | `make test` | runs the Swift Testing suite |
+| `make test-adapters` | runs the Neovim, Emacs and tmux suites that have their tool installed |
 | `make lint` | runs swift-format lint, plus a check for `@State`/`#Preview` |
 | `make coverage` | runs the tests with coverage; fails below 80% for PrinboxCore |
 | `make run` | runs the app from the build directory |
@@ -280,6 +320,9 @@ Other targets:
     logic under `CLI/`, the MCP server under `MCP/`) and is unit tested. It has no AppKit.
   - `Sources/PrinboxApp` is the thin AppKit and SwiftUI shell (macOS).
   - `Sources/PrinboxCLI` is the command's `main.swift` and composition root.
+  - `lua/`, `plugin/`, `prinbox.el`, `prinbox.tmux` and `tmux/` are the editor and tmux plugins, at the root
+    because their package managers expect that; `Tests/Adapters/` holds their tests over a stub of the command
+    (`make test-adapters`).
 - **Fixtures:** `scripts/record-fixture.sh <name>` records the live inbox as a two-phase fixture (the
   search and the detail batches). It rebuilds the response from an allowlist of fields and replaces
   repositories, logins, titles, URLs and ids with placeholders, and a test checks every string in every
@@ -303,7 +346,7 @@ Other targets:
 ## Roadmap
 
 See [docs/roadmap.md](docs/roadmap.md): a shared core with a `prinbox` command and stacked PRs (0.5.0), an MCP server
-(0.6.0), editor and tmux adapters (0.7.0), and Linux support for Hyprland and KDE (1.0.0).
+(0.6.0), editor and tmux adapters with default repositories (0.7.0), and Linux support for Hyprland and KDE (1.0.0).
 
 ## Credits
 
