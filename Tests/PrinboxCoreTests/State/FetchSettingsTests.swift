@@ -40,4 +40,20 @@ import Testing
         #expect(
             FetchSettings(defaults: defaults).scope == SearchScope(directReviewRequestsOnly: true, hideDrafts: true))
     }
+
+    @Test func setRepositoriesNormalizesAndWritesTheKey() {
+        let defaults = MemoryDefaults()
+        defaults.set(["acme", "org:bad"], forKey: SearchScope.repositoriesKey)
+        let logger = MemoryLogging()
+        let settings = FetchSettings(defaults: defaults, logger: logger)
+        #expect(settings.scope == SearchScope(repositories: ["acme/*"]))
+        #expect(logger.messages(.notice) == ["default repositories: ignored 1 invalid entry"])
+        settings.setRepositories(["globex/billing", "acme/*", "acme/web"])
+        #expect(settings.scope.repositories == ["acme/*", "globex/billing"])
+        #expect(defaults.object(forKey: SearchScope.repositoriesKey) as? [String] == ["acme/*", "globex/billing"])
+        settings.setRepositories([])
+        #expect(settings.scope.isEmpty)
+        #expect(defaults.object(forKey: SearchScope.repositoriesKey) as? [String] == [])
+        #expect(FetchSettings(defaults: defaults).scope == .none)
+    }
 }
