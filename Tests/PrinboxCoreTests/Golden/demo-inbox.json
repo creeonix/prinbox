@@ -1,6 +1,9 @@
 {
   "badge" : 8,
   "checkedAt" : "2026-08-10T12:00:00Z",
+  "defaultRepositories" : [
+
+  ],
   "error" : null,
   "fetchedAt" : "2026-08-10T12:00:00Z",
   "newCount" : 4,

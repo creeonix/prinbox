@@ -22,9 +22,9 @@ import Testing
         )
     }
 
-    func golden(_ name: String) throws -> String {
+    func golden(_ name: String, ext: String = "json") throws -> String {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Golden/\(name).json")
+            .appendingPathComponent("Golden/\(name).\(ext)")
         return try String(contentsOf: url, encoding: .utf8).trimmingCharacters(in: .newlines)
     }
 
@@ -167,5 +167,54 @@ import Testing
         #expect(InboxTmux.render(try await demoDocument(error: offline, source: "cache")) == "!8")
         let empty = DocumentMeta(prinbox: "x", source: nil, fetchedAt: nil, checkedAt: nil, viewer: nil, error: offline)
         #expect(InboxTmux.render(InboxDocument.make(nil, meta: empty, isNew: { _ in false }, now: now)) == "!")
+    }
+
+    @Test func linesMatchTheGoldenFile() async throws {
+        let rendered = InboxLines.render(try await demoDocument()).trimmingCharacters(in: .newlines)
+        let expected = try golden("demo-inbox", ext: "lines")
+        #expect(rendered == expected)
+    }
+
+    /// The two failure documents the adapter stub serves: a signed-out run without a cache, and a failed fetch over
+    /// the demo cache. The error is `timedOut`, whose text carries no clock time, so the file is the same in every
+    /// time zone.
+    @Test func theSetupNeededAndFetchFailedDocumentsMatchTheirGoldenFiles() async throws {
+        let clock = now
+        let signedOut = await InboxRun(
+            context: makeContext(fetcher: ScriptedFetcher { _ in throw FetchError.loggedOut }, clock: { clock })
+        )
+        .inbox(InboxOptions())
+        #expect(signedOut.exitCode == 3)
+        let setupNeeded = try golden("setup-needed")
+        #expect(InboxJSON.render(signedOut.document) == setupNeeded)
+        let fetcher = DemoFetcher(now: { clock })
+        let result = try await fetcher.fetch()
+        let cache = MemoryCache(
+            InboxCache(
+                fetchedAt: now, checkedAt: now, includeConversation: true, viewer: "me", fingerprint: [:],
+                attention: nil, result: result))
+        let failed = await InboxRun(
+            context: makeContext(
+                fetcher: ScriptedFetcher { _ in throw FetchError.timedOut }, cache: cache,
+                persistence: MemoryStatePersistence(fetcher.initialState), clock: { clock })
+        )
+        .inbox(InboxOptions())
+        #expect(failed.exitCode == 1)
+        #expect(failed.document.error?.message == "GitHub did not answer in time")
+        let fetchFailed = try golden("fetch-failed")
+        #expect(InboxJSON.render(failed.document) == fetchFailed)
+    }
+
+    /// The document `prinbox inbox --cached` prints before any fetch: exit 1, no rows, no error, the stderr line.
+    @Test func theNoCacheDocumentMatchesItsGoldenFile() async throws {
+        let clock = now
+        let outcome = await InboxRun(
+            context: makeContext(fetcher: ScriptedFetcher { _ in makeResult([]) }, clock: { clock })
+        )
+        .inbox(InboxOptions(cacheMode: .cached))
+        #expect(outcome.exitCode == 1)
+        #expect(outcome.stderr == ["prinbox: no cache yet, run prinbox inbox"])
+        let noCache = try golden("no-cache")
+        #expect(InboxJSON.render(outcome.document) == noCache)
     }
 }

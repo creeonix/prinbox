@@ -3,6 +3,15 @@ import Testing
 
 @testable import PrinboxCore
 
+/// Holds one snoozed pull request and cannot save: the unsnooze write-failure path.
+struct UnsaveablePersistence: StatePersisting {
+    struct Failure: Error {}
+    let state: AppState
+
+    func load() throws -> AppState? { state }
+    func save(_ state: AppState) throws { throw Failure() }
+}
+
 @Suite struct MCPToolsTests {
     let start = date("2026-08-10T12:00:00Z")
     let pr1 = makePR(id: "PR_1", number: 1, title: "Add feature", reviewRequestedAt: date("2026-08-10T08:00:00Z"))
@@ -134,6 +143,19 @@ import Testing
         #expect(logger.messages(.notice).contains { $0.hasPrefix("GitHub did not answer in time") })
         #expect(logger.lines.allSatisfy { !$0.message.hasPrefix("prinbox: ") })
         #expect(logger.lines.contains { $0.level == .debug && $0.message == "mcp get_inbox: cache, exit 1" })
+    }
+
+    @Test func anUnsnoozeThatCannotSaveIsAToolError() async throws {
+        let parked = AppState(snoozed: ["PR_1": SnoozeEntry(snoozedAt: start, updatedAt: pr1.updatedAt)])
+        let run = InboxRun(
+            context: makeContext(
+                fetcher: ScriptedFetcher { _ in makeResult([]) }, cache: MemoryCache(cached([pr1])),
+                persistence: UnsaveablePersistence(state: parked)))
+        let result = try await MCPTools.call("unsnooze_pull_request", arguments: ["id": "PR_1"], run: run)
+        #expect(result.isError)
+        #expect(result.content.count == 1)
+        #expect(result.content[0].hasPrefix("state.json not saved: "))
+        #expect(result.structuredContent == nil)
     }
 
     @Test func snoozeAndUnsnoozeReportThePullRequest() async throws {

@@ -190,6 +190,20 @@ public final class PopoverState {
     /// The "+N more on GitHub" page of a section under the inbox's scope.
     public func moreURL(_ kind: SectionKind) -> URL { (store.inbox ?? .empty).moreURL(kind) }
 
+    // MARK: Default repositories
+
+    /// The menu over what the store knows and what is pinned (spec 4.2).
+    public var repositoryPicker: RepositoryPicker {
+        RepositoryPicker(known: store.knownRepositories, shape: store.shape)
+    }
+
+    public var defaultRepositories: [String] { store.shape.scope.repositories }
+
+    public var hasDefaultRepositories: Bool { !defaultRepositories.isEmpty }
+
+    /// The strip's label.
+    public var defaultRepositoriesText: String { defaultRepositories.joined(separator: ", ") }
+
     /// Returns nil when the key is not for the popover, so the event continues to the view.
     public func handle(_ command: KeyCommand) -> KeyAction? {
         if showingSettings {
@@ -214,6 +228,8 @@ public final class PopoverState {
         case .unsnooze:
             if case .row(let id) = selection.current, store.state.isSnoozed(id) { unsnooze(id) }
             return .handled
+        case .repositories:
+            return .pickRepositories
         case .escape:
             return .close
         }

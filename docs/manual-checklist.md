@@ -76,4 +76,18 @@ Run them before a release.
 - [ ] After upgrading from 0.5.0, the first refresh is an unchanged check (the log says `fetch unchanged: 1 request`), not a full fetch: the old `cache.json` is still trusted.
 - [ ] Open Settings: a Scope group follows Follow review threads with "Only direct review requests" and "Hide draft pull requests", each with its caption.
 - [ ] With the popover open, run `prinbox snooze <id>` in a terminal: the row moves to Waiting on others and the count drops within a second (the directory watcher), without reopening the popover.
-- [ ] After the release: `brew install creeonix/tap/prinbox-cli` prints the registration line in its caveats and `prinbox --version` says 0.6.0.
+- [ ] The filter icon in the header opens a menu grouped by owner; clicking `acme/*` narrows every section to
+  that owner within seconds, the strip under the header reads `acme/*`, and the icon is filled.
+- [ ] In the menu a repository under a pinned owner is checked and dimmed; clicking a second entry adds it; the
+  strip's pull-down reopens the menu.
+- [ ] The [x] on the strip clears the filter: the whole inbox returns, the strip disappears, the icon is an outline.
+- [ ] `F` opens the menu; the arrow keys and Return pick an entry; Esc closes it.
+- [ ] With a filter that leaves nothing, the empty state says "Nothing waiting on you in acme/*."
+- [ ] `prinbox inbox --cached` and the agent's next `get_inbox` show `"defaultRepositories" : ["acme/*"]` and the
+  same rows as the popover.
+- [ ] After quitting and relaunching under a filter, the menu still lists every owner of the unfiltered inbox.
+- [ ] After upgrading from 0.6.0, the first refresh is an unchanged check (the log says `fetch unchanged: 1 request`).
+- [ ] `:Prinbox` in Neovim, `M-x prinbox` in Emacs and `prefix + P` in tmux list the rows; `s` (or `ctrl-s`) on a
+  row moves it to Waiting on others in the popover within a second; Enter opens the pull request.
+- [ ] The Neovim count and the Emacs mode line show the badge; `#{prinbox_status}` in the tmux status line too.
+- [ ] After the release: `brew upgrade creeonix/tap/prinbox-cli` and `prinbox --version` says 0.7.0.

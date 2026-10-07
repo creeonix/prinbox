@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# A stand-in for the prinbox command, for the adapter tests: prints the golden documents and records what the
+# adapters ask of it. Never contacts GitHub. Controlled by:
+#   PRINBOX_STUB_LOG      a file every inbox, snooze, unsnooze and open call appends its line to
+#   PRINBOX_STUB_EXIT     3 (signed out) or 1 (the fetch failed) makes `inbox` answer as the command would
+#   PRINBOX_STUB_VERSION  rewrites the document's top-level version (an adapter must refuse what it cannot read)
+#   PRINBOX_STUB_NOCACHE  1 makes `inbox --cached` answer as a first run does: the empty document, exit 1
+set -euo pipefail
+golden="$(cd "$(dirname "$0")/../../PrinboxCoreTests/Golden" && pwd)"
+command=${1:-}
+[ $# -gt 0 ] && shift
+
+log() { if [ -n "${PRINBOX_STUB_LOG:-}" ]; then echo "$1" >> "$PRINBOX_STUB_LOG"; fi; }
+
+case "$command" in
+    --version) echo "prinbox 0.7.0-stub"; exit 0 ;;
+    snooze|unsnooze|open)
+        [ $# -eq 1 ] || { echo "prinbox: $command needs one pull request id" >&2; exit 2; }
+        log "$command $1"
+        exit 0 ;;
+    inbox) ;;
+    *) echo "prinbox: unknown command '$command'" >&2; exit 2 ;;
+esac
+
+format=json
+cached=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --format) format=$2; shift 2 ;;
+        --format=*) format=${1#--format=}; shift ;;
+        --cached) cached=1; shift ;;
+        --notify) shift ;;
+        --max-age) shift 2 ;;
+        *) echo "prinbox: unknown option $1" >&2; exit 2 ;;
+    esac
+done
+log "inbox $format"
+
+rewrite() {
+    if [ -n "${PRINBOX_STUB_VERSION:-}" ]; then
+        sed "s/^  \"version\" : 1,\$/  \"version\" : ${PRINBOX_STUB_VERSION},/"
+    else
+        cat
+    fi
+}
+
+if [ "${PRINBOX_STUB_NOCACHE:-}" = 1 ] && [ "$cached" = 1 ]; then
+    [ "$format" = json ] && rewrite < "$golden/no-cache.json"
+    echo "prinbox: no cache yet, run prinbox inbox" >&2
+    exit 1
+fi
+
+case "${PRINBOX_STUB_EXIT:-0}" in
+    3)
+        [ "$format" = json ] && rewrite < "$golden/setup-needed.json"
+        printf 'Sign in to the GitHub CLI\ngh is installed but not signed in to GitHub, or its sign-in has expired.\n\n1. Run this in a terminal, choose GitHub.com, then "Login with a web browser":\n     gh auth login\n' >&2
+        exit 3 ;;
+    1)
+        case "$format" in
+            json) rewrite < "$golden/fetch-failed.json" ;;
+            lines) cat "$golden/demo-inbox.lines" ;;
+            tmux) echo '!8' ;;
+        esac
+        echo "prinbox: GitHub did not answer in time" >&2
+        exit 1 ;;
+esac
+
+case "$format" in
+    json) rewrite < "$golden/demo-inbox.json" ;;
+    lines) cat "$golden/demo-inbox.lines" ;;
+    tmux) echo 8 ;;
+    *) echo "prinbox: unknown format '$format' (json, lines, waybar, tmux)" >&2; exit 2 ;;
+esac

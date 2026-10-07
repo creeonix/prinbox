@@ -3,7 +3,7 @@ import Observation
 
 /// What a refresh asks for, persisted through `KeyValueStoring` (settings.json in the app): Follow review
 /// threads (Replies to you, open threads on your PRs, the thread-aware snooze wake; off is the lighter refresh)
-/// and the two scope settings (spec 4.1). Each change writes its one key.
+/// and the three scope settings (spec 3.4). Each change writes its one key.
 @MainActor
 @Observable
 public final class FetchSettings {
@@ -13,10 +13,10 @@ public final class FetchSettings {
     public private(set) var scope: SearchScope
     @ObservationIgnored private let defaults: KeyValueStoring
 
-    public init(defaults: KeyValueStoring) {
+    public init(defaults: KeyValueStoring, logger: Logging = NullLogging()) {
         self.defaults = defaults
         followReviewThreads = defaults.object(forKey: Self.key) as? Bool ?? true
-        scope = SearchScope.read(from: defaults)
+        scope = SearchScope.read(from: defaults, logger: logger)
     }
 
     public func setFollowReviewThreads(_ on: Bool) {
@@ -32,5 +32,11 @@ public final class FetchSettings {
     public func setHideDrafts(_ on: Bool) {
         scope.hideDrafts = on
         defaults.set(on, forKey: SearchScope.hideDraftsKey)
+    }
+
+    /// Writes the normalized entries once; the caller refreshes (spec 4.2).
+    public func setRepositories(_ entries: [String]) {
+        scope.repositories = entries
+        defaults.set(scope.repositories, forKey: SearchScope.repositoriesKey)
     }
 }

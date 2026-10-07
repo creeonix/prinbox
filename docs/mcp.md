@@ -26,13 +26,14 @@ next question.
 | `snooze_pull_request` | `id` (a `rows[].id` from `get_inbox`) | `{"id", "snoozed": true, "number", "repository", "title"}` and one text line |
 | `unsnooze_pull_request` | `id` | the same with `"snoozed": false`; `number`, `repository` and `title` are `null` when the row is not in the cache |
 
-`get_inbox` serves the cache when GitHub confirmed it within `max_age_seconds`, and fetches otherwise; `0`
-fetches now. The document's `source` (`fetch`, `unchanged`, `cache`) and `checkedAt` say what the agent got.
-A fetch beside the running app costs GitHub one request when nothing changed. Snooze parks a pull request
-until something happens on it (a push, a reply in a thread the user took part in, a new review request, a
-review on the user's own PR); both tools are idempotent. There is no tool to open a pull request: the URL is in
-every row, and opening a browser is the client's job. The tools carry MCP annotations: `get_inbox` is
-read-only, the other two are idempotent, none is destructive.
+`get_inbox` serves the cache when GitHub confirmed it within `max_age_seconds`, and fetches otherwise; `0` fetches
+now. The document's `source` (`fetch`, `unchanged`, `cache`) and `checkedAt` say what the agent got. A fetch beside
+the running app costs GitHub one request when nothing changed. Snooze parks a pull request until something happens on
+it (a push, a reply in a thread the user took part in, a new review request, a review on the user's own PR); both
+tools are idempotent. There is no tool to open a pull request: the URL is in every row, and opening a browser is the
+client's job. The tools carry MCP annotations: `get_inbox` is read-only, the other two are idempotent, none is
+destructive. The document carries `defaultRepositories`: the user's default repositories apply to the agent's inbox as
+to the popover's.
 
 ## Errors
 

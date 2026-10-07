@@ -1,3 +1,20 @@
+## What's new in 0.7.0
+
+- **Default repositories.** The filter icon in the popover's header opens a menu over the owners and repositories
+  your inbox knows; pick `acme/*` or `globex/billing` and every search narrows to them, so a maintainer of many
+  repositories sees only the ones that matter now. A strip under the header names the choice and its [x] clears it;
+  `F` opens the menu. The command and the agent follow the same `defaultRepositories` key.
+- **Neovim, Emacs and tmux.** Three plugins over `prinbox inbox --format json`, in this repository: `:Prinbox` (a
+  list with `Enter`, `s`, `u`, `r`, `q`, and `:Prinbox pick` through `vim.ui.select`), `M-x prinbox` (a
+  `tabulated-list` buffer with a mode-line count) and `#{prinbox_status}` plus `prefix + P` for an fzf popup. Each
+  opens, snoozes and wakes; a snooze made in one shows in the others and in the menu bar within a second. See
+  `docs/neovim.md`, `docs/emacs.md` and `docs/tmux.md`.
+- The JSON document carries `defaultRepositories`, so adapters and agents can say the inbox is filtered.
+- Upgrade the app and the command together: a 0.6.0 command beside the 0.7.0 app ignores the filter.
+- Small fixes from the 0.6.0 review: the state watcher cancels its source when released, and a few more edge
+  cases are pinned by tests. `make install-cli` replaces the installed binary through a new inode (0.6.0 users
+  who saw exit 137 after a reinstall: this is the fix).
+
 ## What's new in 0.6.0
 
 - **An inbox for AI agents.** `prinbox mcp` serves the inbox over the Model Context Protocol, on standard input

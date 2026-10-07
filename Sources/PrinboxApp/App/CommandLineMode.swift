@@ -63,7 +63,7 @@ enum CommandLineMode {
                 url: directories.state.appendingPathComponent("cache.json"), lock: lock, logger: logger),
             persistence: JSONStateFile(url: JSONStateFile.url(in: directories)), lock: lock,
             followReviewThreads: settings.object(forKey: FetchSettings.key) as? Bool ?? true,
-            scope: SearchScope.read(from: settings),
+            scope: SearchScope.read(from: settings, logger: logger),
             ghOverride: locator.overridePath, delivery: NoDelivery(), opener: WorkspaceURLOpener(), notifyNote: nil,
             clock: { Date() }, logger: logger,
             version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")

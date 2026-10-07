@@ -1,0 +1,79 @@
+{
+  "badge" : 0,
+  "checkedAt" : null,
+  "defaultRepositories" : [
+
+  ],
+  "error" : null,
+  "fetchedAt" : null,
+  "newCount" : 0,
+  "prinbox" : "0.5.0-test",
+  "sections" : [
+    {
+      "count" : 0,
+      "kind" : "needsReview",
+      "moreCount" : 0,
+      "moreUrl" : "https://github.com/pulls/review-requested",
+      "rows" : [
+
+      ],
+      "title" : "Needs your review"
+    },
+    {
+      "count" : 0,
+      "kind" : "repliesToYou",
+      "moreCount" : 0,
+      "moreUrl" : "https://github.com/pulls?q=is%3Aopen+is%3Apr+involves%3A%40me+-author%3A%40me",
+      "rows" : [
+
+      ],
+      "title" : "Replies to you"
+    },
+    {
+      "count" : 0,
+      "kind" : "takeAnotherLook",
+      "moreCount" : 0,
+      "moreUrl" : "https://github.com/pulls/review-requested",
+      "rows" : [
+
+      ],
+      "title" : "Take another look"
+    },
+    {
+      "count" : 0,
+      "kind" : "mentions",
+      "moreCount" : 0,
+      "moreUrl" : "https://github.com/pulls/mentioned",
+      "rows" : [
+
+      ],
+      "title" : "Mentions"
+    },
+    {
+      "count" : 0,
+      "kind" : "yourPRs",
+      "moreCount" : 0,
+      "moreUrl" : "https://github.com/pulls",
+      "rows" : [
+
+      ],
+      "title" : "Your PRs"
+    },
+    {
+      "count" : 0,
+      "kind" : "waitingOnOthers",
+      "moreCount" : 0,
+      "moreUrl" : "https://github.com/pulls",
+      "rows" : [
+
+      ],
+      "title" : "Waiting on others"
+    }
+  ],
+  "source" : null,
+  "version" : 1,
+  "viewer" : null,
+  "warnings" : [
+
+  ]
+}

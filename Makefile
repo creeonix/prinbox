@@ -2,7 +2,7 @@ PRODUCT    := PrinboxApp
 EXECUTABLE := Prinbox
 APP_NAME   := PRInbox
 BUNDLE_ID  := io.github.creeonix.prinbox
-VERSION    ?= 0.6.0
+VERSION    ?= 0.7.0
 BUILD_DIR  := build
 APP        := $(BUILD_DIR)/$(APP_NAME).app
 DMG        := $(BUILD_DIR)/$(APP_NAME)-$(VERSION).dmg
@@ -26,7 +26,7 @@ SIGN_FLAGS    := $(if $(filter -,$(SIGN_IDENTITY)),,--options runtime --timestam
 TESTING_PLUGINS := $(shell d="$$(dirname "$$(dirname "$$(xcrun --find swift)")")/lib/swift/host/plugins/testing"; [ -d "$$d" ] && echo "$$d")
 SWIFT_TEST_FLAGS := $(if $(TESTING_PLUGINS),-Xswiftc -plugin-path -Xswiftc $(TESTING_PLUGINS))
 
-.PHONY: test lint format coverage build icon app dmg install uninstall run clean cli install-cli cli-tarball
+.PHONY: test lint format coverage build icon app dmg install uninstall run clean cli install-cli cli-tarball test-adapters
 
 test:
 	swift test $(SWIFT_TEST_FLAGS)
@@ -43,6 +43,10 @@ format:
 
 coverage:
 	SWIFT_TEST_FLAGS="$(SWIFT_TEST_FLAGS)" scripts/coverage.sh 80
+
+# The Neovim, Emacs and tmux plugins against a stub of the command; suites whose tool is missing are skipped.
+test-adapters:
+	Tests/Adapters/run.sh
 
 build:
 	swift build -c release --product $(PRODUCT) $(ARCH_FLAGS)

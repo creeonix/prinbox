@@ -650,4 +650,55 @@ final class ReceivedRows {
         #expect(memory.writeCount == 3)
         #expect(store.lastSuccess == start + 360)
     }
+
+    @Test func knownRepositoriesComeFromTheUnfilteredFetchAndSurviveAFilteredOne() async {
+        let clock = TestClock(start)
+        let memory = MemoryCache()
+        let two = makeResult([
+            makePR(id: "PR_1", repository: "acme/web"), makePR(id: "PR_2", repository: "globex/billing"),
+        ])
+        let one = makeResult([makePR(id: "PR_1", repository: "acme/web")])
+        let fetcher = ScriptedFetcher(outcomes: { call, _ in .result(call == 1 ? two : one) })
+        let store = InboxStore(fetcher: fetcher, cache: memory, clock: { clock.now })
+        await store.refresh()
+        #expect(store.knownRepositories == ["acme/web", "globex/billing"])
+        #expect(memory.saved?.knownRepositories == ["acme/web", "globex/billing"])
+        store.setScope(SearchScope(repositories: ["acme/*"]))
+        clock.advance(60)
+        await store.refresh()
+        #expect(store.inbox?.badgeCount == 1)
+        #expect(store.knownRepositories == ["acme/web", "globex/billing"])
+        #expect(memory.saved?.knownRepositories == ["acme/web", "globex/billing"])
+        #expect(memory.saved?.scope == SearchScope(repositories: ["acme/*"]))
+        // Back to no filter: the third fetch (acme/web only) is unfiltered, so the list narrows to what it saw.
+        store.setScope(.none)
+        clock.advance(60)
+        await store.refresh()
+        #expect(store.knownRepositories == ["acme/web"])
+        #expect(memory.saved?.knownRepositories == ["acme/web"])
+    }
+
+    @Test func adoptCacheSeedsTheKnownRepositoriesFromTheFieldOrAnUnfilteredResult() {
+        let prs = [makePR(id: "PR_1", repository: "acme/web")]
+        func cache(scope: SearchScope, known: [String]?) -> InboxCache {
+            InboxCache(
+                fetchedAt: start - 60, checkedAt: start - 60, includeConversation: true, scope: scope,
+                viewer: testViewer,
+                fingerprint: [:], attention: nil, result: makeResult(prs), knownRepositories: known)
+        }
+        let withField = InboxStore(
+            fetcher: ScriptedFetcher { _ in makeResult([]) },
+            cache: MemoryCache(cache(scope: SearchScope(repositories: ["globex/*"]), known: ["globex/billing"])))
+        withField.adoptCache()
+        #expect(withField.knownRepositories == ["globex/billing"])
+        let unfiltered = InboxStore(
+            fetcher: ScriptedFetcher { _ in makeResult([]) }, cache: MemoryCache(cache(scope: .none, known: nil)))
+        unfiltered.adoptCache()
+        #expect(unfiltered.knownRepositories == ["acme/web"])
+        let filteredWithoutField = InboxStore(
+            fetcher: ScriptedFetcher { _ in makeResult([]) },
+            cache: MemoryCache(cache(scope: SearchScope(repositories: ["acme/*"]), known: nil)))
+        filteredWithoutField.adoptCache()
+        #expect(filteredWithoutField.knownRepositories.isEmpty)
+    }
 }

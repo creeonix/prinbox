@@ -66,22 +66,29 @@ import Testing
     }
 
     @Test func scopeChangesTheQualifiersOfEverySearch() {
-        let scope = SearchScope(directReviewRequestsOnly: true, hideDrafts: true)
-        #expect(SearchQuery.qualifier(.review, scope: scope) == "user-review-requested:@me -is:draft")
+        let scope = SearchScope(
+            directReviewRequestsOnly: true, repositories: ["acme", "globex/billing"], hideDrafts: true)
+        #expect(
+            SearchQuery.qualifier(.review, scope: scope)
+                == "user-review-requested:@me -is:draft user:acme repo:globex/billing")
         #expect(
             SearchQuery.qualifier(.mentions, scope: scope)
-                == "mentions:@me -author:@me -user-review-requested:@me -is:draft")
-        #expect(SearchQuery.qualifier(.mine, scope: scope) == "author:@me")
+                == "mentions:@me -author:@me -user-review-requested:@me -is:draft user:acme repo:globex/billing")
+        #expect(SearchQuery.qualifier(.mine, scope: scope) == "author:@me user:acme repo:globex/billing")
         #expect(
             SearchQuery.qualifier(.involved, scope: scope)
-                == "involves:@me -author:@me -user-review-requested:@me -mentions:@me -is:draft")
+                == "involves:@me -author:@me -user-review-requested:@me -mentions:@me -is:draft user:acme repo:globex/billing"
+        )
         #expect(
             SearchQuery.qualifier(.review, scope: SearchScope(hideDrafts: true)) == "review-requested:@me -is:draft")
         #expect(SearchQuery.qualifier(.mine, scope: SearchScope(hideDrafts: true)) == "author:@me")
         #expect(
             SearchQuery.qualifier(.mentions, scope: SearchScope(directReviewRequestsOnly: true))
                 == "mentions:@me -author:@me -user-review-requested:@me")
+        #expect(
+            SearchQuery.qualifier(.mine, scope: SearchScope(repositories: ["acme/web"])) == "author:@me repo:acme/web")
         let text = SearchQuery.text(includeInvolved: true, scope: scope)
+        #expect(text.components(separatedBy: "user:acme repo:globex/billing").count - 1 == 4)
         #expect(text.components(separatedBy: " -is:draft").count - 1 == 3)
         #expect(!text.contains(" review-requested:@me"))
         #expect(SearchQuery.text(includeInvolved: true) == SearchQuery.text(includeInvolved: true, scope: .none))
@@ -96,5 +103,25 @@ import Testing
         )
         #expect(SearchQuery.query(.involved, scope: longest).count == 122)
         #expect(SearchQuery.query(.mentions, scope: longest).count == 108)
+    }
+
+    @Test func overflowCountsCharactersPastTheLimit() {
+        // The longest base is `involved` with direct-only and drafts hidden: 122 characters (29 for
+        // "is:pr is:open archived:false ", 65 for the qualifier, 10 for " -is:draft", 18 for " sort:updated-desc").
+        // One owner entry adds " user:" (6) plus its length: 128 letters land exactly on 256, 129 go one over.
+        let fits = SearchScope(
+            directReviewRequestsOnly: true, repositories: [String(repeating: "a", count: 128)], hideDrafts: true)
+        #expect(SearchQuery.query(.involved, scope: fits).count == 256)
+        #expect(SearchQuery.overflow(includeInvolved: true, scope: fits) == 0)
+        let over = SearchScope(
+            directReviewRequestsOnly: true, repositories: [String(repeating: "a", count: 129)], hideDrafts: true)
+        #expect(SearchQuery.overflow(includeInvolved: true, scope: over) == 1)
+        // Without the involved search the longest is `mentions`, 108 base: 142 letters fit, 143 is one over.
+        #expect(SearchQuery.overflow(includeInvolved: false, scope: over) == 0)
+        let mentionsOver = SearchScope(
+            directReviewRequestsOnly: true, repositories: [String(repeating: "a", count: 143)], hideDrafts: true)
+        #expect(SearchQuery.overflow(includeInvolved: false, scope: mentionsOver) == 1)
+        #expect(SearchQuery.overflow(includeInvolved: true, scope: .none) == 0)
+        #expect(SearchQuery.queryLimit == 256)
     }
 }

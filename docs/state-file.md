@@ -27,23 +27,24 @@ popover on its next refresh or open, and a snooze in the popover shows in `prinb
 
 | Writer | `settings.json` | `state.json` | `cache.json` |
 |---|---|---|---|
-| App | Settings changes, folds, org colors, the one-time migration from defaults | snooze, unsnooze, fetch reconciliation (wake, prune, seed `seen`), popover close | after every full fetch; `checkedAt` on an unchanged check |
-| `prinbox inbox` | never | wake and prune after a complete, unscoped fetch | after a fetch (`attention` only with `--notify`); `checkedAt` on unchanged; nothing when served from the cache |
+| App | Settings changes, folds, org colors, the one-time migration from defaults | snooze, unsnooze, fetch reconciliation (wake, prune, seed `seen`), popover close | after every full fetch; `checkedAt` on an unchanged check; `knownRepositories` after a fetch (the result's repositories when no default repositories were set, else carried) |
+| `prinbox inbox` | never | wake and prune after a complete, unscoped fetch | after a fetch (`attention` only with `--notify`); `checkedAt` on unchanged; nothing when served from the cache; `knownRepositories` after a fetch (the result's repositories when no default repositories were set, else carried) |
 | `prinbox snooze`, `unsnooze` | never | the entry; when it had to fetch, wake and prune after a complete, unscoped fetch | only when `snooze` had to fetch |
 | `prinbox open` | never | when it had to fetch, wake and prune after a complete, unscoped fetch | only when it had to fetch |
-| `prinbox mcp` | never | snooze and unsnooze entries; wake and prune after a complete, unscoped fetch | after a fetch (`attention` left as found); `checkedAt` on unchanged; nothing when served |
+| `prinbox mcp` | never | snooze and unsnooze entries; wake and prune after a complete, unscoped fetch | after a fetch (`attention` left as found); `checkedAt` on unchanged; nothing when served; `knownRepositories` after a fetch (the result's repositories when no default repositories were set, else carried) |
 | `prinbox print`, `Prinbox --print` | never | never | never |
 | `--demo` | never | never | never |
 
 ### Settings
 
-`settings.json` is one JSON object of the keys the app's stores keep: `compactRows`, `directReviewRequestsOnly`,
-`foldedSections`, `followReviewThreads`, `ghPath`, `globalShortcut`, `groupByOrganization`, `hideDrafts`,
-`notifyOnNewReviewRequests`, `orgColors`, `showOrganizationAvatars`. A missing key means its default. The app
-rewrites one key at a time after re-reading the file, so a hand edit made while the app runs survives; the edit
-itself takes effect at the next launch. The command and the server read `followReviewThreads`, `ghPath`,
-`directReviewRequestsOnly` and `hideDrafts`; the server reads them at every call. On the first 0.5.0 launch the app
-copies every known key out of the `io.github.creeonix.prinbox` defaults domain into the file and removes it there.
+`settings.json` is one JSON object of the keys the app's stores keep: `compactRows`, `defaultRepositories`,
+`directReviewRequestsOnly`, `foldedSections`, `followReviewThreads`, `ghPath`, `globalShortcut`,
+`groupByOrganization`, `hideDrafts`, `notifyOnNewReviewRequests`, `orgColors`, `showOrganizationAvatars`. A missing
+key means its default. The app rewrites one key at a time after re-reading the file, so a hand edit made while the app
+runs survives; the edit itself takes effect at the next launch. The command and the server read `defaultRepositories`,
+`followReviewThreads`, `ghPath`, `directReviewRequestsOnly` and `hideDrafts`; the server reads them at every call. On
+the first 0.5.0 launch the app copies every known key out of the `io.github.creeonix.prinbox` defaults domain into the
+file and removes it there.
 
 ### Cache
 
@@ -51,8 +52,10 @@ copies every known key out of the `io.github.creeonix.prinbox` defaults domain i
 means "no cache". Other programs read the inbox through `prinbox inbox --format json` (see
 `docs/inbox-json.md`). For transparency, its keys: `version` (1), `fetchedAt` (when `result` was fetched),
 `checkedAt` (the last time GitHub confirmed it, including an unchanged check), `includeConversation` (the
-request shape it came from), `scope` (the two scope settings the request had; absent in a 0.5 file, which
-means none), `viewer`, `fingerprint` (id to `updatedAt` over every search hit),
+request shape it came from), `scope` (the three scope settings the request had; absent in a 0.5 file, which
+means none), `knownRepositories` (what the picker offers, absent in a 0.6 file: it holds the repositories of
+the last fetch made with no default repositories; a fetch made with some carries the list it found; an unchanged
+check leaves it alone), `viewer`, `fingerprint` (id to `updatedAt` over every search hit),
 `attention` (the arrivals baseline: the non-draft ids of the attention sections, written only by a
 notifier), `result` (the fetch: `viewerLogin`, `pullRequests`, `totals`, `fetched`, `warnings`). Nothing in it
 is body text: the same fields the popover shows, titles, logins and URLs included. Readers trust the

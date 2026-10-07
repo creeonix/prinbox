@@ -35,6 +35,12 @@ public struct FetchResult: Sendable, Equatable {
         warnings.isEmpty
             && SearchSource.allCases.filter(\.boundsCompleteness).allSatisfy { (fetched[$0] ?? 0) >= (totals[$0] ?? 0) }
     }
+
+    /// The distinct `owner/name` of the non-archived pull requests, sorted: what the repository picker offers
+    /// after an unfiltered fetch (spec 3.4).
+    public var repositoryNames: [String] {
+        Array(Set(pullRequests.filter { !$0.isArchived }.map(\.repository))).sorted()
+    }
 }
 
 /// Why a refresh failed. Partial data is not an error; it arrives as `FetchResult.warnings`.

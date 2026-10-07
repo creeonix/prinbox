@@ -8,10 +8,12 @@ public struct DocumentMeta: Sendable, Equatable {
     public let checkedAt: Date?
     public let viewer: String?
     public let error: InboxDocument.ErrorInfo?
+    /// The run's default repositories, a fact about the run that every document carries (spec 3.5).
+    public let defaultRepositories: [String]
 
     public init(
         prinbox: String, source: String?, fetchedAt: Date?, checkedAt: Date?, viewer: String?,
-        error: InboxDocument.ErrorInfo?
+        error: InboxDocument.ErrorInfo?, defaultRepositories: [String] = []
     ) {
         self.prinbox = prinbox
         self.source = source
@@ -19,6 +21,7 @@ public struct DocumentMeta: Sendable, Equatable {
         self.checkedAt = checkedAt
         self.viewer = viewer
         self.error = error
+        self.defaultRepositories = defaultRepositories
     }
 }
 
@@ -210,6 +213,7 @@ public struct InboxDocument: Codable, Equatable, Sendable {
     public let error: ErrorInfo?
     public let warnings: [String]
     public let sections: [Section]
+    public let defaultRepositories: [String]
 
     /// All six sections, always, in display order; `inbox` nil gives six empty ones.
     public static func make(_ inbox: Inbox?, meta: DocumentMeta, isNew: (PullRequest) -> Bool, now: Date)
@@ -226,7 +230,8 @@ public struct InboxDocument: Codable, Equatable, Sendable {
             version: currentVersion, prinbox: meta.prinbox, source: meta.source, fetchedAt: meta.fetchedAt,
             checkedAt: meta.checkedAt, viewer: meta.viewer, badge: inbox?.badgeCount ?? 0,
             newCount: sections.flatMap(\.rows).filter(\.isNew).count, error: meta.error,
-            warnings: inbox?.warnings ?? [], sections: sections)
+            warnings: inbox?.warnings ?? [], sections: sections,
+            defaultRepositories: meta.defaultRepositories)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -242,5 +247,6 @@ public struct InboxDocument: Codable, Equatable, Sendable {
         try container.encodeNullable(error, forKey: .error)
         try container.encode(warnings, forKey: .warnings)
         try container.encode(sections, forKey: .sections)
+        try container.encode(defaultRepositories, forKey: .defaultRepositories)
     }
 }

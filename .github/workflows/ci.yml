@@ -46,3 +46,16 @@ jobs:
         run: swift build
       - name: Test
         run: swift test
+  adapters:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Neovim, Emacs, tmux and fzf
+        run: |
+          curl -fsSL https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz | tar -xz -C "$HOME"
+          echo "$HOME/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+          sudo apt-get update -qq && sudo apt-get install -y -qq emacs-nox tmux fzf
+      - name: Versions
+        run: nvim --version | head -1 && emacs --version | head -1 && tmux -V && fzf --version
+      - name: Adapter suites
+        run: make test-adapters

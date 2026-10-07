@@ -96,4 +96,20 @@ import Testing
         let empty = InboxDocument.make(nil, meta: meta, isNew: { _ in false }, now: now)
         #expect(empty.sections[0].moreUrl == SectionKind.needsReview.moreURL)
     }
+
+    @Test func theDocumentNamesTheDefaultRepositoriesFromTheMeta() throws {
+        let filtered = DocumentMeta(
+            prinbox: "0.5.0-test", source: "fetch", fetchedAt: now, checkedAt: now, viewer: "me", error: nil,
+            defaultRepositories: ["acme/*", "globex/billing"])
+        let document = InboxDocument.make(
+            InboxBuilder.build(makeResult([makePR()])), meta: filtered, isNew: { _ in false }, now: now)
+        #expect(document.defaultRepositories == ["acme/*", "globex/billing"])
+        let text = InboxJSON.render(document)
+        #expect(text.contains("\"defaultRepositories\" : [\n    \"acme/*\",\n    \"globex/billing\"\n  ]"))
+        let plain = InboxDocument.make(nil, meta: meta, isNew: { _ in false }, now: now)
+        #expect(plain.defaultRepositories == [])
+        #expect(InboxJSON.render(plain).contains("\"defaultRepositories\" : [\n\n  ]"))
+        let decoded = try JSONDecoder().decode(JSONValue.self, from: Data(text.utf8))
+        #expect(decoded["defaultRepositories"] == ["acme/*", "globex/billing"])
+    }
 }

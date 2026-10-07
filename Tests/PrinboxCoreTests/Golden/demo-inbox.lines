@@ -1,0 +1,17 @@
+DEMO_1290	needsReview	1290	Migrate the settings page to the new design system	acme/web	Review requested	2d	stack 1/2	https://github.com/acme/web/pull/1290
+DEMO_1291	needsReview	1291	Settings page: migrate the notifications tab	acme/web	Review requested	2d	stack 2/2	https://github.com/acme/web/pull/1291
+DEMO_2104	needsReview	2104	Charge sales tax per region	globex/billing	Review requested	8h	new	https://github.com/globex/billing/pull/2104
+DEMO_482	needsReview	482	Add rate limiting to the public API	acme/api	Review requested	5h	new	https://github.com/acme/api/pull/482
+DEMO_77	needsReview	77	Fix the flaky checkout integration test	acme/shop	Review requested	2h	draft	https://github.com/acme/shop/pull/77
+DEMO_2077	repliesToYou	2077	Stream large uploads instead of buffering them	acme/api	Awaiting your reply	4h		https://github.com/acme/api/pull/2077
+DEMO_145	repliesToYou	145	Rotate the signing keys quarterly	globex/billing	Awaiting your reply	1h	new	https://github.com/globex/billing/pull/145
+DEMO_917	takeAnotherLook	917	Add a retry budget to the sync worker	globex/sync	Re-review requested	5h		https://github.com/globex/sync/pull/917
+DEMO_58	mentions	58	Document the release process	initech/docs	Mentioned	30m	new	https://github.com/initech/docs/pull/58
+DEMO_1301	yourPRs	1301	Speed up search indexing	acme/web	CI is red	1h	stack 2/2	https://github.com/acme/web/pull/1301
+DEMO_310	yourPRs	310	Reconcile invoices nightly	globex/billing	Merge conflicts	4h		https://github.com/globex/billing/pull/310
+DEMO_489	yourPRs	489	Retry webhook deliveries with backoff	acme/api	Open threads	6h		https://github.com/acme/api/pull/489
+DEMO_612	yourPRs	612	Rewrite the TPS report generator	initech/tps	Changes requested	9h		https://github.com/initech/tps/pull/612
+DEMO_1298	waitingOnOthers	1298	Bump the Swift toolchain to 6.4	acme/web	Waiting for review	20h	stack 1/2	https://github.com/acme/web/pull/1298
+DEMO_33	waitingOnOthers	33	Add a cover sheet to every report	initech/tps	Waiting for review	30h		https://github.com/initech/tps/pull/33
+DEMO_91	waitingOnOthers	91	Explore an offline mode	acme/shop	Draft	3d	draft	https://github.com/acme/shop/pull/91
+DEMO_1284	waitingOnOthers	1284	Cache avatar images on disk	acme/web	Snoozed	3h	snoozed	https://github.com/acme/web/pull/1284

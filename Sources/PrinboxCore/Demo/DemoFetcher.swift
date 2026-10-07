@@ -14,9 +14,13 @@ public struct DemoFetcher: InboxFetching {
         base = now()
     }
 
-    /// The demo never answers `.unchanged`: its data is frozen anyway, and the inbox is built once.
+    /// The demo never answers `.unchanged`: its data is frozen anyway, and the inbox is built once. Default
+    /// repositories narrow the sample (spec 3.4) so the filtered popover can be shown; the other switches are ignored.
     public func fetch(_ request: FetchRequest) async throws -> FetchOutcome {
-        let prs = DemoData.pullRequests(now: base)
+        let entries = request.scope.repositories
+        let prs = DemoData.pullRequests(now: base).filter { pr in
+            entries.isEmpty || entries.contains { RepositoryEntries.covers($0, repository: pr.repository) }
+        }
         let counts = Dictionary(grouping: prs, by: \.source).mapValues(\.count)
         let fetched = Dictionary(uniqueKeysWithValues: SearchSource.allCases.map { ($0, counts[$0] ?? 0) })
         return .result(

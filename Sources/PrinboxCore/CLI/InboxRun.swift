@@ -119,7 +119,9 @@ public struct InboxRun: Sendable {
                         scope: shape.scope,
                         viewer: result.viewerLogin, fingerprint: result.fingerprint,
                         attention: notify ? attention : (existing?.shape == shape ? existing?.attention : nil),
-                        result: result)
+                        result: result,
+                        knownRepositories: InboxCache.knownRepositories(
+                            after: result, scope: shape.scope, carrying: existing?.knownRepositories))
                 }
                 return .success(Served(result: result, source: "fetch", fetchedAt: now, checkedAt: now, error: nil))
             }
@@ -163,7 +165,8 @@ public struct InboxRun: Sendable {
         let inbox = InboxBuilder.build(served.result, snoozed: snoozed, scope: context.scope)
         let meta = DocumentMeta(
             prinbox: context.version, source: served.source, fetchedAt: served.fetchedAt, checkedAt: served.checkedAt,
-            viewer: served.result.viewerLogin, error: served.error.map { errorInfo($0, lastSuccess: served.checkedAt) })
+            viewer: served.result.viewerLogin, error: served.error.map { errorInfo($0, lastSuccess: served.checkedAt) },
+            defaultRepositories: context.scope.repositories)
         let document = InboxDocument.make(inbox, meta: meta, isNew: state.isNew, now: context.clock())
         return RunOutcome(
             document: document, exitCode: exitCode, stderr: extra + (warning ? [Self.stateWarning] : []),
@@ -172,7 +175,8 @@ public struct InboxRun: Sendable {
 
     private func emptyDocument(error: InboxDocument.ErrorInfo?) -> InboxDocument {
         let meta = DocumentMeta(
-            prinbox: context.version, source: nil, fetchedAt: nil, checkedAt: nil, viewer: nil, error: error)
+            prinbox: context.version, source: nil, fetchedAt: nil, checkedAt: nil, viewer: nil, error: error,
+            defaultRepositories: context.scope.repositories)
         return InboxDocument.make(nil, meta: meta, isNew: { _ in false }, now: context.clock())
     }
 

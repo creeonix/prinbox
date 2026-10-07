@@ -142,4 +142,11 @@ import Testing
         #expect(RowText.help(topRow) == "globex/billing · stacked on #1")
         #expect(RowText.help(baseRow) == "globex/billing")
     }
+
+    @Test func emptyStateNamesTheDefaultRepositories() {
+        #expect(RowText.emptyState(repositories: []) == "Nothing waiting on you.")
+        #expect(
+            RowText.emptyState(repositories: ["acme/*", "globex/billing"])
+                == "Nothing waiting on you in acme/*, globex/billing.")
+    }
 }

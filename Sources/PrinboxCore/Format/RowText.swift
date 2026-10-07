@@ -88,4 +88,10 @@ public enum RowText {
         let base = "\(badgeCount) waiting on you · updated \(ClockText.hhmm(lastSuccess, timeZone: timeZone))"
         return newCount > 0 ? "\(base) · \(newCount) new" : base
     }
+
+    /// The empty state's line, naming the default repositories when there are any (spec 4.5).
+    public static func emptyState(repositories: [String]) -> String {
+        repositories.isEmpty
+            ? "Nothing waiting on you." : "Nothing waiting on you in \(repositories.joined(separator: ", "))."
+    }
 }

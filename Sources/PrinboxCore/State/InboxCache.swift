@@ -25,14 +25,18 @@ public struct InboxCache: Codable, Equatable, Sendable {
     /// The arrivals baseline, sorted; absent until a notifier writes one.
     public var attention: [String]?
     public var result: FetchResult
+    /// The repositories of the last fetch made with no default repositories, for the picker (spec 3.4); absent in
+    /// a 0.6.0 file.
+    public var knownRepositories: [String]?
 
     enum CodingKeys: String, CodingKey {
         case version, fetchedAt, checkedAt, includeConversation, scope, viewer, fingerprint, attention, result
+        case knownRepositories
     }
 
     public init(
         fetchedAt: Date, checkedAt: Date, includeConversation: Bool, scope: SearchScope = .none, viewer: String,
-        fingerprint: [String: Date], attention: [String]?, result: FetchResult
+        fingerprint: [String: Date], attention: [String]?, result: FetchResult, knownRepositories: [String]? = nil
     ) {
         version = InboxCache.currentVersion
         self.fetchedAt = fetchedAt
@@ -43,6 +47,7 @@ public struct InboxCache: Codable, Equatable, Sendable {
         self.fingerprint = fingerprint
         self.attention = attention
         self.result = result
+        self.knownRepositories = knownRepositories
     }
 
     public init(from decoder: Decoder) throws {
@@ -56,6 +61,7 @@ public struct InboxCache: Codable, Equatable, Sendable {
         fingerprint = try container.decode([String: Date].self, forKey: .fingerprint)
         attention = try container.decodeIfPresent([String].self, forKey: .attention)
         result = try container.decode(FetchResult.self, forKey: .result)
+        knownRepositories = try container.decodeIfPresent([String].self, forKey: .knownRepositories)
     }
 
     public var shape: FetchShape { FetchShape(includeConversation: includeConversation, scope: scope) }
@@ -72,5 +78,13 @@ public struct InboxCache: Codable, Equatable, Sendable {
     public func trustedAttention(shape: FetchShape) -> Set<String>? {
         guard self.shape == shape, let attention else { return nil }
         return Set(attention)
+    }
+
+    /// What a `.result` writer records as `knownRepositories`: the result's repositories when the fetch had no
+    /// default repositories, else what the file holds (`existing`), so a filtered fetch never narrows the picker.
+    public static func knownRepositories(after result: FetchResult, scope: SearchScope, carrying existing: [String]?)
+        -> [String]?
+    {
+        scope.repositories.isEmpty ? result.repositoryNames : existing
     }
 }

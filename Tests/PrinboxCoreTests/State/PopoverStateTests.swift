@@ -312,6 +312,22 @@ import Testing
         #expect(state.store.state.snoozedIDs.isEmpty)
         #expect(state.selection.current == .more(.needsReview))
     }
+
+    @Test func fOpensThePickerOutsideSettingsAndThePickerFollowsTheStore() async {
+        let prs = [makePR(id: "a", repository: "acme/web"), makePR(id: "b", repository: "globex/billing")]
+        let state = await makeState { _ in makeResult(prs) }
+        #expect(state.handle(.repositories) == .pickRepositories)
+        #expect(state.hasDefaultRepositories == false)
+        #expect(state.defaultRepositoriesText == "")
+        #expect(state.repositoryPicker.groups.map(\.owner) == ["acme", "globex"])
+        state.store.setScope(SearchScope(repositories: ["acme/*"]))
+        #expect(state.defaultRepositories == ["acme/*"])
+        #expect(state.defaultRepositoriesText == "acme/*")
+        #expect(state.hasDefaultRepositories)
+        #expect(state.repositoryPicker.groups[0].items[0].isPinned)
+        state.openSettings()
+        #expect(state.handle(.repositories) == nil)
+    }
 }
 
 @MainActor

@@ -4,6 +4,7 @@ import SwiftUI
 struct HeaderView: View {
     let state: PopoverState
     let actions: PopoverActions
+    let anchor: MenuAnchor
 
     var body: some View {
         HStack(spacing: 8) {
@@ -15,6 +16,12 @@ struct HeaderView: View {
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(.secondary)
             Spacer()
+            RepositoryMenuButton(
+                state: state, actions: actions,
+                symbol: state.hasDefaultRepositories
+                    ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle",
+                help: "Default repositories (F)", tint: state.hasDefaultRepositories ? .systemGray : nil,
+                anchor: anchor)
             if state.store.isRefreshing {
                 ProgressView().controlSize(.small)
             } else {
