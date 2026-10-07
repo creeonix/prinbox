@@ -121,9 +121,13 @@ CALLBACK receives what INTERPRET makes of the exit code, stdout and stderr."
          :sentinel
          (lambda (process _event)
            (when (memq (process-status process) '(exit signal))
-             (let ((errp (get-buffer-process stderr)))
-               (while (and errp (process-live-p errp))
-                 (accept-process-output errp 0.05)))
+             ;; Bounded: a grandchild holding stderr open must not freeze Emacs (sentinels inhibit quit).
+             (let ((errp (get-buffer-process stderr))
+                   (deadline (+ (float-time) 1.0)))
+               (while (and errp (process-live-p errp) (< (float-time) deadline))
+                 (accept-process-output errp 0.05))
+               (when (and errp (process-live-p errp))
+                 (delete-process errp)))
              (let ((code (process-exit-status process))
                    (out (with-current-buffer stdout (buffer-string)))
                    (err (with-current-buffer stderr (buffer-string))))
@@ -262,6 +266,8 @@ when setup is needed."
   (setq tabulated-list-padding 1)
   (setq tabulated-list-sort-key nil)
   (setq-local revert-buffer-function #'prinbox--revert)
+  ;; The column titles print as the buffer's first line: the header line holds the summary.
+  (setq-local tabulated-list-use-header-line nil)
   (tabulated-list-init-header))
 
 (defun prinbox--buffer ()

@@ -99,6 +99,9 @@ count cannot leak into this one."
   (prinbox-test--wait (lambda () (>= (length (prinbox-test--log-lines)) 2)))
   (with-current-buffer "*prinbox*"
     (goto-char (point-min))
+    (should (string-match-p "Section" (buffer-substring-no-properties (point-min) (line-end-position))))
+    (should (string-prefix-p "8 waiting on you" header-line-format))
+    (forward-line 1)
     (cl-letf (((symbol-function 'browse-url) (lambda (url &rest _) (push url prinbox-test--opened))))
       (prinbox-open))
     (should (equal prinbox-test--opened '("https://github.com/acme/web/pull/1290")))
@@ -171,7 +174,7 @@ count cannot leak into this one."
       (should (equal (car more) "more-needsReview"))
       (should (equal (prinbox-test--cell more 2) "+2 more on GitHub")))
     (goto-char (point-min))
-    (forward-line 1)
+    (forward-line 2)
     (should (equal (tabulated-list-get-id) "more-needsReview"))
     (cl-letf (((symbol-function 'browse-url) (lambda (url &rest _) (push url prinbox-test--opened))))
       (prinbox-open))
