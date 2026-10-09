@@ -91,5 +91,12 @@ import Testing
             VerdictCue.of(
                 row(makePR(viewerReview: ViewerReview(state: "COMMENTED", submittedAt: nil), source: .review))) == nil)
         #expect(VerdictCue.of(row(makePR(authorLogin: testViewer, source: .mine, viewerVerdict: approved))) == nil)
+        let snoozedPR = makePR(
+            viewerReview: approved, reviewRequestedAt: date("2026-08-02T10:00:00Z"), source: .review,
+            viewerVerdict: approved)
+        let snoozed = InboxRow(
+            pullRequest: snoozedPR, classification: Classifier.classify(snoozedPR, viewer: testViewer, snoozed: true)!)
+        #expect(snoozed.classification.section == .waitingOnOthers)
+        #expect(VerdictCue.of(snoozed) == nil)
     }
 }

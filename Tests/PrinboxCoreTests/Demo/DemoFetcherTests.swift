@@ -124,7 +124,8 @@ import Testing
     @Test func theSampleShowsBothPushesAndThreeReviewedRows() async throws {
         let box = try await inbox()
         let look = try #require(box.section(.takeAnotherLook))
-        // Longest waiting first: #2210 pushed 6h ago, #917 requested 5h ago, #1284 requested 3h ago, #733 pushed 2h ago.
+        // Longest waiting first: #2210 pushed 6h ago, #917 requested 5h ago, #1284 requested 3h ago,
+        // #733 pushed 2h ago.
         #expect(look.rows.map(\.id) == ["DEMO_2210", "DEMO_917", "DEMO_1284", "DEMO_733"])
         #expect(
             look.rows.map(\.classification.reason)

@@ -220,9 +220,6 @@ count cannot leak into this one."
     (prinbox-mode-line-mode -1)
     (should-not (member '(:eval (prinbox--mode-line)) global-mode-string))))
 
-(provide 'prinbox-test)
-;;; prinbox-test.el ends here
-
 (ert-deftest prinbox-test-ret-opens-the-diff-since-your-review ()
   "A row whose diff moved since your review opens GitHub's diff since that review."
   (prinbox-test--reset)
@@ -247,3 +244,6 @@ count cannot leak into this one."
     (prinbox-test--wait (lambda () (member "inbox json all" (prinbox-test--log-lines))))
     (with-current-buffer "*prinbox*"
       (should (seq-some (lambda (entry) (equal (car entry) "DEMO_1250")) tabulated-list-entries)))))
+
+(provide 'prinbox-test)
+;;; prinbox-test.el ends here
