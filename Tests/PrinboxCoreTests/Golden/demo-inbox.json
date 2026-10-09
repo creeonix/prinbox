@@ -45,7 +45,8 @@
           "title" : "Migrate the settings page to the new design system",
           "updatedAt" : "2026-08-10T09:00:00Z",
           "url" : "https://github.com/acme/web/pull/1290",
-          "waitingSince" : "2026-08-08T10:00:00Z"
+          "waitingSince" : "2026-08-08T10:00:00Z",
+          "yourReview" : null
         },
         {
           "additions" : 140,
@@ -77,7 +78,8 @@
           "title" : "Settings page: migrate the notifications tab",
           "updatedAt" : "2026-08-10T10:00:00Z",
           "url" : "https://github.com/acme/web/pull/1291",
-          "waitingSince" : "2026-08-08T11:00:00Z"
+          "waitingSince" : "2026-08-08T11:00:00Z",
+          "yourReview" : null
         },
         {
           "additions" : 301,
@@ -105,7 +107,8 @@
           "title" : "Charge sales tax per region",
           "updatedAt" : "2026-08-10T10:00:00Z",
           "url" : "https://github.com/globex/billing/pull/2104",
-          "waitingSince" : "2026-08-10T04:00:00Z"
+          "waitingSince" : "2026-08-10T04:00:00Z",
+          "yourReview" : null
         },
         {
           "additions" : 214,
@@ -133,7 +136,8 @@
           "title" : "Add rate limiting to the public API",
           "updatedAt" : "2026-08-10T11:00:00Z",
           "url" : "https://github.com/acme/api/pull/482",
-          "waitingSince" : "2026-08-10T07:00:00Z"
+          "waitingSince" : "2026-08-10T07:00:00Z",
+          "yourReview" : null
         },
         {
           "additions" : 18,
@@ -161,7 +165,8 @@
           "title" : "Fix the flaky checkout integration test",
           "updatedAt" : "2026-08-10T10:00:00Z",
           "url" : "https://github.com/acme/shop/pull/77",
-          "waitingSince" : "2026-08-10T10:00:00Z"
+          "waitingSince" : "2026-08-10T10:00:00Z",
+          "yourReview" : null
         }
       ],
       "title" : "Needs your review"
@@ -198,7 +203,17 @@
           "title" : "Stream large uploads instead of buffering them",
           "updatedAt" : "2026-08-10T09:00:00Z",
           "url" : "https://github.com/acme/api/pull/2077",
-          "waitingSince" : "2026-08-10T08:00:00Z"
+          "waitingSince" : "2026-08-10T08:00:00Z",
+          "yourReview" : {
+            "commit" : null,
+            "commitsSince" : null,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : null,
+            "sinceReviewUrl" : null,
+            "state" : "commented",
+            "submittedAt" : "2026-08-09T10:00:00Z"
+          }
         },
         {
           "additions" : 64,
@@ -226,7 +241,17 @@
           "title" : "Rotate the signing keys quarterly",
           "updatedAt" : "2026-08-10T11:00:00Z",
           "url" : "https://github.com/globex/billing/pull/145",
-          "waitingSince" : "2026-08-10T11:00:00Z"
+          "waitingSince" : "2026-08-10T11:00:00Z",
+          "yourReview" : {
+            "commit" : null,
+            "commitsSince" : null,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : null,
+            "sinceReviewUrl" : null,
+            "state" : "commented",
+            "submittedAt" : "2026-08-09T16:00:00Z"
+          }
         }
       ],
       "title" : "Replies to you"
@@ -263,7 +288,17 @@
           "title" : "Add a retry budget to the sync worker",
           "updatedAt" : "2026-08-10T07:00:00Z",
           "url" : "https://github.com/globex/sync/pull/917",
-          "waitingSince" : "2026-08-10T07:00:00Z"
+          "waitingSince" : "2026-08-10T07:00:00Z",
+          "yourReview" : {
+            "commit" : null,
+            "commitsSince" : null,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : null,
+            "sinceReviewUrl" : null,
+            "state" : "commented",
+            "submittedAt" : "2026-08-09T06:00:00Z"
+          }
         }
       ],
       "title" : "Take another look"
@@ -300,7 +335,8 @@
           "title" : "Document the release process",
           "updatedAt" : "2026-08-10T11:30:00Z",
           "url" : "https://github.com/initech/docs/pull/58",
-          "waitingSince" : "2026-08-10T11:30:00Z"
+          "waitingSince" : "2026-08-10T11:30:00Z",
+          "yourReview" : null
         }
       ],
       "title" : "Mentions"
@@ -341,7 +377,8 @@
           "title" : "Speed up search indexing",
           "updatedAt" : "2026-08-10T11:00:00Z",
           "url" : "https://github.com/acme/web/pull/1301",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 142,
@@ -369,7 +406,8 @@
           "title" : "Reconcile invoices nightly",
           "updatedAt" : "2026-08-10T08:00:00Z",
           "url" : "https://github.com/globex/billing/pull/310",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 75,
@@ -397,7 +435,8 @@
           "title" : "Retry webhook deliveries with backoff",
           "updatedAt" : "2026-08-10T06:00:00Z",
           "url" : "https://github.com/acme/api/pull/489",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 540,
@@ -425,7 +464,8 @@
           "title" : "Rewrite the TPS report generator",
           "updatedAt" : "2026-08-10T03:00:00Z",
           "url" : "https://github.com/initech/tps/pull/612",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         }
       ],
       "title" : "Your PRs"
@@ -466,7 +506,8 @@
           "title" : "Bump the Swift toolchain to 6.4",
           "updatedAt" : "2026-08-09T16:00:00Z",
           "url" : "https://github.com/acme/web/pull/1298",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 27,
@@ -494,7 +535,8 @@
           "title" : "Add a cover sheet to every report",
           "updatedAt" : "2026-08-09T06:00:00Z",
           "url" : "https://github.com/initech/tps/pull/33",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 512,
@@ -522,7 +564,8 @@
           "title" : "Explore an offline mode",
           "updatedAt" : "2026-08-07T12:00:00Z",
           "url" : "https://github.com/acme/shop/pull/91",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 96,
@@ -550,7 +593,17 @@
           "title" : "Cache avatar images on disk",
           "updatedAt" : "2026-08-10T09:00:00Z",
           "url" : "https://github.com/acme/web/pull/1284",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : {
+            "commit" : null,
+            "commitsSince" : null,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : null,
+            "sinceReviewUrl" : null,
+            "state" : "commented",
+            "submittedAt" : "2026-08-08T10:00:00Z"
+          }
         }
       ],
       "title" : "Waiting on others"

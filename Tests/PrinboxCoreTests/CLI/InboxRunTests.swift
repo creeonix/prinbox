@@ -488,4 +488,36 @@ import Testing
         #expect(empty.exitCode == 1)
         #expect(empty.document.defaultRepositories == ["acme/*"])
     }
+
+    @Test func allFillsTheReviewedSectionAndTheDefaultLeavesItEmpty() async {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: start - 3600, commitOid: "aaa")
+        let quiet = makePR(
+            id: "PR_Q", number: 5, viewerReview: approved, source: .involved, headOid: "aaa", viewerVerdict: approved)
+        let fetcher = ScriptedFetcher { _ in makeResult([self.pr1, quiet]) }
+        let plain = await InboxRun(context: makeContext(fetcher: fetcher)).inbox(InboxOptions())
+        #expect(plain.document.sections.last?.kind == "reviewed")
+        #expect(plain.document.sections.last?.rows.isEmpty == true)
+        #expect(plain.document.badge == 1)
+        let all = await InboxRun(context: makeContext(fetcher: fetcher)).inbox(InboxOptions(all: true))
+        #expect(all.document.sections.last?.rows.map(\.id) == ["PR_Q"])
+        #expect(all.document.sections.last?.rows.first?.reason == "youApproved")
+        #expect(all.document.badge == 1)
+        let cached = await InboxRun(context: makeContext(fetcher: fetcher, cache: MemoryCache(cached([pr1, quiet]))))
+            .inbox(InboxOptions(cacheMode: .cached, all: true))
+        #expect(cached.document.sections.last?.rows.map(\.id) == ["PR_Q"])
+    }
+
+    @Test func openOpensTheDeltaWhenTheDiffMovedSinceYourVerdict() async {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: start - 3600, commitOid: "aaa")
+        let moved = makePR(
+            id: "PR_M", number: 8, repository: "acme/api", viewerReview: approved, source: .involved, headOid: "ccc",
+            viewerVerdict: approved, recentCommitOids: ["aaa", "ccc"], commitCount: 2)
+        let opener = FakeOpener()
+        let run = InboxRun(
+            context: makeContext(
+                fetcher: ScriptedFetcher { _ in makeResult([]) }, cache: MemoryCache(cached([moved])), opener: opener))
+        let opened = await run.open(id: "PR_M")
+        #expect(opened.exitCode == 0)
+        #expect(opener.opened == [URL(string: "https://github.com/acme/api/pull/8/files/aaa..ccc")])
+    }
 }

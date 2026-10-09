@@ -121,6 +121,60 @@ public struct InboxDocument: Codable, Equatable, Sendable {
         }
     }
 
+    /// Your review of a pull request (spec 0.8 section 5): the verdict, whether the diff moved since it, how, and
+    /// the diff to open. `state` is `approved`, `changesRequested` or `commented`; a comment-only review has no
+    /// commit, nothing moved and no sentence.
+    public struct YourReview: Codable, Equatable, Sendable {
+        public let state: String
+        public let submittedAt: Date?
+        public let commit: String?
+        public let moved: Bool
+        public let commitsSince: Int?
+        public let rewritten: Bool
+        public let since: String?
+        public let sinceReviewUrl: URL?
+
+        public init(
+            state: String, submittedAt: Date?, commit: String?, moved: Bool, commitsSince: Int?, rewritten: Bool,
+            since: String?, sinceReviewUrl: URL?
+        ) {
+            self.state = state
+            self.submittedAt = submittedAt
+            self.commit = commit
+            self.moved = moved
+            self.commitsSince = commitsSince
+            self.rewritten = rewritten
+            self.since = since
+            self.sinceReviewUrl = sinceReviewUrl
+        }
+
+        static func make(_ pr: PullRequest) -> YourReview? {
+            if let verdict = pr.viewerVerdict {
+                return YourReview(
+                    state: verdict.state == "APPROVED" ? "approved" : "changesRequested",
+                    submittedAt: verdict.submittedAt,
+                    commit: verdict.commitOid, moved: pr.movedSinceVerdict, commitsSince: pr.commitsSinceVerdict,
+                    rewritten: pr.rewrittenSinceVerdict, since: RowText.since(pr), sinceReviewUrl: pr.sinceReviewURL)
+            }
+            guard let review = pr.viewerReview else { return nil }
+            return YourReview(
+                state: "commented", submittedAt: review.submittedAt, commit: nil, moved: false, commitsSince: nil,
+                rewritten: false, since: nil, sinceReviewUrl: nil)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(state, forKey: .state)
+            try container.encodeNullable(submittedAt, forKey: .submittedAt)
+            try container.encodeNullable(commit, forKey: .commit)
+            try container.encode(moved, forKey: .moved)
+            try container.encodeNullable(commitsSince, forKey: .commitsSince)
+            try container.encode(rewritten, forKey: .rewritten)
+            try container.encodeNullable(since, forKey: .since)
+            try container.encodeNullable(sinceReviewUrl, forKey: .sinceReviewUrl)
+        }
+    }
+
     public struct Row: Codable, Equatable, Sendable {
         public let id: String
         public let number: Int
@@ -143,6 +197,7 @@ public struct InboxDocument: Codable, Equatable, Sendable {
         public let pendingReplies: Int
         public let marks: Marks
         public let stack: Stack?
+        public let yourReview: YourReview?
 
         static func make(_ row: InboxRow, isNew: Bool, now: Date) -> Row {
             let pr = row.pullRequest
@@ -154,7 +209,8 @@ public struct InboxDocument: Codable, Equatable, Sendable {
                 age: RelativeAge.format(from: since ?? pr.updatedAt, to: now), reason: row.classification.reason.code,
                 reasonText: row.classification.reason.rawValue, snoozed: row.classification.reason == .snoozed,
                 isNew: isNew, pendingReplies: row.pendingReplies, marks: Marks.make(pr),
-                stack: row.stack.map { Stack(position: $0.position, size: $0.size, parentId: $0.parentID) })
+                stack: row.stack.map { Stack(position: $0.position, size: $0.size, parentId: $0.parentID) },
+                yourReview: YourReview.make(pr))
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -180,6 +236,7 @@ public struct InboxDocument: Codable, Equatable, Sendable {
             try container.encode(pendingReplies, forKey: .pendingReplies)
             try container.encode(marks, forKey: .marks)
             try container.encodeNullable(stack, forKey: .stack)
+            try container.encodeNullable(yourReview, forKey: .yourReview)
         }
     }
 
@@ -215,7 +272,7 @@ public struct InboxDocument: Codable, Equatable, Sendable {
     public let sections: [Section]
     public let defaultRepositories: [String]
 
-    /// All six sections, always, in display order; `inbox` nil gives six empty ones.
+    /// All seven sections, always, in display order; `inbox` nil gives seven empty ones.
     public static func make(_ inbox: Inbox?, meta: DocumentMeta, isNew: (PullRequest) -> Bool, now: Date)
         -> InboxDocument
     {

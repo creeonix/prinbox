@@ -97,4 +97,14 @@ import Testing
         #expect(try parse("--format lines inbox").command == .inbox(InboxOptions(format: .lines)))
         #expect(try parse("--settings /tmp/s.json snooze PR_1").settingsPath == "/tmp/s.json")
     }
+
+    @Test func allFillsTheReviewedSectionAndAppliesToInboxOnly() throws {
+        #expect(try parse("inbox --all").command == .inbox(InboxOptions(all: true)))
+        #expect(
+            try parse("inbox --all --cached --format lines").command
+                == .inbox(InboxOptions(format: .lines, cacheMode: .cached, all: true)))
+        #expect(usageError("snooze PR_1 --all") == "--all applies to inbox only")
+        #expect(CLIArguments.usage.contains("--all"))
+        #expect(InboxOptions().all == false)
+    }
 }

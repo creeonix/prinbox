@@ -20,11 +20,13 @@ public struct InboxOptions: Sendable, Equatable {
     public var format: OutputFormat
     public var cacheMode: CacheMode
     public var notify: Bool
+    public var all: Bool
 
-    public init(format: OutputFormat = .json, cacheMode: CacheMode = .fetch, notify: Bool = false) {
+    public init(format: OutputFormat = .json, cacheMode: CacheMode = .fetch, notify: Bool = false, all: Bool = false) {
         self.format = format
         self.cacheMode = cacheMode
         self.notify = notify
+        self.all = all
     }
 }
 
@@ -69,6 +71,7 @@ public enum CLIArguments {
             --cached                          print the cache, never contact GitHub
             --max-age <seconds>               serve the cache while it is this fresh
             --notify                          deliver arrivals (one notifier per machine)
+            --all                             include every open pull request you reviewed (the Reviewed section)
           print             the inbox as text: a full fetch that touches nothing
           snooze <id>       park a pull request until something happens on it
           unsnooze <id>     wake it
@@ -129,6 +132,9 @@ public enum CLIArguments {
             case "--notify":
                 options.notify = true
                 inboxFlags.append("--notify")
+            case "--all":
+                options.all = true
+                inboxFlags.append("--all")
             case _ where argument.hasPrefix("-"):
                 throw UsageError(message: "unknown option \(argument)")
             default:

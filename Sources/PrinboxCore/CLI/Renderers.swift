@@ -12,8 +12,9 @@ public enum InboxJSON {
 }
 
 /// `--format lines`: one tab-separated row per line, flat, in display order, for fzf, walker and rofi.
-/// Fields: id, kind, number, title, repository, reasonText, age, flags, url. A capped section adds a
-/// `more:<kind>` line with the section's page.
+/// Fields: id, kind, number, title, repository, reasonText, age, flags, url. The url is the URL to open: the diff
+/// since your review when it moved, the pull request otherwise. A capped section adds a `more:<kind>` line with the
+/// section's page.
 public enum InboxLines {
     public static func render(_ document: InboxDocument) -> String {
         var lines: [String] = []
@@ -23,7 +24,7 @@ public enum InboxLines {
                     [
                         row.id, section.kind, String(row.number), RowText.flattened(row.title), row.repository,
                         row.reasonText, row.age,
-                        flags(row), row.url.absoluteString,
+                        flags(row), (row.yourReview?.sinceReviewUrl ?? row.url).absoluteString,
                     ].joined(separator: "\t"))
             }
             if section.moreCount > 0 {

@@ -49,7 +49,7 @@ public enum MCPTools {
         [
             "name": "get_inbox",
             "description":
-                "The pull requests waiting on the user, in six sections: Needs your review, Replies to you, Take another look, Mentions, Your PRs, Waiting on others. The result is the JSON document of prinbox (docs/inbox-json.md). source says whether the rows were fetched now (fetch), confirmed unchanged by GitHub (unchanged) or served from the local cache (cache); checkedAt says when GitHub last confirmed them. The default serves rows confirmed within the last 60 seconds; max_age_seconds 0 fetches now, which takes two to eight seconds. When error is set GitHub could not be reached and the rows are the last known ones.",
+                "The pull requests waiting on the user, in seven sections: Needs your review, Replies to you, Take another look, Mentions, Your PRs, Waiting on others, and Reviewed, which is empty unless all is true. The result is the JSON document of prinbox (docs/inbox-json.md). source says whether the rows were fetched now (fetch), confirmed unchanged by GitHub (unchanged) or served from the local cache (cache); checkedAt says when GitHub last confirmed them. The default serves rows confirmed within the last 60 seconds; max_age_seconds 0 fetches now, which takes two to eight seconds. When error is set GitHub could not be reached and the rows are the last known ones.",
             "inputSchema": [
                 "type": "object",
                 "properties": [
@@ -57,7 +57,12 @@ public enum MCPTools {
                         "type": "integer", "minimum": 0,
                         "description":
                             "Serve the local cache when GitHub confirmed it within this many seconds; 0 fetches now. Default 60.",
-                    ]
+                    ],
+                    "all": [
+                        "type": "boolean",
+                        "description":
+                            "Include every open pull request the user reviewed, with their verdict, in the Reviewed section. Default false.",
+                    ],
                 ],
                 "additionalProperties": false,
             ],
@@ -83,8 +88,8 @@ public enum MCPTools {
         let args = try self.arguments(arguments)
         switch name {
         case "get_inbox":
-            try allow(args, keys: ["max_age_seconds"])
-            return await getInbox(run, maxAge: try maxAge(args["max_age_seconds"]))
+            try allow(args, keys: ["max_age_seconds", "all"])
+            return await getInbox(run, maxAge: try maxAge(args["max_age_seconds"]), all: try all(args["all"]))
         case "snooze_pull_request":
             try allow(args, keys: ["id"])
             let id = try self.id(args)
@@ -122,6 +127,12 @@ public enum MCPTools {
         return TimeInterval(seconds)
     }
 
+    static func all(_ value: JSONValue?) throws -> Bool {
+        guard let value else { return false }
+        guard let flag = value.boolValue else { throw JSONRPCError.invalidParams("all must be a boolean") }
+        return flag
+    }
+
     static func id(_ args: [String: JSONValue]) throws -> String {
         guard let id = args["id"]?.stringValue else {
             throw JSONRPCError.invalidParams("id must be a pull request node id string")
@@ -134,8 +145,8 @@ public enum MCPTools {
 
     // MARK: Runs
 
-    static func getInbox(_ run: InboxRun, maxAge: TimeInterval) async -> ToolResult {
-        let outcome = await run.inbox(InboxOptions(format: .json, cacheMode: .maxAge(maxAge), notify: false))
+    static func getInbox(_ run: InboxRun, maxAge: TimeInterval, all: Bool) async -> ToolResult {
+        let outcome = await run.inbox(InboxOptions(format: .json, cacheMode: .maxAge(maxAge), notify: false, all: all))
         forward(outcome.stderr, except: outcome.setupGuide, to: run.context.logger)
         let text = InboxJSON.render(outcome.document)
         let structured = (try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8))) ?? .null

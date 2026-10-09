@@ -217,4 +217,17 @@ import Testing
         let noCache = try golden("no-cache")
         #expect(InboxJSON.render(outcome.document) == noCache)
     }
+
+    @Test func linesOpenTheDeltaWhenTheDiffMovedSinceYourVerdict() {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: nil, commitOid: "aaa")
+        let moved = makePR(
+            id: "m", number: 3, repository: "acme/api", viewerReview: approved, source: .involved, headOid: "ccc",
+            viewerVerdict: approved)
+        let meta = DocumentMeta(prinbox: "t", source: "fetch", fetchedAt: now, checkedAt: now, viewer: "me", error: nil)
+        let document = InboxDocument.make(
+            InboxBuilder.build(makeResult([moved, makePR(id: "p")])), meta: meta, isNew: { _ in false }, now: now)
+        let lines = InboxLines.render(document).split(separator: "\n").map(String.init)
+        #expect(lines[0].hasSuffix("\thttps://github.com/acme/web/pull/1"))
+        #expect(lines[1].hasSuffix("\thttps://github.com/acme/api/pull/3/files/aaa..ccc"))
+    }
 }

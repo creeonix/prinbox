@@ -112,4 +112,41 @@ import Testing
         let decoded = try JSONDecoder().decode(JSONValue.self, from: Data(text.utf8))
         #expect(decoded["defaultRepositories"] == ["acme/*", "globex/billing"])
     }
+
+    @Test func aRowCarriesYourReview() throws {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: date("2026-08-09T10:00:00Z"), commitOid: "aaa")
+        let moved = makePR(
+            id: "m", number: 3, repository: "acme/api", viewerReview: approved, source: .involved,
+            lastCommitAt: date("2026-08-10T10:00:00Z"), headOid: "ccc", viewerVerdict: approved,
+            recentCommitOids: ["aaa", "bbb", "ccc"], commitCount: 3)
+        let commented = makePR(
+            id: "c", number: 4,
+            viewerReview: ViewerReview(state: "COMMENTED", submittedAt: date("2026-08-09T11:00:00Z")),
+            source: .involved, headOid: "ccc")
+        let document = InboxDocument.make(
+            InboxBuilder.build(makeResult([makePR(), moved, commented]), showReviewed: true), meta: meta,
+            isNew: { _ in false }, now: now)
+        let plain = try #require(document.sections[0].rows.first)
+        #expect(plain.yourReview == nil)
+        let pushed = try #require(document.sections[2].rows.first)
+        #expect(pushed.reason == "pushedSinceApproval")
+        #expect(pushed.reasonText == "Pushed since you approved")
+        #expect(
+            pushed.yourReview
+                == InboxDocument.YourReview(
+                    state: "approved", submittedAt: date("2026-08-09T10:00:00Z"), commit: "aaa", moved: true,
+                    commitsSince: 2, rewritten: false, since: "2 commits since you approved",
+                    sinceReviewUrl: URL(string: "https://github.com/acme/api/pull/3/files/aaa..ccc")))
+        let quiet = try #require(document.sections[6].rows.first)
+        #expect(quiet.reason == "youCommented")
+        #expect(
+            quiet.yourReview
+                == InboxDocument.YourReview(
+                    state: "commented", submittedAt: date("2026-08-09T11:00:00Z"), commit: nil, moved: false,
+                    commitsSince: nil, rewritten: false, since: nil, sinceReviewUrl: nil))
+        let text = InboxJSON.render(document)
+        #expect(text.contains("\"yourReview\" : null"))
+        #expect(text.contains("\"sinceReviewUrl\" : null"))
+        #expect(text.contains("\"commitsSince\" : null"))
+    }
 }
