@@ -88,3 +88,20 @@ public struct RowMarks: Sendable, Equatable {
         }
     }
 }
+
+/// The verdict a row may be colored by (spec 0.8 4.1): the viewer's, in every section but the two that hold their
+/// own pull requests. A row without a verdict is never colored.
+public enum VerdictCue: Sendable, Equatable {
+    case approved
+    case changesRequested
+
+    public static func of(_ row: InboxRow) -> VerdictCue? {
+        let section = row.classification.section
+        guard section != .yourPRs, section != .waitingOnOthers else { return nil }
+        switch row.pullRequest.viewerVerdict?.state {
+        case "APPROVED": return .approved
+        case "CHANGES_REQUESTED": return .changesRequested
+        default: return nil
+        }
+    }
+}

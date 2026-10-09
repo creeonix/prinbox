@@ -149,4 +149,62 @@ import Testing
             RowText.emptyState(repositories: ["acme/*", "globex/billing"])
                 == "Nothing waiting on you in acme/*, globex/billing.")
     }
+
+    let approved = ViewerReview(state: "APPROVED", submittedAt: date("2026-08-02T10:00:00Z"), commitOid: "aaa")
+    let blocked = ViewerReview(state: "CHANGES_REQUESTED", submittedAt: date("2026-08-02T10:00:00Z"), commitOid: "aaa")
+
+    @Test func sinceNamesTheCountTheRewriteTheReRequestAndTheVerdict() {
+        #expect(RowText.since(makePR()) == nil)
+        #expect(
+            RowText.since(makePR(viewerReview: ViewerReview(state: "COMMENTED", submittedAt: nil), headOid: "bbb"))
+                == nil)
+        let two = makePR(
+            viewerReview: approved, source: .involved, headOid: "ccc", viewerVerdict: approved,
+            recentCommitOids: ["aaa", "bbb", "ccc"], commitCount: 3)
+        #expect(RowText.since(two) == "2 commits since you approved")
+        let one = makePR(
+            viewerReview: blocked, source: .involved, headOid: "bbb", viewerVerdict: blocked,
+            recentCommitOids: ["aaa", "bbb"], commitCount: 2)
+        #expect(RowText.since(one) == "1 commit since you requested changes")
+        let rewritten = makePR(
+            viewerReview: approved, source: .involved, headOid: "ccc", viewerVerdict: approved,
+            recentCommitOids: ["ccc"],
+            commitCount: 1)
+        #expect(RowText.since(rewritten) == "rewritten since you approved")
+        let beyond = makePR(
+            viewerReview: approved, source: .involved, headOid: "ccc", viewerVerdict: approved,
+            recentCommitOids: Array(repeating: "x", count: 30), commitCount: 40)
+        #expect(RowText.since(beyond) == "30+ commits since you approved")
+        let reRequested = makePR(
+            viewerReview: approved, reviewRequestedAt: date("2026-08-03T10:00:00Z"), source: .review, headOid: "aaa",
+            viewerVerdict: approved)
+        #expect(RowText.since(reRequested) == "re-requested, you approved")
+        let quiet = makePR(viewerReview: blocked, source: .involved, headOid: "aaa", viewerVerdict: blocked)
+        #expect(RowText.since(quiet) == "you requested changes")
+    }
+
+    @Test func metaShowsTheSentenceOnlyWhenAskedAndOnlyWithAVerdict() {
+        let pr = makePR(
+            repository: "globex/sync", additions: 210, deletions: 44, viewerReview: approved,
+            reviewRequestedAt: date("2026-08-10T07:00:00Z"), source: .review, headOid: "ccc", viewerVerdict: approved,
+            recentCommitOids: ["aaa", "bbb", "ccc"], commitCount: 3)
+        #expect(RowText.meta(row(pr), now: now) == "sync · waiting 5h · +210 −44")
+        #expect(
+            RowText.meta(row(pr), now: now, sinceReview: true) == "sync · waiting 5h · 2 commits since you approved")
+        let plain = makePR(
+            repository: "globex/sync", additions: 1, deletions: 0, reviewRequestedAt: date("2026-08-10T06:00:00Z"))
+        #expect(RowText.meta(row(plain), now: now, sinceReview: true) == "sync · waiting 6h · +1 −0")
+    }
+
+    @Test func compactTrailerShowsTheVerdictInReviewed() {
+        let pr = makePR(
+            repository: "globex/billing", viewerReview: approved, source: .involved, headOid: "aaa",
+            viewerVerdict: approved)
+        #expect(RowText.compactTrailer(row(pr), showOrg: true) == "· globex/billing · You approved")
+        let draft = makePR(
+            repository: "globex/billing", isDraft: true, viewerReview: approved, source: .involved, headOid: "aaa",
+            viewerVerdict: approved)
+        #expect(RowText.compactTrailer(row(draft)) == "· billing · You approved")
+        #expect(RowText.compactTrailer(row(draft), age: "8h") == "· billing · You approved · 8h")
+    }
 }
