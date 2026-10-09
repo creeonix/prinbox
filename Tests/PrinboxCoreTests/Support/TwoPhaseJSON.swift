@@ -10,7 +10,7 @@ enum TwoPhaseJSON {
         ["id": id, "updatedAt": updatedAt]
     }
 
-    /// A phase 1 response. `involved` nil leaves that search out, as the query does with the setting off.
+    /// A phase 1 response. `involved` nil leaves the search out of the fake response; the client decodes it as absent.
     static func search(
         review: [Any] = [], mentions: [Any] = [], mine: [Any] = [], involved: [Any]? = nil,
         viewer: String = "me", cost: Int = 1, errors: [[String: Any]]? = nil

@@ -9,7 +9,8 @@ they do not know. Dates are ISO 8601 UTC with whole seconds and a `Z` suffix. Ev
 `prinbox mcp`'s `get_inbox` tool returns this same document as its structured result (see `docs/mcp.md`).
 
 The other formats derive from it: `lines` (one tab-separated row per line: id, kind, number, title,
-repository, reasonText, age, flags, url; a `more:<kind>` line per capped section), `waybar` (Waybar's
+repository, reasonText, age, flags, url; a `more:<kind>` line per capped section; the url is the URL to open: the
+diff since your review when there is one, else the pull request's), `waybar` (Waybar's
 custom-module object: `text`, `alt`, `class`, `tooltip`, always exit 0) and `tmux` (the count, empty when
 idle; `!` on any error, followed by the count of known rows (`!5`), and the count alone otherwise). `prinbox print`
 is the text rendering: the fact line and the compact line both show `stack i/n`.
@@ -40,15 +41,16 @@ the state instead.
 | `error` | null, or `{"code", "message", "help"}`: `code` is one of `ghNotFound`, `loggedOut`, `offline`, `timedOut`, `rateLimited`, `badResponse`, `githubUnavailable`, `other`; `message` the text printed on stderr (for the two setup errors the guide's title); `help` the GitHub status page for a 5xx, the gh install page for `ghNotFound`, else null |
 | `warnings` | partial-data warnings from GitHub |
 | `defaultRepositories` | the run's default repositories, `owner/*` or `owner/name`, `[]` when none |
-| `sections` | all six, always, in display order, empty ones with `rows: []` |
-| `sections[].kind`, `title` | `needsReview`, `repliesToYou`, `takeAnotherLook`, `mentions`, `yourPRs`, `waitingOnOthers`, and the display title |
+| `sections` | all seven, always, in display order, empty ones with `rows: []` |
+| `sections[].kind`, `title` | `needsReview`, `repliesToYou`, `takeAnotherLook`, `mentions`, `yourPRs`, `waitingOnOthers`, `reviewed`, and the display title; `reviewed` is filled only with `--all` (or the server's `all`) |
 | `sections[].count`, `moreCount`, `moreUrl` | rows the section holds, rows beyond the cap, the section's GitHub page |
 | `rows[].id` | the GitHub node id; what `snooze`, `unsnooze` and `open` take |
 | `rows[].number`, `title`, `url`, `repository`, `author`, `authorAvatarUrl`, `isDraft`, `additions`, `deletions`, `createdAt`, `updatedAt` | the pull request as fetched |
 | `rows[].waitingSince`, `age` | the date the section sorts by (null in Your PRs and Waiting on others) and the short age the popover shows (`4h`, `2d`; for own rows the time since `updatedAt`) |
-| `rows[].reason`, `reasonText` | a stable code and the display string: `reviewRequested`, `reReviewRequested`, `mentioned`, `awaitingReply`, `openThreads`, `changesRequested`, `mergeConflicts`, `ciRed`, `readyToMerge`, `draft`, `waitingForReview`, `snoozed` |
+| `rows[].reason`, `reasonText` | a stable code and the display string: `reviewRequested`, `reReviewRequested`, `mentioned`, `awaitingReply`, `openThreads`, `changesRequested`, `mergeConflicts`, `ciRed`, `readyToMerge`, `draft`, `waitingForReview`, `snoozed`, `pushedSinceApproval`, `pushedSinceChangesRequested`, `youApproved`, `youRequestedChanges`, `youCommented` |
 | `rows[].snoozed`, `isNew`, `pendingReplies` | parked by you; new since your last look; review threads waiting for your answer |
 | `rows[].marks` | `comments` (a count or null), `ci` (`success`, `failure`, `pending` or null), `review` (`approved`, `changesRequested` or null), `merge` (`ready`, `conflicts` or null) |
+| `rows[].yourReview` | null when you have no review, else `{"state", "submittedAt", "commit", "moved", "commitsSince", "rewritten", "since", "sinceReviewUrl"}`: `state` is `approved`, `changesRequested` or `commented`; `commit` the verdict's commit id (null for `commented`); `moved` whether the diff moved since the verdict (false for `commented`); `commitsSince` the count of commits after it (0 when not moved, null when unknown); `rewritten` the force-push case; `since` the sentence the fact line shows, or null; `sinceReviewUrl` GitHub's diff since your review, or null |
 | `rows[].stack` | null, or `{"position", "size", "parentId"}`: this PR's place in a chain of stacked pull requests, 1 being the one closest to the trunk; `parentId` null on that one |
 
 ## Example
@@ -77,6 +79,7 @@ One row of the demo inbox (`PrinboxApp --demo` shows the same data):
   "title" : "Migrate the settings page to the new design system",
   "updatedAt" : "2026-08-10T09:00:00Z",
   "url" : "https://github.com/acme/web/pull/1290",
-  "waitingSince" : "2026-08-08T10:00:00Z"
+  "waitingSince" : "2026-08-08T10:00:00Z",
+  "yourReview" : null
 }
 ```

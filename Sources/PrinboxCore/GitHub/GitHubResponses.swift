@@ -93,8 +93,10 @@ struct PRNode: Decodable {
     let headRefName: String?
     let baseRefName: String?
     let isCrossRepository: Bool?
+    let headRefOid: String?
     let reviewThreads: Connection<ThreadNode>?
     let reviews: Connection<ReviewNode>?
+    let recent: Connection<OidCommitNode>?
 
     struct Author: Decodable {
         let login: String
@@ -119,7 +121,17 @@ struct PRNode: Decodable {
         }
     }
 
-    struct ReviewStateNode: Decodable { let state: String }
+    /// An entry of `latestOpinionatedReviews`: the state alone before 0.8.0, the author and commit since.
+    struct ReviewStateNode: Decodable {
+        let state: String
+        let submittedAt: Date?
+        let author: Author?
+        let commit: CommitRef?
+    }
+
+    struct CommitRef: Decodable { let oid: String }
+
+    struct OidCommitNode: Decodable { let commit: CommitRef }
 
     struct ViewerReviewNode: Decodable {
         let state: String

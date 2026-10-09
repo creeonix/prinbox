@@ -187,4 +187,115 @@ import Testing
         #expect(!SearchSource.involved.boundsCompleteness)
         #expect(SearchSource.review.boundsCompleteness)
     }
+
+    let approvedAt = ViewerReview(state: "APPROVED", submittedAt: date("2026-08-02T10:00:00Z"), commitOid: "aaa")
+    let blockedAt = ViewerReview(
+        state: "CHANGES_REQUESTED", submittedAt: date("2026-08-02T10:00:00Z"), commitOid: "aaa")
+
+    @Test func aPushAfterYourApprovalIsTakeAnotherLook() {
+        let pr = makePR(
+            viewerReview: approvedAt, source: .involved, lastCommitAt: date("2026-08-05T10:00:00Z"), headOid: "ccc",
+            viewerVerdict: approvedAt, recentCommitOids: ["aaa", "bbb", "ccc"], commitCount: 3)
+        let result = classify(pr)
+        #expect(result.section == .takeAnotherLook)
+        #expect(result.reason == .pushedSinceApproval)
+        #expect(result.waitingSince == date("2026-08-05T10:00:00Z"))
+    }
+
+    @Test func aPushAfterYourRequestForChangesIsTakeAnotherLook() {
+        let pr = makePR(
+            viewerReview: blockedAt, source: .involved, headOid: "ccc", viewerVerdict: blockedAt,
+            recentCommitOids: ["ccc"], commitCount: 1)
+        let result = classify(pr)
+        #expect(result.section == .takeAnotherLook)
+        #expect(result.reason == .pushedSinceChangesRequested)
+        // No commit date: the verdict's date, which is after the PR was created (2026-08-01 in makePR).
+        #expect(result.waitingSince == date("2026-08-02T10:00:00Z"))
+    }
+
+    @Test func aReviewedPullRequestWithNothingMovedIsReviewed() {
+        let approved = classify(
+            makePR(viewerReview: approvedAt, source: .involved, headOid: "aaa", viewerVerdict: approvedAt))
+        #expect(approved.section == .reviewed)
+        #expect(approved.reason == .youApproved)
+        #expect(approved.waitingSince == nil)
+        let blocked = classify(
+            makePR(viewerReview: blockedAt, source: .involved, headOid: "aaa", viewerVerdict: blockedAt))
+        #expect(blocked.reason == .youRequestedChanges)
+        let commented = classify(
+            makePR(viewerReview: ViewerReview(state: "COMMENTED", submittedAt: nil), source: .involved, headOid: "ccc"))
+        #expect(commented.section == .reviewed)
+        #expect(commented.reason == .youCommented)
+    }
+
+    @Test func aCommentOnlyReviewThatMovedChangesNothing() {
+        // No verdict, so no push to look at: the user's rule (spec 0.8 section 2).
+        let pr = makePR(
+            viewerReview: ViewerReview(state: "COMMENTED", submittedAt: nil), source: .involved, headOid: "ccc",
+            recentCommitOids: ["ccc"], commitCount: 1)
+        #expect(classify(pr).reason == .youCommented)
+    }
+
+    @Test func youCommentedRequiresACommentOnlyReview() {
+        // Ruling 12.9: a review that is not COMMENTED and left no verdict (a dismissed approval) says nothing.
+        let approvedOnly = makePR(viewerReview: ViewerReview(state: "APPROVED", submittedAt: nil), source: .involved)
+        #expect(Classifier.classify(approvedOnly, viewer: testViewer) == nil)
+        let commented = makePR(viewerReview: ViewerReview(state: "COMMENTED", submittedAt: nil), source: .involved)
+        #expect(Classifier.classify(commented, viewer: testViewer)?.reason == .youCommented)
+    }
+
+    @Test func involvementWithoutAReviewStaysHidden() {
+        #expect(Classifier.classify(makePR(source: .involved), viewer: testViewer) == nil)
+    }
+
+    @Test func repliesAndReRequestsWinOverAPush() {
+        let owed = thread(
+            comment("alice", date("2026-08-01T10:00:00Z")), comment(testViewer, date("2026-08-01T11:00:00Z")),
+            comment("alice", date("2026-08-03T10:00:00Z")))
+        let replied = makePR(
+            viewerReview: approvedAt, source: .involved, threads: [owed], headOid: "ccc", viewerVerdict: approvedAt)
+        #expect(classify(replied).section == .repliesToYou)
+        let reRequested = makePR(
+            viewerReview: approvedAt, reviewRequestedAt: date("2026-08-04T10:00:00Z"), source: .review, headOid: "ccc",
+            viewerVerdict: approvedAt)
+        #expect(classify(reRequested).reason == .reReviewRequested)
+    }
+
+    @Test func aMentionWithAPushAfterYourVerdictIsTakeAnotherLookAndAQuietOneIsAMention() {
+        let pushed = makePR(viewerReview: approvedAt, source: .mentions, headOid: "ccc", viewerVerdict: approvedAt)
+        #expect(classify(pushed).section == .takeAnotherLook)
+        let quiet = makePR(viewerReview: approvedAt, source: .mentions, headOid: "aaa", viewerVerdict: approvedAt)
+        #expect(classify(quiet).section == .mentions)
+    }
+
+    @Test func theNewReasonsCarryTheirTonesCodesAndTexts() {
+        #expect(Reason.pushedSinceApproval.tone == .attention)
+        #expect(Reason.pushedSinceChangesRequested.tone == .attention)
+        #expect(Reason.youApproved.tone == .neutral && Reason.youCommented.tone == .neutral)
+        let codes = [
+            Reason.pushedSinceApproval, .pushedSinceChangesRequested, .youApproved, .youRequestedChanges, .youCommented,
+        ].map(\.code)
+        #expect(
+            codes == [
+                "pushedSinceApproval", "pushedSinceChangesRequested", "youApproved", "youRequestedChanges",
+                "youCommented",
+            ]
+        )
+        #expect(
+            Reason.pushedSinceApproval.isPushedSinceVerdict && Reason.pushedSinceChangesRequested.isPushedSinceVerdict)
+        #expect(!Reason.reReviewRequested.isPushedSinceVerdict)
+        #expect(Reason.pushedSinceApproval.rawValue == "Pushed since you approved")
+        #expect(Reason.pushedSinceChangesRequested.rawValue == "Pushed since you requested changes")
+        #expect(Reason.youRequestedChanges.rawValue == "You requested changes")
+    }
+
+    @Test func aSnoozeDoesNotMoveAQuietReviewedPullRequest() {
+        let pr = makePR(viewerReview: approvedAt, source: .involved, headOid: "aaa", viewerVerdict: approvedAt)
+        let result = Classifier.classify(pr, viewer: testViewer, snoozed: true)
+        #expect(result?.section == .reviewed)
+        #expect(result?.reason == .youApproved)
+        // A snoozed row that is not quiet still parks, as today.
+        let parked = Classifier.classify(makePR(source: .review), viewer: testViewer, snoozed: true)
+        #expect(parked?.section == .waitingOnOthers && parked?.reason == .snoozed)
+    }
 }

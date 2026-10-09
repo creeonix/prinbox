@@ -7,7 +7,9 @@ import Observation
 public final class FoldStore {
     public nonisolated static let key = "foldedSections"
     /// First run: only "Needs your review" is open, as in the sketchybar prototype.
-    public static let defaultFolded: Set<SectionKind> = [.takeAnotherLook, .mentions, .yourPRs, .waitingOnOthers]
+    public nonisolated static let defaultFolded: Set<SectionKind> = [
+        .takeAnotherLook, .mentions, .yourPRs, .waitingOnOthers, .reviewed,
+    ]
 
     public private(set) var folded: Set<SectionKind>
     @ObservationIgnored private let defaults: KeyValueStoring

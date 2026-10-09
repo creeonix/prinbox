@@ -22,15 +22,32 @@ public enum RowText {
             || (0x2066...0x2069).contains(scalar.value)
     }
 
-    /// "web · waiting 6h · +120 −4" for review sections, "web · updated 3h ago · +1 −0" for own PRs.
-    /// `showOrg` writes "acme/web" instead of "web": on when the inbox spans several orgs and grouping is off.
-    public static func meta(_ row: InboxRow, now: Date, showOrg: Bool = false) -> String {
+    /// The fact-line sentence for a PR with a verdict (spec 0.8 3.6): what moved since it, or the verdict alone.
+    /// Nil without a verdict, a comment-only review included.
+    public static func since(_ pr: PullRequest) -> String? {
+        guard let verdict = pr.viewerVerdict else { return nil }
+        let words = verdict.state == "APPROVED" ? "you approved" : "you requested changes"
+        guard pr.movedSinceVerdict else {
+            let reRequested = pr.source == .review && pr.viewerReview != nil
+            return reRequested ? "re-requested, \(words)" : words
+        }
+        if let count = pr.commitsSinceVerdict {
+            return "\(count) \(count == 1 ? "commit" : "commits") since \(words)"
+        }
+        return pr.rewrittenSinceVerdict
+            ? "rewritten since \(words)" : "\(PullRequest.recentCommitWindow)+ commits since \(words)"
+    }
+
+    /// "web · waiting 6h · +120 −4" for review sections, "web · updated 3h ago · +1 −0" for own PRs. `showOrg`
+    /// writes "acme/web" instead of "web": on when the inbox spans several orgs and grouping is off. `sinceReview`
+    /// puts the sentence of `since` in place of the size on a row that has one (spec 0.8 4.2).
+    public static func meta(_ row: InboxRow, now: Date, showOrg: Bool = false, sinceReview: Bool = false) -> String {
         let pr = row.pullRequest
         let age =
             row.classification.waitingSince.map { "waiting \(RelativeAge.format(from: $0, to: now))" }
             ?? "updated \(RelativeAge.format(from: pr.updatedAt, to: now)) ago"
-        return [repoLabel(pr, showOrg: showOrg), age, "+\(pr.additions) −\(pr.deletions)"].joined(separator: " · ")
-            + stackSegment(row)
+        let size = (sinceReview ? since(pr) : nil) ?? "+\(pr.additions) −\(pr.deletions)"
+        return [repoLabel(pr, showOrg: showOrg), age, size].joined(separator: " · ") + stackSegment(row)
     }
 
     /// " · stack 2/3" for a chain member, nothing otherwise. A fact in the fact line, not a mark.
@@ -45,11 +62,15 @@ public enum RowText {
     }
 
     /// The fixed tail of a compact row, after the truncating title: "· web", "· web · Draft" or
-    /// "· web · Snoozed" (a snoozed draft says Snoozed; the row is dimmed either way), then "· 8h" when the
-    /// compact layout shows an age.
+    /// "· web · Snoozed" (a snoozed draft says Snoozed; the row is dimmed either way) or, in Reviewed,
+    /// "· web · You approved", then "· 8h" when the compact layout shows an age.
     public static func compactTrailer(_ row: InboxRow, showOrg: Bool = false, age: String? = nil) -> String {
         let repo = "· \(repoLabel(row.pullRequest, showOrg: showOrg))"
-        let status = row.classification.reason == .snoozed ? " · Snoozed" : row.pullRequest.isDraft ? " · Draft" : ""
+        let status =
+            row.classification.reason == .snoozed
+            ? " · Snoozed"
+            : row.classification.section == .reviewed
+                ? " · \(row.classification.reason.rawValue)" : row.pullRequest.isDraft ? " · Draft" : ""
         return repo + stackSegment(row) + status + (age.map { " · \($0)" } ?? "")
     }
 

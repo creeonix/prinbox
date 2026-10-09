@@ -78,8 +78,8 @@ count cannot leak into this one."
   (prinbox-test--wait-for-rows)
   (with-current-buffer "*prinbox*"
     (should (derived-mode-p 'prinbox-mode))
-    (should (string-match-p "^8 waiting on you · updated [0-9][0-9]:[0-9][0-9] · 4 new$" header-line-format))
-    (should (equal (length tabulated-list-entries) 17))
+    (should (string-match-p "^10 waiting on you · updated [0-9][0-9]:[0-9][0-9] · 4 new$" header-line-format))
+    (should (equal (length tabulated-list-entries) 19))
     (let ((first (car tabulated-list-entries)) (last (car (last tabulated-list-entries))))
       (should (equal (car first) "DEMO_1290"))
       (should (equal (prinbox-test--cell first 0) "Needs your review"))
@@ -88,7 +88,7 @@ count cannot leak into this one."
       (should (equal (car last) "DEMO_1284"))
       (should (equal (prinbox-test--cell last 0) "Waiting on others"))
       (should (equal (prinbox-test--cell last 6) "snoozed")))
-    (should (equal (prinbox--count) "8"))))
+    (should (equal (prinbox--count) "10"))))
 
 (ert-deftest prinbox-test-ret-opens-and-s-u-run-the-command ()
   "RET opens the row's URL; s and u run the command, then re-read the cache."
@@ -100,7 +100,7 @@ count cannot leak into this one."
   (with-current-buffer "*prinbox*"
     (goto-char (point-min))
     (should (string-match-p "Section" (buffer-substring-no-properties (point-min) (line-end-position))))
-    (should (string-prefix-p "8 waiting on you" header-line-format))
+    (should (string-prefix-p "10 waiting on you" header-line-format))
     (forward-line 1)
     (cl-letf (((symbol-function 'browse-url) (lambda (url &rest _) (push url prinbox-test--opened))))
       (prinbox-open))
@@ -129,35 +129,35 @@ count cannot leak into this one."
   (prinbox-refresh)
   (prinbox-test--wait
    (lambda () (with-current-buffer "*prinbox*"
-                (string-match-p "^8 waiting on you.*· GitHub did not answer in time$" header-line-format))))
-  (should (equal (length (prinbox-test--entries)) 17))
-  (should (equal (prinbox--count) "!8"))
+                (string-match-p "^10 waiting on you.*· GitHub did not answer in time$" header-line-format))))
+  (should (equal (length (prinbox-test--entries)) 19))
+  (should (equal (prinbox--count) "!10"))
   (setenv "PRINBOX_STUB_EXIT" nil)
   (setenv "PRINBOX_STUB_VERSION" "2")
   (prinbox-refresh)
   (prinbox-test--wait
    (lambda () (with-current-buffer "*prinbox*"
                 (equal header-line-format "prinbox prints JSON version 2; this plugin reads version 1"))))
-  (should (equal (prinbox--count) "!8"))
+  (should (equal (prinbox--count) "!10"))
   (setenv "PRINBOX_STUB_VERSION" nil)
   (setq prinbox-command (expand-file-name "Tests/Adapters/bin/no-such-prinbox" prinbox-test--root))
   (prinbox-refresh)
   (prinbox-test--wait
    (lambda () (with-current-buffer "*prinbox*" (equal header-line-format prinbox--install))))
-  (should (equal (prinbox--count) "!8")))
+  (should (equal (prinbox--count) "!10")))
 
 (ert-deftest prinbox-test-count-follows-every-run ()
   "A run that prints no document turns a healthy count into `!' and the last badge."
   (prinbox-test--reset)
-  (prinbox--remember (list :document '((version . 1) (badge . 8))))
-  (should (equal (prinbox--count) "8"))
+  (prinbox--remember (list :document '((version . 1) (badge . 10))))
+  (should (equal (prinbox--count) "10"))
   (prinbox--remember (list :message prinbox--install))
-  (should (equal (prinbox--count) "!8"))
-  (should (equal prinbox-mode-line-string "!8"))
+  (should (equal (prinbox--count) "!10"))
+  (should (equal prinbox-mode-line-string "!10"))
   (prinbox--remember (list :message "prinbox prints JSON version 2; this plugin reads version 1"))
-  (should (equal (prinbox--count) "!8"))
-  (prinbox--remember (list :document '((version . 1) (badge . 8))))
-  (should (equal (prinbox--count) "8")))
+  (should (equal (prinbox--count) "!10"))
+  (prinbox--remember (list :document '((version . 1) (badge . 10))))
+  (should (equal (prinbox--count) "10")))
 
 (ert-deftest prinbox-test-more-line-opens-the-section-page ()
   "A capped section ends with its more line, which opens the section's page."
@@ -214,11 +214,36 @@ count cannot leak into this one."
   (prinbox-test--reset)
   (let ((prinbox-poll-seconds 1))
     (prinbox-mode-line-mode 1)
-    (prinbox-test--wait (lambda () (equal prinbox-mode-line-string "8")))
+    (prinbox-test--wait (lambda () (equal prinbox-mode-line-string "10")))
     (should (member '(:eval (prinbox--mode-line)) global-mode-string))
-    (should (equal (prinbox--mode-line) " PR:8"))
+    (should (equal (prinbox--mode-line) " PR:10"))
     (prinbox-mode-line-mode -1)
     (should-not (member '(:eval (prinbox--mode-line)) global-mode-string))))
+
+(ert-deftest prinbox-test-ret-opens-the-diff-since-your-review ()
+  "A row whose diff moved since your review opens GitHub's diff since that review."
+  (prinbox-test--reset)
+  (prinbox)
+  (prinbox-test--wait-for-rows)
+  (with-current-buffer "*prinbox*"
+    (goto-char (point-min))
+    (while (and (not (eobp)) (not (equal (tabulated-list-get-id) "DEMO_2210")))
+      (forward-line 1))
+    (should (equal (tabulated-list-get-id) "DEMO_2210"))
+    (cl-letf (((symbol-function 'browse-url) (lambda (url &rest _) (push url prinbox-test--opened))))
+      (prinbox-open))
+    (should (equal prinbox-test--opened
+                   '("https://github.com/acme/api/pull/2210/files/3f9c2d1..b7e41a0")))))
+
+(ert-deftest prinbox-test-all-asks-for-the-reviewed-section ()
+  "With `prinbox-all' set the buffer lists the Reviewed section."
+  (prinbox-test--reset)
+  (let ((prinbox-all t))
+    (prinbox)
+    (prinbox-test--wait-for-rows)
+    (prinbox-test--wait (lambda () (member "inbox json all" (prinbox-test--log-lines))))
+    (with-current-buffer "*prinbox*"
+      (should (seq-some (lambda (entry) (equal (car entry) "DEMO_1250")) tabulated-list-entries)))))
 
 (provide 'prinbox-test)
 ;;; prinbox-test.el ends here

@@ -48,7 +48,7 @@ prinbox.open()
 wait_for(function() return #log_lines() >= 2 end, "two runs")
 wait_for(function() return view.last() ~= nil and #lines() > 10 end, "the rows")
 local text = lines()
-assert(text[1]:match("^8 waiting on you · updated %d%d:%d%d · 4 new$"), text[1])
+assert(text[1]:match("^10 waiting on you · updated %d%d:%d%d · 4 new$"), text[1])
 assert(text[2] == "", text[2])
 assert(text[3] == "Needs your review (5)", text[3])
 assert(
@@ -61,13 +61,25 @@ assert(vim.tbl_contains(text, "Replies to you (2)"))
 assert(vim.tbl_contains(text, "Waiting on others (4)"))
 assert(text[#text]:match("^  #1284  Cache avatar images on disk  acme/web  Snoozed  %d+[hd]  snoozed$"), text[#text])
 assert(vim.deep_equal(log_lines(), { "inbox json", "inbox json" }), vim.inspect(log_lines()))
-assert(prinbox.count() == "8", prinbox.count())
+assert(prinbox.count() == "10", prinbox.count())
 assert(view.is_open())
 
 -- 2. Enter opens the row under the cursor.
 vim.api.nvim_win_set_cursor(0, { 4, 0 })
 view.open_current()
 assert(opened[1] == "https://github.com/acme/web/pull/1290", opened[1])
+
+-- 2b. A row whose diff moved since your review opens GitHub's diff since that review.
+local delta_line
+for index, line in ipairs(lines()) do
+  if line:find("#2210", 1, true) then
+    delta_line = index
+  end
+end
+assert(delta_line, "the #2210 row")
+vim.api.nvim_win_set_cursor(0, { delta_line, 0 })
+view.open_current()
+assert(opened[#opened] == "https://github.com/acme/api/pull/2210/files/3f9c2d1..b7e41a0", opened[#opened])
 
 -- 3. s and u run the command with the row's id and re-render from the cache.
 reset_log()
@@ -88,7 +100,7 @@ vim.ui.select = function(items, opts, on_choice)
 end
 prinbox.pick()
 wait_for(function() return shown ~= nil end, "the picker")
-assert(#shown.items == 17, #shown.items)
+assert(#shown.items == 19, #shown.items)
 assert(shown.opts.kind == "prinbox")
 assert(
   pick.format(shown.items[1])
@@ -109,26 +121,26 @@ vim.env.PRINBOX_STUB_EXIT = nil
 vim.env.PRINBOX_STUB_EXIT = "1"
 prinbox.refresh()
 wait_for(function() return lines()[2] == "GitHub did not answer in time" end, "the error line")
-assert(lines()[1]:match("^8 waiting on you"), lines()[1])
+assert(lines()[1]:match("^10 waiting on you"), lines()[1])
 assert(lines()[4] == "Needs your review (5)", lines()[4])
-assert(prinbox.count() == "!8", prinbox.count())
+assert(prinbox.count() == "!10", prinbox.count())
 vim.env.PRINBOX_STUB_EXIT = nil
 
--- 7. A missing command shows the install line; a newer JSON version is refused. Either turns the count to "!8".
+-- 7. A missing command shows the install line; a newer JSON version is refused. Either turns the count to "!10".
 prinbox.refresh()
 wait_for(function() return lines()[3] == "Needs your review (5)" end, "the healthy rows")
-assert(prinbox.count() == "8", prinbox.count())
+assert(prinbox.count() == "10", prinbox.count())
 prinbox.setup({ cmd = root .. "/Tests/Adapters/bin/no-such-prinbox" })
 prinbox.refresh()
 wait_for(function() return (lines()[1] or ""):match("^prinbox not found") ~= nil end, "the install line")
 assert(lines()[1] == "prinbox not found: brew install creeonix/tap/prinbox-cli", lines()[1])
-assert(prinbox.count() == "!8", prinbox.count())
+assert(prinbox.count() == "!10", prinbox.count())
 prinbox.setup({ cmd = stub })
 vim.env.PRINBOX_STUB_VERSION = "2"
 prinbox.refresh()
 wait_for(function() return (lines()[1] or ""):match("version 2") ~= nil end, "the version line")
 assert(lines()[1] == "prinbox prints JSON version 2; this plugin reads version 1", lines()[1])
-assert(prinbox.count() == "!8", prinbox.count())
+assert(prinbox.count() == "!10", prinbox.count())
 vim.env.PRINBOX_STUB_VERSION = nil
 
 -- 8. layout flattens titles: a newline or a tab in a title never reaches nvim_buf_set_lines.
@@ -153,7 +165,7 @@ assert(odd_map[4].row.id == "x" and odd_map[5].more.moreUrl == "https://example.
 -- 9. open falls back to the command when vim.ui.open cannot open.
 prinbox.refresh()
 wait_for(function() return lines()[3] == "Needs your review (5)" end, "the rows again")
-assert(prinbox.count() == "8", prinbox.count())
+assert(prinbox.count() == "10", prinbox.count())
 reset_log()
 open_error = "no opener"
 vim.api.nvim_win_set_cursor(0, { 4, 0 })
@@ -161,6 +173,14 @@ view.open_current()
 wait_for(function() return #log_lines() == 1 end, "the fallback open")
 assert(log_lines()[1] == "open DEMO_1290", log_lines()[1])
 open_error = nil
+
+-- 9b. setup{all = true} asks the command for the Reviewed section.
+reset_log()
+prinbox.setup({ cmd = stub, all = true })
+prinbox.refresh()
+wait_for(function() return vim.tbl_contains(log_lines(), "inbox json all") end, "the --all run")
+wait_for(function() return vim.tbl_contains(lines(), "Reviewed (3)") end, "the Reviewed section")
+prinbox.setup({ cmd = stub, all = false })
 
 -- 10. poll runs the command on its own (with max_age the larger of poll and max_age); q closes the window.
 reset_log()
@@ -179,7 +199,7 @@ local zone = vim.env.TZ
 for tz, hour in pairs({ ["Europe/Berlin"] = "14:00", ["America/New_York"] = "08:00", UTC = "12:00" }) do
   vim.env.TZ = tz
   local header = view.layout(view.last())[1]
-  assert(vim.startswith(header, "8 waiting on you · updated " .. hour), tz .. ": " .. header)
+  assert(vim.startswith(header, "10 waiting on you · updated " .. hour), tz .. ": " .. header)
 end
 vim.env.TZ = zone
 
@@ -201,7 +221,7 @@ shown = nil
 prinbox.pick()
 wait_for(function() return shown ~= nil end, "the picker after the fallback")
 assert(vim.deep_equal(log_lines(), { "inbox json", "inbox json" }), vim.inspect(log_lines()))
-assert(#shown.items == 17, #shown.items)
+assert(#shown.items == 19, #shown.items)
 vim.env.PRINBOX_STUB_NOCACHE = nil
 local nocache = cli.report(1, "", "prinbox: no cache yet, run prinbox inbox\n")
 assert(nocache.message == "no cache yet, run prinbox inbox", nocache.message)

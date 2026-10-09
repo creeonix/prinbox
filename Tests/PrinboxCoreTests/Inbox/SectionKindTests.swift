@@ -37,6 +37,7 @@ import Testing
             replies
                 == "is:open is:pr involves:@me -author:@me -user-review-requested:@me -mentions:@me -is:draft user:acme sort:updated-desc"
         )
+        #expect(try query(.reviewed) == replies)
         #expect(yours == "is:open is:pr author:@me user:acme sort:updated-desc")
         #expect(waiting == yours)
         let text = SectionKind.needsReview.moreURL(scope: scope).absoluteString
@@ -44,5 +45,16 @@ import Testing
         #expect(
             text.hasPrefix("https://github.com/pulls?q=is:open%20is:pr%20")
                 || text.hasPrefix("https://github.com/pulls?q=is%3Aopen%20is%3Apr%20"))
+    }
+
+    @Test func reviewedIsTheQuietSeventhSection() {
+        #expect(SectionKind.allCases.last == .reviewed)
+        #expect(SectionKind.allCases.count == 7)
+        #expect(SectionKind.reviewed.title == "Reviewed")
+        #expect(SectionKind.reviewed.countsTowardBadge == false)
+        #expect(SectionKind.reviewed.sortsByRecency)
+        #expect(SectionKind.reviewed.usesCompactRows)
+        #expect(SectionKind.reviewed.moreURL == SectionKind.repliesToYou.moreURL)
+        #expect(FoldStore.defaultFolded.contains(.reviewed))
     }
 }

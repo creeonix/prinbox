@@ -5,29 +5,27 @@ import Foundation
 public enum InboxBuilder {
     public static let rowCap = 8
 
-    /// The unfetched remainder of each search is attributed to the last section that search feeds.
-    static let remainderSection: [SearchSource: SectionKind] = [
-        .review: .takeAnotherLook, .mentions: .mentions, .mine: .waitingOnOthers,
-    ]
-
-    /// `snoozed` holds the ids the user parked; they are classified as snoozed before anything else.
+    /// `snoozed` holds the ids the user parked; they are classified as snoozed before anything else. `showReviewed`
+    /// keeps the Reviewed section's rows and attributes the `involved` search's remainder to it (spec 0.8 3.5);
+    /// off, those rows are dropped like hidden ones.
     public static func build(
         _ result: FetchResult, snoozed: Set<String> = [], cap: Int = rowCap,
-        scope: SearchScope = .none
+        scope: SearchScope = .none, showReviewed: Bool = false
     ) -> Inbox {
         let viewer = result.viewerLogin
         let stacks = Stacks.compute(result.pullRequests)
         let rows = result.pullRequests
             .filter { !$0.isArchived }
             .compactMap { pr -> InboxRow? in
-                guard let classification = Classifier.classify(pr, viewer: viewer, snoozed: snoozed.contains(pr.id))
+                guard let classification = Classifier.classify(pr, viewer: viewer, snoozed: snoozed.contains(pr.id)),
+                    showReviewed || classification.section != .reviewed
                 else { return nil }
                 return InboxRow(
                     pullRequest: pr, classification: classification,
                     pendingReplies: Classifier.pendingReplies(pr, viewer: viewer, reason: classification.reason),
                     stack: stacks[pr.id])
             }
-        let remainders = unfetchedBySection(result)
+        let remainders = unfetchedBySection(result, showReviewed: showReviewed)
         let sections = SectionKind.allCases.compactMap { kind -> InboxSection? in
             let members = sorted(rows.filter { $0.classification.section == kind }, kind: kind)
             // Snoozed rows follow the capped rows in full: hidden ones could never be woken from the popover.
@@ -75,9 +73,19 @@ public enum InboxBuilder {
         return Array(rows.prefix(end))
     }
 
-    static func unfetchedBySection(_ result: FetchResult) -> [SectionKind: Int] {
+    /// The unfetched remainder of each search is attributed to the last section that search feeds; the `involved`
+    /// search's only when the Reviewed section shows.
+    static func remainderSection(showReviewed: Bool) -> [SearchSource: SectionKind] {
+        var sections: [SearchSource: SectionKind] = [
+            .review: .takeAnotherLook, .mentions: .mentions, .mine: .waitingOnOthers,
+        ]
+        if showReviewed { sections[.involved] = .reviewed }
+        return sections
+    }
+
+    static func unfetchedBySection(_ result: FetchResult, showReviewed: Bool) -> [SectionKind: Int] {
         Dictionary(
-            uniqueKeysWithValues: remainderSection.map { source, kind in
+            uniqueKeysWithValues: remainderSection(showReviewed: showReviewed).map { source, kind in
                 (kind, max(0, (result.totals[source] ?? 0) - (result.fetched[source] ?? 0)))
             })
     }

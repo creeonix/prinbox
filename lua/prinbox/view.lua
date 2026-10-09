@@ -197,7 +197,7 @@ function M.open_current()
       cli.open(item.more.moreUrl, nil)
     end
   else
-    cli.open(item.row.url, item.row.id)
+    cli.open(cli.url(item.row), item.row.id)
   end
 end
 

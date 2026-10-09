@@ -135,11 +135,11 @@ final class QueryLog: @unchecked Sendable {
         #expect(log.queries.isEmpty)
     }
 
-    @Test func conversationOffDropsTheInvolvedSearchAndTheThreadFields() async throws {
+    @Test func conversationOffDropsTheThreadFieldsButKeepsTheInvolvedSearch() async throws {
         let log = QueryLog()
         let search = TwoPhaseJSON.search(review: [TwoPhaseJSON.hit("a")])
         _ = try await twoPhase(search: search, log: log).fetch(FetchRequest(includeConversation: false))
-        #expect(!log.queries[0].contains("involved"))
+        #expect(log.queries[0].contains("involved: search"))
         #expect(!log.queries[1].contains("reviewThreads"))
         _ = try await twoPhase(search: search, log: log).fetch(.full)
         #expect(log.queries[2].contains("involved: search"))

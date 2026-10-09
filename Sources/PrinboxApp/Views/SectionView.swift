@@ -44,10 +44,10 @@ struct SectionView: View {
         let selected = state.isSelected(.row(row.id))
         Group {
             if section.kind.usesCompactRows || state.display.compactRows {
-                CompactRowView(row: row, state: state, isSelected: selected) { actions.open(row.pullRequest.url) }
+                CompactRowView(row: row, state: state, isSelected: selected) { actions.open(row.openURL) }
             } else {
                 PullRequestRowView(row: row, state: state, avatars: avatars, isSelected: selected) {
-                    actions.open(row.pullRequest.url)
+                    actions.open(row.openURL)
                 }
             }
         }

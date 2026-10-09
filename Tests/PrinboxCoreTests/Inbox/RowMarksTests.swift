@@ -68,4 +68,35 @@ import Testing
         #expect(!Reason.changesRequested.highlightsComments)
         #expect(!Reason.snoozed.highlightsComments)
     }
+
+    @Test func theVerdictCueIsYoursAndNeverOnYourOwnRows() {
+        func row(_ pr: PullRequest) -> InboxRow {
+            InboxRow(pullRequest: pr, classification: Classifier.classify(pr, viewer: testViewer)!)
+        }
+        let approved = ViewerReview(state: "APPROVED", submittedAt: nil, commitOid: "aaa")
+        let blocked = ViewerReview(state: "CHANGES_REQUESTED", submittedAt: nil, commitOid: "aaa")
+        #expect(
+            VerdictCue.of(
+                row(makePR(viewerReview: approved, source: .involved, headOid: "ccc", viewerVerdict: approved)))
+                == .approved)
+        #expect(
+            VerdictCue.of(row(makePR(viewerReview: blocked, source: .review, viewerVerdict: blocked)))
+                == .changesRequested)
+        #expect(
+            VerdictCue.of(
+                row(makePR(viewerReview: approved, source: .involved, headOid: "aaa", viewerVerdict: approved)))
+                == .approved)
+        #expect(VerdictCue.of(row(makePR(source: .review))) == nil)
+        #expect(
+            VerdictCue.of(
+                row(makePR(viewerReview: ViewerReview(state: "COMMENTED", submittedAt: nil), source: .review))) == nil)
+        #expect(VerdictCue.of(row(makePR(authorLogin: testViewer, source: .mine, viewerVerdict: approved))) == nil)
+        let snoozedPR = makePR(
+            viewerReview: approved, reviewRequestedAt: date("2026-08-02T10:00:00Z"), source: .review,
+            viewerVerdict: approved)
+        let snoozed = InboxRow(
+            pullRequest: snoozedPR, classification: Classifier.classify(snoozedPR, viewer: testViewer, snoozed: true)!)
+        #expect(snoozed.classification.section == .waitingOnOthers)
+        #expect(VerdictCue.of(snoozed) == nil)
+    }
 }

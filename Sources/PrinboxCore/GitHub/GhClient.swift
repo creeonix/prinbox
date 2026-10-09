@@ -5,7 +5,7 @@ public struct FetchRequest: Sendable, Equatable {
     /// `id -> updatedAt` of the previous fetch. When phase 1 returns the same set, the fetch answers
     /// `.unchanged` without running phase 2. Nil forces a full fetch.
     public let previous: [String: Date]?
-    /// Threads and reviews, and the `involved` search behind Replies to you. Off is the lighter refresh.
+    /// The conversation fields of the details query (threads and reviews). Off is the lighter refresh.
     public let includeConversation: Bool
     /// The login `previous` was recorded for; when set, a different viewer never counts as unchanged.
     public let previousViewer: String?
@@ -79,7 +79,7 @@ public struct GhClient: InboxFetching {
 
     public func fetch(_ request: FetchRequest) async throws -> FetchOutcome {
         guard let gh = locator.locate() else { throw FetchError.ghNotFound }
-        let overflow = SearchQuery.overflow(includeInvolved: request.includeConversation, scope: request.scope)
+        let overflow = SearchQuery.overflow(scope: request.scope)
         if overflow > 0 {
             throw FetchError.other(
                 "default repositories too long for GitHub search: "
@@ -88,7 +88,7 @@ public struct GhClient: InboxFetching {
         let started = ContinuousClock.now
         let search = try Self.interpretSearch(
             try await run(
-                gh, query: SearchQuery.text(includeInvolved: request.includeConversation, scope: request.scope)))
+                gh, query: SearchQuery.text(scope: request.scope)))
         let fingerprint = PullRequestMapper.fingerprint(search)
         if let previous = request.previous, previous == fingerprint,
             request.previousViewer == nil || request.previousViewer == search.data?.viewer?.login

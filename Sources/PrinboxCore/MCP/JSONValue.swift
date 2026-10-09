@@ -23,6 +23,11 @@ public indirect enum JSONValue: Equatable, Sendable {
         return elements[index]
     }
 
+    public var boolValue: Bool? {
+        guard case .bool(let value) = self else { return nil }
+        return value
+    }
+
     public var stringValue: String? {
         guard case .string(let value) = self else { return nil }
         return value

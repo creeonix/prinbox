@@ -1,5 +1,5 @@
 {
-  "badge" : 8,
+  "badge" : 10,
   "checkedAt" : "2026-08-10T12:00:00Z",
   "defaultRepositories" : [
 
@@ -49,7 +49,8 @@
           "title" : "Migrate the settings page to the new design system",
           "updatedAt" : "2026-08-10T09:00:00Z",
           "url" : "https://github.com/acme/web/pull/1290",
-          "waitingSince" : "2026-08-08T10:00:00Z"
+          "waitingSince" : "2026-08-08T10:00:00Z",
+          "yourReview" : null
         },
         {
           "additions" : 140,
@@ -81,7 +82,8 @@
           "title" : "Settings page: migrate the notifications tab",
           "updatedAt" : "2026-08-10T10:00:00Z",
           "url" : "https://github.com/acme/web/pull/1291",
-          "waitingSince" : "2026-08-08T11:00:00Z"
+          "waitingSince" : "2026-08-08T11:00:00Z",
+          "yourReview" : null
         },
         {
           "additions" : 301,
@@ -109,7 +111,8 @@
           "title" : "Charge sales tax per region",
           "updatedAt" : "2026-08-10T10:00:00Z",
           "url" : "https://github.com/globex/billing/pull/2104",
-          "waitingSince" : "2026-08-10T04:00:00Z"
+          "waitingSince" : "2026-08-10T04:00:00Z",
+          "yourReview" : null
         },
         {
           "additions" : 214,
@@ -137,7 +140,8 @@
           "title" : "Add rate limiting to the public API",
           "updatedAt" : "2026-08-10T11:00:00Z",
           "url" : "https://github.com/acme/api/pull/482",
-          "waitingSince" : "2026-08-10T07:00:00Z"
+          "waitingSince" : "2026-08-10T07:00:00Z",
+          "yourReview" : null
         },
         {
           "additions" : 18,
@@ -165,7 +169,8 @@
           "title" : "Fix the flaky checkout integration test",
           "updatedAt" : "2026-08-10T10:00:00Z",
           "url" : "https://github.com/acme/shop/pull/77",
-          "waitingSince" : "2026-08-10T10:00:00Z"
+          "waitingSince" : "2026-08-10T10:00:00Z",
+          "yourReview" : null
         }
       ],
       "title" : "Needs your review"
@@ -202,7 +207,17 @@
           "title" : "Stream large uploads instead of buffering them",
           "updatedAt" : "2026-08-10T09:00:00Z",
           "url" : "https://github.com/acme/api/pull/2077",
-          "waitingSince" : "2026-08-10T08:00:00Z"
+          "waitingSince" : "2026-08-10T08:00:00Z",
+          "yourReview" : {
+            "commit" : null,
+            "commitsSince" : null,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : null,
+            "sinceReviewUrl" : null,
+            "state" : "commented",
+            "submittedAt" : "2026-08-09T10:00:00Z"
+          }
         },
         {
           "additions" : 64,
@@ -230,17 +245,65 @@
           "title" : "Rotate the signing keys quarterly",
           "updatedAt" : "2026-08-10T11:00:00Z",
           "url" : "https://github.com/globex/billing/pull/145",
-          "waitingSince" : "2026-08-10T11:00:00Z"
+          "waitingSince" : "2026-08-10T11:00:00Z",
+          "yourReview" : {
+            "commit" : null,
+            "commitsSince" : null,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : null,
+            "sinceReviewUrl" : null,
+            "state" : "commented",
+            "submittedAt" : "2026-08-09T16:00:00Z"
+          }
         }
       ],
       "title" : "Replies to you"
     },
     {
-      "count" : 1,
+      "count" : 3,
       "kind" : "takeAnotherLook",
       "moreCount" : 0,
       "moreUrl" : "https://github.com/pulls/review-requested",
       "rows" : [
+        {
+          "additions" : 96,
+          "age" : "6h",
+          "author" : "alice",
+          "authorAvatarUrl" : null,
+          "createdAt" : "2026-08-05T12:00:00Z",
+          "deletions" : 14,
+          "id" : "DEMO_2210",
+          "isDraft" : false,
+          "isNew" : false,
+          "marks" : {
+            "ci" : "success",
+            "comments" : 3,
+            "merge" : null,
+            "review" : null
+          },
+          "number" : 2210,
+          "pendingReplies" : 0,
+          "reason" : "pushedSinceApproval",
+          "reasonText" : "Pushed since you approved",
+          "repository" : "acme/api",
+          "snoozed" : false,
+          "stack" : null,
+          "title" : "Index the audit log by actor",
+          "updatedAt" : "2026-08-10T06:00:00Z",
+          "url" : "https://github.com/acme/api/pull/2210",
+          "waitingSince" : "2026-08-10T06:00:00Z",
+          "yourReview" : {
+            "commit" : "3f9c2d1",
+            "commitsSince" : 2,
+            "moved" : true,
+            "rewritten" : false,
+            "since" : "2 commits since you approved",
+            "sinceReviewUrl" : "https://github.com/acme/api/pull/2210/files/3f9c2d1..b7e41a0",
+            "state" : "approved",
+            "submittedAt" : "2026-08-08T12:00:00Z"
+          }
+        },
         {
           "additions" : 210,
           "age" : "5h",
@@ -267,7 +330,55 @@
           "title" : "Add a retry budget to the sync worker",
           "updatedAt" : "2026-08-10T07:00:00Z",
           "url" : "https://github.com/globex/sync/pull/917",
-          "waitingSince" : "2026-08-10T07:00:00Z"
+          "waitingSince" : "2026-08-10T07:00:00Z",
+          "yourReview" : {
+            "commit" : null,
+            "commitsSince" : null,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : null,
+            "sinceReviewUrl" : null,
+            "state" : "commented",
+            "submittedAt" : "2026-08-09T06:00:00Z"
+          }
+        },
+        {
+          "additions" : 230,
+          "age" : "2h",
+          "author" : "frank",
+          "authorAvatarUrl" : null,
+          "createdAt" : "2026-08-05T12:00:00Z",
+          "deletions" : 120,
+          "id" : "DEMO_733",
+          "isDraft" : false,
+          "isNew" : false,
+          "marks" : {
+            "ci" : "failure",
+            "comments" : 2,
+            "merge" : null,
+            "review" : null
+          },
+          "number" : 733,
+          "pendingReplies" : 0,
+          "reason" : "pushedSinceChangesRequested",
+          "reasonText" : "Pushed since you requested changes",
+          "repository" : "globex/billing",
+          "snoozed" : false,
+          "stack" : null,
+          "title" : "Split the invoice job",
+          "updatedAt" : "2026-08-10T10:00:00Z",
+          "url" : "https://github.com/globex/billing/pull/733",
+          "waitingSince" : "2026-08-10T10:00:00Z",
+          "yourReview" : {
+            "commit" : "a1b2c3d",
+            "commitsSince" : null,
+            "moved" : true,
+            "rewritten" : true,
+            "since" : "rewritten since you requested changes",
+            "sinceReviewUrl" : "https://github.com/globex/billing/pull/733/files/a1b2c3d..e5f6a7b",
+            "state" : "changesRequested",
+            "submittedAt" : "2026-08-09T10:00:00Z"
+          }
         }
       ],
       "title" : "Take another look"
@@ -304,7 +415,8 @@
           "title" : "Document the release process",
           "updatedAt" : "2026-08-10T11:30:00Z",
           "url" : "https://github.com/initech/docs/pull/58",
-          "waitingSince" : "2026-08-10T11:30:00Z"
+          "waitingSince" : "2026-08-10T11:30:00Z",
+          "yourReview" : null
         }
       ],
       "title" : "Mentions"
@@ -345,7 +457,8 @@
           "title" : "Speed up search indexing",
           "updatedAt" : "2026-08-10T11:00:00Z",
           "url" : "https://github.com/acme/web/pull/1301",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 142,
@@ -373,7 +486,8 @@
           "title" : "Reconcile invoices nightly",
           "updatedAt" : "2026-08-10T08:00:00Z",
           "url" : "https://github.com/globex/billing/pull/310",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 75,
@@ -401,7 +515,8 @@
           "title" : "Retry webhook deliveries with backoff",
           "updatedAt" : "2026-08-10T06:00:00Z",
           "url" : "https://github.com/acme/api/pull/489",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 540,
@@ -429,7 +544,8 @@
           "title" : "Rewrite the TPS report generator",
           "updatedAt" : "2026-08-10T03:00:00Z",
           "url" : "https://github.com/initech/tps/pull/612",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         }
       ],
       "title" : "Your PRs"
@@ -470,7 +586,8 @@
           "title" : "Bump the Swift toolchain to 6.4",
           "updatedAt" : "2026-08-09T16:00:00Z",
           "url" : "https://github.com/acme/web/pull/1298",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 27,
@@ -498,7 +615,8 @@
           "title" : "Add a cover sheet to every report",
           "updatedAt" : "2026-08-09T06:00:00Z",
           "url" : "https://github.com/initech/tps/pull/33",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 512,
@@ -526,7 +644,8 @@
           "title" : "Explore an offline mode",
           "updatedAt" : "2026-08-07T12:00:00Z",
           "url" : "https://github.com/acme/shop/pull/91",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : null
         },
         {
           "additions" : 96,
@@ -554,10 +673,30 @@
           "title" : "Cache avatar images on disk",
           "updatedAt" : "2026-08-10T09:00:00Z",
           "url" : "https://github.com/acme/web/pull/1284",
-          "waitingSince" : null
+          "waitingSince" : null,
+          "yourReview" : {
+            "commit" : null,
+            "commitsSince" : null,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : null,
+            "sinceReviewUrl" : null,
+            "state" : "commented",
+            "submittedAt" : "2026-08-08T10:00:00Z"
+          }
         }
       ],
       "title" : "Waiting on others"
+    },
+    {
+      "count" : 0,
+      "kind" : "reviewed",
+      "moreCount" : 0,
+      "moreUrl" : "https://github.com/pulls?q=is%3Aopen+is%3Apr+involves%3A%40me+-author%3A%40me",
+      "rows" : [
+
+      ],
+      "title" : "Reviewed"
     }
   ],
   "source" : "cache",

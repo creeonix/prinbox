@@ -58,6 +58,38 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 .labelsHidden()
             }
+            SettingRow(title: "Color rows by your verdict") {
+                Picker(
+                    "",
+                    selection: Binding(get: { state.display.rowColor }, set: { state.display.setRowColor($0) })
+                ) {
+                    Text("None").tag(RowColor.plain)
+                    Text("Background").tag(RowColor.background)
+                    Text("Title").tag(RowColor.title)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 210)
+            }
+            Text("Green when you approved, red when you requested changes").font(.caption).foregroundStyle(.secondary)
+            SettingRow(title: "Show what moved since your review") {
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { state.display.sinceReviewLine }, set: { state.display.setSinceReviewLine($0) })
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
+            }
+            Text("\"2 commits since you approved\" in place of the size").font(.caption).foregroundStyle(.secondary)
+            SettingRow(title: "Show reviewed pull requests") {
+                Toggle("", isOn: Binding(get: { state.display.showReviewed }, set: { state.setShowReviewed($0) }))
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+            }
+            Text("Every open pull request you reviewed, in a Reviewed section at the bottom")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             SettingRow(title: "Follow review threads") {
                 Toggle(
                     "",

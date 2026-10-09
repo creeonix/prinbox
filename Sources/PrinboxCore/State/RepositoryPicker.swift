@@ -50,7 +50,7 @@ public struct RepositoryPicker: Equatable, Sendable {
         func overflow(toggling entry: String) -> Int {
             var next = shape
             next.scope.repositories = RepositoryPicker.toggled(entry, in: pinned)
-            return SearchQuery.overflow(includeInvolved: shape.includeConversation, scope: next.scope)
+            return SearchQuery.overflow(scope: next.scope)
         }
         func item(_ entry: String) -> Item {
             let isPinned = pinnedLower.contains(entry.lowercased())

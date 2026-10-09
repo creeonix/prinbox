@@ -685,12 +685,125 @@
       "title" : "Waiting on others"
     },
     {
-      "count" : 0,
+      "count" : 3,
       "kind" : "reviewed",
       "moreCount" : 0,
       "moreUrl" : "https://github.com/pulls?q=is%3Aopen+is%3Apr+involves%3A%40me+-author%3A%40me",
       "rows" : [
-
+        {
+          "additions" : 410,
+          "age" : "12h",
+          "author" : "bob",
+          "authorAvatarUrl" : null,
+          "createdAt" : "2026-08-05T12:00:00Z",
+          "deletions" : 95,
+          "id" : "DEMO_1250",
+          "isDraft" : false,
+          "isNew" : false,
+          "marks" : {
+            "ci" : null,
+            "comments" : 4,
+            "merge" : "ready",
+            "review" : null
+          },
+          "number" : 1250,
+          "pendingReplies" : 0,
+          "reason" : "youApproved",
+          "reasonText" : "You approved",
+          "repository" : "acme/web",
+          "snoozed" : false,
+          "stack" : null,
+          "title" : "Refund flow rework",
+          "updatedAt" : "2026-08-10T00:00:00Z",
+          "url" : "https://github.com/acme/web/pull/1250",
+          "waitingSince" : null,
+          "yourReview" : {
+            "commit" : "7a7a7a7",
+            "commitsSince" : 0,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : "you approved",
+            "sinceReviewUrl" : null,
+            "state" : "approved",
+            "submittedAt" : "2026-08-09T06:00:00Z"
+          }
+        },
+        {
+          "additions" : 58,
+          "age" : "20h",
+          "author" : "heidi",
+          "authorAvatarUrl" : null,
+          "createdAt" : "2026-08-05T12:00:00Z",
+          "deletions" : 22,
+          "id" : "DEMO_702",
+          "isDraft" : false,
+          "isNew" : false,
+          "marks" : {
+            "ci" : "success",
+            "comments" : 3,
+            "merge" : null,
+            "review" : "changesRequested"
+          },
+          "number" : 702,
+          "pendingReplies" : 0,
+          "reason" : "youRequestedChanges",
+          "reasonText" : "You requested changes",
+          "repository" : "globex/billing",
+          "snoozed" : false,
+          "stack" : null,
+          "title" : "Rotate the API keys",
+          "updatedAt" : "2026-08-09T16:00:00Z",
+          "url" : "https://github.com/globex/billing/pull/702",
+          "waitingSince" : null,
+          "yourReview" : {
+            "commit" : "beefcaf",
+            "commitsSince" : 0,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : "you requested changes",
+            "sinceReviewUrl" : null,
+            "state" : "changesRequested",
+            "submittedAt" : "2026-08-09T14:00:00Z"
+          }
+        },
+        {
+          "additions" : 31,
+          "age" : "28h",
+          "author" : "erin",
+          "authorAvatarUrl" : null,
+          "createdAt" : "2026-08-05T12:00:00Z",
+          "deletions" : 8,
+          "id" : "DEMO_140",
+          "isDraft" : false,
+          "isNew" : false,
+          "marks" : {
+            "ci" : null,
+            "comments" : 2,
+            "merge" : null,
+            "review" : null
+          },
+          "number" : 140,
+          "pendingReplies" : 0,
+          "reason" : "youCommented",
+          "reasonText" : "You commented",
+          "repository" : "initech/docs",
+          "snoozed" : false,
+          "stack" : null,
+          "title" : "Clarify the on-call guide",
+          "updatedAt" : "2026-08-09T08:00:00Z",
+          "url" : "https://github.com/initech/docs/pull/140",
+          "waitingSince" : null,
+          "yourReview" : {
+            "commit" : null,
+            "commitsSince" : null,
+            "moved" : false,
+            "rewritten" : false,
+            "since" : null,
+            "sinceReviewUrl" : null,
+            "state" : "commented",
+            "submittedAt" : "2026-08-09T08:00:00Z"
+          }
+        }
       ],
       "title" : "Reviewed"
     }

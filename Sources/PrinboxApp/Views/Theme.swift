@@ -1,3 +1,4 @@
+import PrinboxCore
 import SwiftUI
 
 enum Theme {
@@ -9,6 +10,14 @@ enum Theme {
         let count = orgPalette.count
         return orgPalette[((index % count) + count) % count]
     }
+
+    /// The verdict's color on a row (spec 0.8 4.1): the marks' green and red.
+    static func verdictColor(_ cue: VerdictCue) -> Color {
+        switch cue {
+        case .approved: .green
+        case .changesRequested: .red
+        }
+    }
 }
 
 /// Shared highlight for hover and keyboard selection.
@@ -18,6 +27,17 @@ struct RowHighlight: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 6)
             .fill(isSelected ? Color.accentColor.opacity(0.18) : Color.clear)
+            .padding(.horizontal, 4)
+    }
+}
+
+/// The faint wash behind a row colored by your verdict; the hover and selection highlight draws over it.
+struct VerdictWash: View {
+    let color: Color?
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 6)
+            .fill(color?.opacity(0.11) ?? Color.clear)
             .padding(.horizontal, 4)
     }
 }

@@ -7,13 +7,14 @@ public enum DetailsQuery {
 
     static let rowFields = [
         "id number title url isDraft additions deletions createdAt updatedAt totalCommentsCount",
-        "headRefName baseRefName isCrossRepository",
+        "headRefName baseRefName isCrossRepository headRefOid",
         "author { login avatarUrl(size: 64) }",
         "repository { nameWithOwner isArchived owner { __typename login avatarUrl(size: 64) } }",
         "reviewDecision mergeable",
         "viewerLatestReview { state submittedAt }",
-        "latestOpinionatedReviews(first: 10) { nodes { state } }",
+        "latestOpinionatedReviews(first: 10) { nodes { state submittedAt author { login } commit { oid } } }",
         "commits(last: 1) { nodes { commit { committedDate statusCheckRollup { state } } } }",
+        "recent: commits(last: \(PullRequest.recentCommitWindow)) { totalCount nodes { commit { oid } } }",
         "timelineItems(last: 20, itemTypes: [REVIEW_REQUESTED_EVENT, READY_FOR_REVIEW_EVENT]) { nodes { __typename"
             + " ... on ReviewRequestedEvent { createdAt requestedReviewer { __typename ... on User { login } } }"
             + " ... on ReadyForReviewEvent { createdAt } } }",

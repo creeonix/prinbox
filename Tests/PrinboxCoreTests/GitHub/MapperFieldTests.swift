@@ -34,6 +34,10 @@ import Testing
         #expect(pr.ownerAvatarURL == nil)
         #expect(pr.ownerIsOrganization == false)
         #expect(pr.ownerLogin == "acme")
+        #expect(pr.headOid == nil)
+        #expect(pr.viewerVerdict == nil)
+        #expect(pr.recentCommitOids == nil)
+        #expect(pr.commitCount == nil)
     }
 
     @Test func readsCommentCountAndOrganizationOwner() throws {
@@ -166,5 +170,51 @@ import Testing
             try #require(plain.data?.nodes?.first ?? nil), source: .review, viewer: "me")
         #expect(forkPR.isCrossRepository)
         #expect(!plainPR.isCrossRepository)
+    }
+
+    @Test func readsTheHeadOidTheVerdictAndTheRecentCommits() throws {
+        let pr = try map([
+            "headRefOid": "b7e41a0000000000000000000000000000000000",
+            "latestOpinionatedReviews": [
+                "nodes": [
+                    [
+                        "state": "APPROVED", "submittedAt": "2026-08-02T10:00:00Z", "author": ["login": "ME"],
+                        "commit": ["oid": "3f9c2d1"],
+                    ],
+                    ["state": "CHANGES_REQUESTED", "author": ["login": "bob"], "commit": ["oid": "b7e41a0"]],
+                ]
+            ],
+            "recent": [
+                "totalCount": 4,
+                "nodes": [
+                    ["commit": ["oid": "90ab12c"]], ["commit": ["oid": "3f9c2d1"]], NSNull(),
+                    ["commit": ["oid": "b7e41a0000000000000000000000000000000000"]],
+                ],
+            ],
+        ])
+        #expect(pr.headOid == "b7e41a0000000000000000000000000000000000")
+        #expect(
+            pr.viewerVerdict
+                == ViewerReview(state: "APPROVED", submittedAt: date("2026-08-02T10:00:00Z"), commitOid: "3f9c2d1"))
+        #expect(pr.recentCommitOids == ["90ab12c", "3f9c2d1", "b7e41a0000000000000000000000000000000000"])
+        #expect(pr.commitCount == 4)
+        #expect(pr.movedSinceVerdict)
+        #expect(pr.commitsSinceVerdict == 1)
+    }
+
+    @Test func aCommentedDismissedOrPendingEntryIsNoVerdictAndAnotherUsersIsNotYours() throws {
+        for state in ["COMMENTED", "DISMISSED", "PENDING"] {
+            let pr = try map([
+                "latestOpinionatedReviews": [
+                    "nodes": [["state": state, "author": ["login": "me"], "commit": ["oid": "1"]]]
+                ]
+            ])
+            #expect(pr.viewerVerdict == nil, "\(state)")
+        }
+        let other = try map([
+            "latestOpinionatedReviews": ["nodes": [["state": "APPROVED", "author": ["login": "bob"]]]]
+        ])
+        #expect(other.viewerVerdict == nil)
+        #expect(other.reviewDecision == .approved)
     }
 }

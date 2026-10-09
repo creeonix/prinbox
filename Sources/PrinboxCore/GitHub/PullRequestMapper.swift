@@ -70,7 +70,7 @@ enum PullRequestMapper {
         }
     }
 
-    /// Only searches the query asked for get an entry (`involved` is absent with the setting off).
+    /// Only searches the response carries get an entry (a fake or older response may lack `involved`).
     private static func perSearch(
         _ data: SearchResponse.Payload, _ value: (SearchResponse.Search) -> Int
     ) -> [SearchSource: Int] {
@@ -114,8 +114,25 @@ enum PullRequestMapper {
             lastCommitAt: lastCommit?.committedDate,
             threads: node.reviewThreads.map(threads),
             reviews: node.reviews.map(reviews),
-            isCrossRepository: node.isCrossRepository ?? false
+            isCrossRepository: node.isCrossRepository ?? false,
+            headOid: node.headRefOid,
+            viewerVerdict: viewerVerdict(node.latestOpinionatedReviews, viewer: viewer),
+            recentCommitOids: node.recent.map { $0.nodes.compactMap { $0?.commit.oid } },
+            commitCount: node.recent?.totalCount
         )
+    }
+
+    /// The viewer's entry among the latest opinionated reviews when it approves or requests changes (spec 0.8
+    /// 3.1); a dismissed or pending one is no verdict. Logins compare without regard to case.
+    static func viewerVerdict(_ connection: PRNode.Connection<PRNode.ReviewStateNode>?, viewer: String)
+        -> ViewerReview?
+    {
+        let entries = (connection?.nodes ?? []).compactMap { $0 }
+        guard
+            let mine = entries.first(where: { $0.author?.login.caseInsensitiveCompare(viewer) == .orderedSame }),
+            mine.state == "APPROVED" || mine.state == "CHANGES_REQUESTED"
+        else { return nil }
+        return ViewerReview(state: mine.state, submittedAt: mine.submittedAt, commitOid: mine.commit?.oid)
     }
 
     /// Comments keep GitHub's order (oldest first); a deleted author is "ghost", like a deleted PR author.

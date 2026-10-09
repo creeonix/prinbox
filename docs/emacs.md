@@ -29,7 +29,8 @@ Repository, Reason, Age, Flags (`new`, `draft`, `snoozed`, `stack i/n`); rows in
 
 The header line reads `8 waiting on you · updated 14:02 · 4 new`, with your default repositories appended when
 some are set in PRInbox, and the error line when the last fetch failed. A snooze made here shows in the menu bar
-and the popover within a second, and the other way round.
+and the popover within a second, and the other way round. Enter on a row whose diff moved since your review opens
+GitHub's diff since that review.
 
 ## Options
 
@@ -37,6 +38,7 @@ and the popover within a second, and the other way round.
 |---|---|---|
 | `prinbox-command` | `"prinbox"` | the executable |
 | `prinbox-max-age` | `60` | the buffer serves the cache when GitHub confirmed it within this many seconds |
+| `prinbox-all` | `nil` | list every pull request you reviewed |
 | `prinbox-poll-seconds` | `0` | seconds between background refreshes for the mode line; 0 is off |
 
 ## Mode line

@@ -28,19 +28,31 @@ grep -qx -- '3,4,5,6,7' "$work/fzf-args"
 grep -q 'snooze {1}' "$work/fzf-args"
 grep -q 'unsnooze {1}' "$work/fzf-args"
 grep -q 'reload(' "$work/fzf-args"
-grep -q '^8 waiting on you' "$work/fzf-args"
+grep -q '^10 waiting on you' "$work/fzf-args"
 grep -qx 'inbox lines' "$work/log"
 grep -qx 'inbox tmux' "$work/log"
 
-# The 17th line is the snoozed row; a more line would open its ninth field the same way.
+# The 19th line is the snoozed row; a more line would open its ninth field the same way.
 rm -f "$work/opened"
-FAKE_FZF_PICK=17 bash "$root/tmux/popup.sh"
+FAKE_FZF_PICK=19 bash "$root/tmux/popup.sh"
 [ "$(cat "$work/opened")" = "https://github.com/acme/web/pull/1284" ]
 
 # Esc opens nothing.
 rm -f "$work/opened"
 FAKE_FZF_PICK=0 bash "$root/tmux/popup.sh"
 [ ! -f "$work/opened" ]
+
+# The row whose diff moved since your review opens GitHub's diff since that review (the lines' url column).
+rm -f "$work/opened"
+delta_line=$(grep -n $'^DEMO_2210\t' "$root/Tests/PrinboxCoreTests/Golden/demo-inbox.lines" | cut -d: -f1)
+FAKE_FZF_PICK=$delta_line bash "$root/tmux/popup.sh"
+[ "$(cat "$work/opened")" = "https://github.com/acme/api/pull/2210/files/3f9c2d1..b7e41a0" ]
+
+# @prinbox_all reaches the popup as PRINBOX_ALL and adds --all to every lines command.
+rm -f "$work/log"
+PRINBOX_ALL=on bash "$root/tmux/popup.sh"
+grep -qx 'inbox lines all' "$work/log"
+grep -q -- 'inbox --cached --format lines --all' "$work/fzf-args"
 
 # Signed out: the setup text, then a wait for Enter (stdin is closed here, so it returns at once), exit 3.
 set +e
@@ -67,6 +79,7 @@ tmux -L "$socket" set-option -g status-right 'left #{prinbox_status} right'
 tmux -L "$socket" set-option -g status-left '#{prinbox_status}'
 tmux -L "$socket" set-option -g @prinbox_command "$stub"
 tmux -L "$socket" set-option -g @prinbox_max_age 30
+tmux -L "$socket" set-option -g @prinbox_all on
 tmux -L "$socket" run-shell "$root/prinbox.tmux"
 [ "$(tmux -L "$socket" show-option -gqv status-right)" = "left #($stub inbox --format tmux --max-age 30) right" ]
 [ "$(tmux -L "$socket" show-option -gqv status-left)" = "#($stub inbox --format tmux --max-age 30)" ]
@@ -75,5 +88,6 @@ binding=$(tmux -L "$socket" list-keys -T prefix | grep -E '^bind-key +-T prefix 
 grep -q 'display-popup' <<<"$binding"
 grep -q 'popup.sh' <<<"$binding"
 grep -q "PRINBOX_MAX_AGE='30'" <<<"$binding"
+grep -q "PRINBOX_ALL='on'" <<<"$binding"
 tmux -L "$socket" kill-server
 echo "tmux: ok"

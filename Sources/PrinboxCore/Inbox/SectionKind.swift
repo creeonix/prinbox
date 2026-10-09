@@ -8,6 +8,7 @@ public enum SectionKind: String, CaseIterable, Sendable, Codable {
     case mentions
     case yourPRs
     case waitingOnOthers
+    case reviewed
 
     public var title: String {
         switch self {
@@ -17,6 +18,7 @@ public enum SectionKind: String, CaseIterable, Sendable, Codable {
         case .mentions: "Mentions"
         case .yourPRs: "Your PRs"
         case .waitingOnOthers: "Waiting on others"
+        case .reviewed: "Reviewed"
         }
     }
 
@@ -25,14 +27,14 @@ public enum SectionKind: String, CaseIterable, Sendable, Codable {
         self == .needsReview || self == .repliesToYou || self == .takeAnotherLook || self == .mentions
     }
 
-    /// Own-PR sections are sorted newest first and show "updated X ago" instead of "waiting X".
-    public var sortsByRecency: Bool { self == .yourPRs || self == .waitingOnOthers }
+    /// Own-PR sections and Reviewed are sorted newest first and show "updated X ago" instead of "waiting X".
+    public var sortsByRecency: Bool { self == .yourPRs || self == .waitingOnOthers || self == .reviewed }
 
-    public var usesCompactRows: Bool { self == .waitingOnOthers }
+    public var usesCompactRows: Bool { self == .waitingOnOthers || self == .reviewed }
 
     public var moreURL: URL {
         switch self {
-        case .repliesToYou:
+        case .repliesToYou, .reviewed:
             URL(string: "https://github.com/pulls?q=is%3Aopen+is%3Apr+involves%3A%40me+-author%3A%40me")!
         case .needsReview, .takeAnotherLook: URL(string: "https://github.com/pulls/review-requested")!
         case .mentions: URL(string: "https://github.com/pulls/mentioned")!
@@ -48,7 +50,7 @@ public enum SectionKind: String, CaseIterable, Sendable, Codable {
             switch self {
             case .needsReview, .takeAnotherLook: .review
             case .mentions: .mentions
-            case .repliesToYou: .involved
+            case .repliesToYou, .reviewed: .involved
             case .yourPRs, .waitingOnOthers: .mine
             }
         var components = URLComponents(string: "https://github.com/pulls")!
@@ -79,19 +81,29 @@ public enum Reason: String, Sendable, Equatable {
     case draft = "Draft"
     case waitingForReview = "Waiting for review"
     case snoozed = "Snoozed"
+    case pushedSinceApproval = "Pushed since you approved"
+    case pushedSinceChangesRequested = "Pushed since you requested changes"
+    case youApproved = "You approved"
+    case youRequestedChanges = "You requested changes"
+    case youCommented = "You commented"
 
     public var tone: ReasonTone {
         switch self {
-        case .reviewRequested, .reReviewRequested, .mentioned, .awaitingReply, .openThreads: .attention
+        case .reviewRequested, .reReviewRequested, .mentioned, .awaitingReply, .openThreads, .pushedSinceApproval,
+            .pushedSinceChangesRequested:
+            .attention
         case .changesRequested, .mergeConflicts, .ciRed: .failure
         case .readyToMerge: .success
-        case .draft, .waitingForReview, .snoozed: .neutral
+        case .draft, .waitingForReview, .snoozed, .youApproved, .youRequestedChanges, .youCommented: .neutral
         }
     }
 
     /// Rows with these reasons draw the comment bubble and its count in the accent color: the conversation is
     /// what needs attention.
     public var highlightsComments: Bool { self == .awaitingReply || self == .openThreads }
+
+    /// The author pushed a diff change after the viewer's verdict (spec 0.8 3.4): an update in a notification.
+    public var isPushedSinceVerdict: Bool { self == .pushedSinceApproval || self == .pushedSinceChangesRequested }
 
     /// The stable code the JSON carries; the raw value is the display text.
     public var code: String {
@@ -108,6 +120,11 @@ public enum Reason: String, Sendable, Equatable {
         case .draft: "draft"
         case .waitingForReview: "waitingForReview"
         case .snoozed: "snoozed"
+        case .pushedSinceApproval: "pushedSinceApproval"
+        case .pushedSinceChangesRequested: "pushedSinceChangesRequested"
+        case .youApproved: "youApproved"
+        case .youRequestedChanges: "youRequestedChanges"
+        case .youCommented: "youCommented"
         }
     }
 }

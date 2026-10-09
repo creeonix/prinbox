@@ -219,4 +219,20 @@ struct UnsaveablePersistence: StatePersisting {
                 == "unknown argument 'force'")
         #expect(await fetcher.calls == 0)
     }
+
+    @Test func allIsABooleanThatFillsTheReviewedSection() async throws {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: nil, commitOid: "aaa")
+        let quiet = makePR(
+            id: "PR_Q", viewerReview: approved, source: .involved, headOid: "aaa", viewerVerdict: approved)
+        let run = InboxRun(context: makeContext(fetcher: ScriptedFetcher { _ in makeResult([quiet]) }))
+        let plain = try await MCPTools.call("get_inbox", arguments: ["max_age_seconds": 0], run: run)
+        #expect(plain.structuredContent?["sections"]?[6]?["rows"] == .array([]))
+        let all = try await MCPTools.call("get_inbox", arguments: ["max_age_seconds": 0, "all": true], run: run)
+        #expect(all.structuredContent?["sections"]?[6]?["rows"]?[0]?["id"] == .string("PR_Q"))
+        #expect(await invalidParams("get_inbox", ["all": "yes"], run: run) == "all must be a boolean")
+        #expect(await invalidParams("get_inbox", ["all": 1], run: run) == "all must be a boolean")
+        #expect(MCPTools.definitions[0]?["inputSchema"]?["properties"]?["all"]?["type"] == "boolean")
+        #expect(JSONValue.bool(true).boolValue == true)
+        #expect(JSONValue.number(1).boolValue == nil)
+    }
 }

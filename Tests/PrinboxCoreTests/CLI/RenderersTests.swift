@@ -8,12 +8,14 @@ import Testing
     let now = date("2026-08-10T12:00:00Z")
 
     /// The demo inbox as the command would document it, with the demo's seen ledger and snooze.
-    func demoDocument(error: InboxDocument.ErrorInfo? = nil, source: String? = "fetch") async throws -> InboxDocument {
+    func demoDocument(
+        error: InboxDocument.ErrorInfo? = nil, source: String? = "fetch", all: Bool = false
+    ) async throws -> InboxDocument {
         let clock = now
         let fetcher = DemoFetcher(now: { clock })
         let result = try await fetcher.fetch()
         let state = fetcher.initialState
-        let inbox = InboxBuilder.build(result, snoozed: Set(state.snoozed.keys))
+        let inbox = InboxBuilder.build(result, snoozed: Set(state.snoozed.keys), showReviewed: all)
         let meta = DocumentMeta(
             prinbox: "0.5.0-test", source: source, fetchedAt: now, checkedAt: now, viewer: "me", error: error)
         return InboxDocument.make(
@@ -41,14 +43,14 @@ import Testing
         #expect(text.contains("\"stack\" : null"))
         #expect(text.contains("\"parentId\" : null"))
         #expect(text.contains("\"review\" : null"))
-        #expect(text.hasPrefix("{\n  \"badge\" : 8,"))
+        #expect(text.hasPrefix("{\n  \"badge\" : 10,"))
         #expect(text.contains("\"url\" : \"https://github.com/acme/web/pull/1290\""))
     }
 
     @Test func linesAreTabSeparatedInDisplayOrderWithMoreLines() async throws {
         let text = InboxLines.render(try await demoDocument())
         let lines = text.split(separator: "\n", omittingEmptySubsequences: false).dropLast()
-        #expect(lines.count == 17)
+        #expect(lines.count == 19)
         let first = lines[0].split(separator: "\t", omittingEmptySubsequences: false)
         #expect(first.count == 9)
         #expect(first[0] == "DEMO_1290")
@@ -98,7 +100,7 @@ import Testing
 
     @Test func waybarWaitingWithNewRows() async throws {
         let object = try waybar(try await demoDocument())
-        #expect(object["text"] as? String == "8")
+        #expect(object["text"] as? String == "10")
         #expect(object["alt"] as? String == "waiting")
         #expect(object["class"] as? [String] == ["waiting", "new"])
         let tooltip = try #require(object["tooltip"] as? String)
@@ -117,7 +119,7 @@ import Testing
         #expect(idle["class"] as? [String] == ["idle"])
         let offline = InboxDocument.ErrorInfo(code: "offline", message: "Offline, showing data from 11:00", help: nil)
         let cached = try waybar(try await demoDocument(error: offline, source: "cache"))
-        #expect(cached["text"] as? String == "8")
+        #expect(cached["text"] as? String == "10")
         #expect(cached["alt"] as? String == "error")
         #expect(cached["class"] as? [String] == ["waiting", "new", "error"])
         #expect((cached["tooltip"] as? String)?.hasPrefix("Offline, showing data from 11:00\n") == true)
@@ -157,14 +159,14 @@ import Testing
     }
 
     @Test func tmuxMirrorsTheIcon() async throws {
-        #expect(InboxTmux.render(try await demoDocument()) == "8")
+        #expect(InboxTmux.render(try await demoDocument()) == "10")
         let meta = DocumentMeta(prinbox: "x", source: "fetch", fetchedAt: now, checkedAt: now, viewer: "me", error: nil)
         #expect(
             InboxTmux.render(
                 InboxDocument.make(InboxBuilder.build(makeResult([])), meta: meta, isNew: { _ in false }, now: now))
                 == "")
         let offline = InboxDocument.ErrorInfo(code: "offline", message: "Offline", help: nil)
-        #expect(InboxTmux.render(try await demoDocument(error: offline, source: "cache")) == "!8")
+        #expect(InboxTmux.render(try await demoDocument(error: offline, source: "cache")) == "!10")
         let empty = DocumentMeta(prinbox: "x", source: nil, fetchedAt: nil, checkedAt: nil, viewer: nil, error: offline)
         #expect(InboxTmux.render(InboxDocument.make(nil, meta: empty, isNew: { _ in false }, now: now)) == "!")
     }
@@ -173,6 +175,16 @@ import Testing
         let rendered = InboxLines.render(try await demoDocument()).trimmingCharacters(in: .newlines)
         let expected = try golden("demo-inbox", ext: "lines")
         #expect(rendered == expected)
+    }
+
+    @Test func theAllDocumentMatchesItsGoldenFiles() async throws {
+        let document = try await demoDocument(all: true)
+        let expectedJSON = try golden("demo-inbox-all")
+        let expectedLines = try golden("demo-inbox-all", ext: "lines")
+        #expect(InboxJSON.render(document) == expectedJSON)
+        #expect(InboxLines.render(document).trimmingCharacters(in: .newlines) == expectedLines)
+        #expect(document.sections[6].rows.count == 3)
+        #expect(document.badge == 10)
     }
 
     /// The two failure documents the adapter stub serves: a signed-out run without a cache, and a failed fetch over
@@ -216,5 +228,18 @@ import Testing
         #expect(outcome.stderr == ["prinbox: no cache yet, run prinbox inbox"])
         let noCache = try golden("no-cache")
         #expect(InboxJSON.render(outcome.document) == noCache)
+    }
+
+    @Test func linesOpenTheDeltaWhenTheDiffMovedSinceYourVerdict() {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: nil, commitOid: "aaa")
+        let moved = makePR(
+            id: "m", number: 3, repository: "acme/api", viewerReview: approved, source: .involved, headOid: "ccc",
+            viewerVerdict: approved)
+        let meta = DocumentMeta(prinbox: "t", source: "fetch", fetchedAt: now, checkedAt: now, viewer: "me", error: nil)
+        let document = InboxDocument.make(
+            InboxBuilder.build(makeResult([moved, makePR(id: "p")])), meta: meta, isNew: { _ in false }, now: now)
+        let lines = InboxLines.render(document).split(separator: "\n").map(String.init)
+        #expect(lines[0].hasSuffix("\thttps://github.com/acme/web/pull/1"))
+        #expect(lines[1].hasSuffix("\thttps://github.com/acme/api/pull/3/files/aaa..ccc"))
     }
 }

@@ -22,7 +22,8 @@ plugin: its Lua lives in `lua/prinbox/` and `plugin/prinbox.lua` at the root.
 | `:Prinbox pick` | `vim.ui.select` over the rows (telescope, fzf-lua, snacks or mini.pick take it over); Enter opens |
 | `:Prinbox refresh` | fetch now |
 
-In the list: `Enter` opens the pull request in your browser (the `+N more on GitHub` line opens its page), `s`
+In the list: `Enter` opens the pull request in your browser (a row whose diff moved since your review opens
+GitHub's diff since that review; the `+N more on GitHub` line opens its page), `s`
 snoozes it until something happens on it, `u` wakes it, `r` refreshes, `q` closes. A snooze made here shows in
 the menu bar and the popover within a second, and the other way round.
 
@@ -35,6 +36,7 @@ some are set in PRInbox (`· acme/*, globex/billing`).
 require("prinbox").setup({
   cmd = "prinbox",            -- the executable
   max_age = 60,               -- the list serves the cache when GitHub confirmed it within this many seconds
+  all = false,                -- list every pull request you reviewed
   poll = 0,                   -- seconds between background refreshes for the count; 0 is off
   window = "botright 15split" -- the Ex command that opens the list's window
 })

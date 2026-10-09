@@ -23,7 +23,8 @@ when idle, `!` when gh needs attention, `!8` when the fetch failed but rows are 
 nothing at all when the app or another adapter refreshed within the minute.
 
 `prefix + P` opens a popup with the rows in fzf: type to filter, `Enter` opens the pull request in your browser
-(the `+N more on GitHub` line opens its page), `ctrl-s` snoozes it, `ctrl-u` wakes it, `ctrl-r` fetches now. The
+(the `+N more on GitHub` line opens its page; a row whose diff moved since your review opens GitHub's diff since
+that review), `ctrl-s` snoozes it, `ctrl-u` wakes it, `ctrl-r` fetches now. The
 header shows the count and the keys, or the error when the last fetch failed.
 
 The popup and the status segment follow your default repositories without saying so (the `lines` and `tmux`
@@ -37,10 +38,11 @@ Set these before the plugin runs:
 |---|---|---|
 | `@prinbox_command` | `prinbox` | the executable |
 | `@prinbox_max_age` | `60` | seconds the status segment and the popup serve the cache |
+| `@prinbox_all` | `off` | `on` lists every pull request you reviewed too |
 | `@prinbox_key` | `P` | the key after the prefix that opens the popup |
 | `@prinbox_popup_width`, `@prinbox_popup_height` | `80%`, `70%` | the popup's size |
 
-The popup script also reads `PRINBOX_FZF` (the fzf executable, default `fzf`) and `PRINBOX_OPENER` (default `open` on
+The popup script also reads `PRINBOX_ALL` (`on` adds `--all`; the plugin sets it from `@prinbox_all`), `PRINBOX_FZF` (the fzf executable, default `fzf`) and `PRINBOX_OPENER` (default `open` on
 macOS, `xdg-open` elsewhere) from the environment, for a non-standard install.
 
 ## When something is wrong

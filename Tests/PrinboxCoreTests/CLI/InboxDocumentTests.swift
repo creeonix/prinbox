@@ -14,7 +14,7 @@ import Testing
             InboxBuilder.build(makeResult([makePR()])), meta: meta, isNew: { _ in false }, now: now)
         #expect(document.sections.map(\.kind) == SectionKind.allCases.map(\.rawValue))
         #expect(document.sections.map(\.title) == SectionKind.allCases.map(\.title))
-        #expect(document.sections.map { $0.rows.count } == [1, 0, 0, 0, 0, 0])
+        #expect(document.sections.map { $0.rows.count } == [1, 0, 0, 0, 0, 0, 0])
         #expect(document.sections[0].moreUrl == SectionKind.needsReview.moreURL)
         #expect(document.version == 1)
         #expect(document.prinbox == "0.5.0-test")
@@ -64,11 +64,11 @@ import Testing
         #expect(document.badge == 0)
     }
 
-    @Test func noInboxGivesSixEmptySectionsAndTheError() {
+    @Test func noInboxGivesSevenEmptySectionsAndTheError() {
         let error = InboxDocument.ErrorInfo(code: "offline", message: "Offline", help: nil)
         let empty = DocumentMeta(prinbox: "x", source: nil, fetchedAt: nil, checkedAt: nil, viewer: nil, error: error)
         let document = InboxDocument.make(nil, meta: empty, isNew: { _ in false }, now: now)
-        #expect(document.sections.count == 6)
+        #expect(document.sections.count == 7)
         #expect(document.sections.allSatisfy { $0.rows.isEmpty })
         #expect(document.error == error)
         #expect(document.source == nil)
@@ -111,5 +111,58 @@ import Testing
         #expect(InboxJSON.render(plain).contains("\"defaultRepositories\" : [\n\n  ]"))
         let decoded = try JSONDecoder().decode(JSONValue.self, from: Data(text.utf8))
         #expect(decoded["defaultRepositories"] == ["acme/*", "globex/billing"])
+    }
+
+    @Test func aRowCarriesYourReview() throws {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: date("2026-08-09T10:00:00Z"), commitOid: "aaa")
+        let moved = makePR(
+            id: "m", number: 3, repository: "acme/api", viewerReview: approved, source: .involved,
+            lastCommitAt: date("2026-08-10T10:00:00Z"), headOid: "ccc", viewerVerdict: approved,
+            recentCommitOids: ["aaa", "bbb", "ccc"], commitCount: 3)
+        let commented = makePR(
+            id: "c", number: 4,
+            viewerReview: ViewerReview(state: "COMMENTED", submittedAt: date("2026-08-09T11:00:00Z")),
+            source: .involved, headOid: "ccc")
+        let document = InboxDocument.make(
+            InboxBuilder.build(makeResult([makePR(), moved, commented]), showReviewed: true), meta: meta,
+            isNew: { _ in false }, now: now)
+        let plain = try #require(document.sections[0].rows.first)
+        #expect(plain.yourReview == nil)
+        let pushed = try #require(document.sections[2].rows.first)
+        #expect(pushed.reason == "pushedSinceApproval")
+        #expect(pushed.reasonText == "Pushed since you approved")
+        #expect(
+            pushed.yourReview
+                == InboxDocument.YourReview(
+                    state: "approved", submittedAt: date("2026-08-09T10:00:00Z"), commit: "aaa", moved: true,
+                    commitsSince: 2, rewritten: false, since: "2 commits since you approved",
+                    sinceReviewUrl: URL(string: "https://github.com/acme/api/pull/3/files/aaa..ccc")))
+        let quiet = try #require(document.sections[6].rows.first)
+        #expect(quiet.reason == "youCommented")
+        #expect(
+            quiet.yourReview
+                == InboxDocument.YourReview(
+                    state: "commented", submittedAt: date("2026-08-09T11:00:00Z"), commit: nil, moved: false,
+                    commitsSince: nil, rewritten: false, since: nil, sinceReviewUrl: nil))
+        let text = InboxJSON.render(document)
+        #expect(text.contains("\"yourReview\" : null"))
+        #expect(text.contains("\"sinceReviewUrl\" : null"))
+        #expect(text.contains("\"commitsSince\" : null"))
+    }
+
+    @Test func yourReviewRequiresACommentOnlyReviewWithoutAVerdict() throws {
+        // Ruling 12.9: a review that is not COMMENTED and left no verdict is neither a row nor a yourReview.
+        let approvedOnly = makePR(
+            id: "a", number: 5, viewerReview: ViewerReview(state: "APPROVED", submittedAt: nil), source: .involved)
+        let commented = makePR(
+            id: "c", number: 6, viewerReview: ViewerReview(state: "COMMENTED", submittedAt: nil), source: .involved)
+        let document = InboxDocument.make(
+            InboxBuilder.build(makeResult([approvedOnly, commented]), showReviewed: true), meta: meta,
+            isNew: { _ in false }, now: now)
+        let rows = document.sections.flatMap(\.rows)
+        #expect(rows.map(\.id) == ["c"])
+        #expect(rows.first?.yourReview?.state == "commented")
+        let requested = makePR(viewerReview: ViewerReview(state: "APPROVED", submittedAt: nil))
+        #expect(InboxDocument.YourReview.make(requested) == nil)
     }
 }

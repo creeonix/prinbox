@@ -49,6 +49,12 @@
   "Refresh this often in the background for the mode line; 0 turns polling off."
   :type 'integer)
 
+(defcustom prinbox-all nil
+  "When non-nil, list every open pull request you reviewed in a Reviewed section.
+This passes `--all' to `prinbox inbox'."
+  :type 'boolean
+  :group 'prinbox)
+
 (defface prinbox-section '((t :inherit font-lock-keyword-face :weight bold))
   "The section column.")
 
@@ -149,7 +155,7 @@ Note whether it did, for `prinbox--count'."
 
 (defun prinbox--inbox (args callback)
   "Run `prinbox inbox --format json' with ARGS and call CALLBACK with the report."
-  (prinbox--process (append (list "inbox" "--format" "json") args) #'prinbox--report
+  (prinbox--process (append (list "inbox" "--format" "json") (and prinbox-all (list "--all")) args) #'prinbox--report
                     (lambda (report) (prinbox--remember report) (funcall callback report))))
 
 (defun prinbox--count ()
@@ -322,9 +328,16 @@ when setup is needed."
 On a more line, open the section's page on GitHub."
   (interactive)
   (if-let* ((row (prinbox--current-row)))
-      (browse-url (alist-get 'url row))
+      (browse-url (prinbox--row-url row))
     (when-let* ((section (prinbox--current-more)))
       (browse-url (alist-get 'moreUrl section)))))
+
+(defun prinbox--row-url (row)
+  "The URL ROW opens.
+That is GitHub's diff since your review when the diff moved,
+else the pull request."
+  (or (alist-get 'sinceReviewUrl (alist-get 'yourReview row))
+      (alist-get 'url row)))
 
 (defun prinbox--act (verb)
   "Run `prinbox VERB <id>' for the row at point, then re-read the cache."

@@ -64,6 +64,12 @@ public final class PopoverState {
         reconcileSelection()
     }
 
+    public func setShowReviewed(_ on: Bool) {
+        display.setShowReviewed(on)
+        store.setShowReviewed(on)
+        reconcileSelection()
+    }
+
     // MARK: Opening
 
     /// Opens a PR, a section page or a help link through the adapter, then tells the shell.
@@ -223,7 +229,10 @@ public final class PopoverState {
         case .refresh:
             return .refresh
         case .snooze:
-            if case .row(let id) = selection.current, !store.state.isSnoozed(id) { snooze(id) }
+            // A Reviewed row has nothing to wait for, so it is never snoozed from here (ruling 12.10).
+            if case .row(let id) = selection.current, !store.state.isSnoozed(id), section(forRow: id) != .reviewed {
+                snooze(id)
+            }
             return .handled
         case .unsnooze:
             if case .row(let id) = selection.current, store.state.isSnoozed(id) { unsnooze(id) }
@@ -243,6 +252,14 @@ public final class PopoverState {
     }
 
     private func url(forRow id: String) -> URL? {
-        store.inbox?.sections.lazy.flatMap(\.rows).first { $0.id == id }?.pullRequest.url
+        row(id)?.openURL
+    }
+
+    private func section(forRow id: String) -> SectionKind? {
+        row(id)?.classification.section
+    }
+
+    private func row(_ id: String) -> InboxRow? {
+        store.inbox?.sections.lazy.flatMap(\.rows).first { $0.id == id }
     }
 }
