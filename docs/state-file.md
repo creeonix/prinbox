@@ -59,10 +59,11 @@ made with some carries the list it found; an unchanged check leaves it alone), `
 written only by a notifier), `result` (the fetch: `viewerLogin`, `pullRequests`, `totals`, `fetched`, `warnings`).
 Nothing in it is body text: the same fields the popover shows, titles, logins and URLs included. Readers trust the
 fingerprint for 15 minutes and only for the same `includeConversation` and `scope`; the rows and the baseline have no
-age limit. A version-1 file (0.7.0) is still read for its rows, fingerprint and known repositories, but not for its
-arrivals baseline, so the first notifying run after the upgrade is quiet; a writer always writes version 2, and a
-0.7.0 command beside the 0.8.0 app finds a version it does not know and refetches. A `checkedAt` bump on an unchanged
-check is written only when the file still holds the fingerprint that check confirmed.
+age limit. A version-1 file (0.7.0) is still read for its rows and known repositories, and `--cached` keeps serving
+them, but its fingerprint and arrivals baseline are not trusted, so the first fetch after the upgrade is a full one
+and quiet; a writer always writes version 2, and a 0.7.0 command beside the 0.8.0 app finds a version it does not
+know and refetches. A `checkedAt` bump on an unchanged check is written only when the file still holds the fingerprint
+that check confirmed.
 
 ## Shape
 

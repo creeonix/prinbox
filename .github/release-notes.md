@@ -13,8 +13,8 @@
   with `all: true` add a Reviewed section listing every open pull request you reviewed with your verdict. The
   plugins take `all = true`, `prinbox-all` and `@prinbox_all on`.
 - The JSON document carries `rows[].yourReview` and a seventh section; the `lines` url column is the URL to open.
-- Upgrade the app and the command together: the cache is version 2, a 0.7.0 command beside the 0.8.0 app refetches
-  and the first notifying run after the upgrade is quiet.
+- Upgrade the app and the command together: the cache is version 2, a 0.7.0 command beside the 0.8.0 app refetches,
+  and the first refresh after the upgrade is a full fetch and quiet.
 - Small fixes from the 0.7.0 review: the README names TPM and the plugins' prerequisites, and the test stub
   answers usage on a valueless flag.
 

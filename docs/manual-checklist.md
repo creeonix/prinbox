@@ -90,18 +90,18 @@ Run them before a release.
 - [ ] `:Prinbox` in Neovim, `M-x prinbox` in Emacs and `prefix + P` in tmux list the rows; `s` (or `ctrl-s`) on a
   row moves it to Waiting on others in the popover within a second; Enter opens the pull request.
 - [ ] The Neovim count and the Emacs mode line show the badge; `#{prinbox_status}` in the tmux status line too.
-- [ ] After the release: `brew upgrade creeonix/tap/prinbox-cli` and `prinbox --version` says 0.7.0.
 - [ ] On the live account, a PR you approved whose author pushed since sits in Take another look with a green wash
   and "N commits since you approved" (or "rewritten since you approved"); Enter lands on GitHub's "files" tab
   showing only the changes since your review.
 - [ ] Settings > Color rows by your verdict: Title colors the titles instead; None shows today's rows. Both in
   light and dark mode (System Settings > Appearance).
 - [ ] Settings > Show what moved since your review off: the fact line shows `+N −M` again.
-- [ ] Settings > Show reviewed pull requests: a folded Reviewed section appears at the bottom; unfolded it lists
-  every open PR you reviewed with "You approved" or "You requested changes"; off removes it; the badge never
-  changes.
-- [ ] After upgrading from 0.7.0, the popover shows the cached rows at launch, the first refresh gives no banner,
-  and `~/Library/Application Support/prinbox/cache.json` says `"version" : 2` afterwards.
+- [ ] Settings > Show reviewed pull requests: a Reviewed section appears at the bottom (folded on a fresh install;
+  an existing `foldedSections` keeps its own state); unfolded it lists every open PR you reviewed with "You
+  approved" or "You requested changes"; off removes it; the badge never changes.
+- [ ] After upgrading from 0.7.0, the popover shows the cached rows at launch, the first refresh is a full fetch
+  (not an unchanged check) and gives no banner, and `~/Library/Application Support/prinbox/cache.json` says
+  `"version" : 2` afterwards.
 - [ ] `prinbox inbox --all --cached --format lines | grep -c '^'` is 3 more than without `--all` (when three
   reviewed PRs are open); the url column of a pushed-since row ends in `/files/<oid>..<oid>`.
 - [ ] Ask the agent for the inbox with `all: true`: it lists the Reviewed section.
