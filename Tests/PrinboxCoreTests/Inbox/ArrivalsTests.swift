@@ -112,4 +112,31 @@ import Testing
             ]))
         #expect(ArrivalNotice.make(one)?.body == "acme/api · Replies to you")
     }
+
+    @Test func aPushAfterYourVerdictArrivesAsAnUpdate() {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: old, commitOid: "aaa")
+        func pushed(_ id: String, _ number: Int) -> PullRequest {
+            makePR(
+                id: id, number: number, title: "U\(number)", repository: "acme/api", viewerReview: approved,
+                source: .involved, headOid: "ccc", viewerVerdict: approved)
+        }
+        let one = Arrivals.compute(previous: [], current: inbox([pushed("u", 9)]))
+        #expect(
+            ArrivalNotice.make(one)
+                == ArrivalNotice(title: "#9 U9", body: "acme/api · Pushed since you approved", url: pushed("u", 9).url))
+        let mixed = Arrivals.compute(
+            previous: [], current: inbox([makePR(id: "r1", number: 1, title: "R1"), pushed("u1", 9), pushed("u2", 10)]))
+        #expect(ArrivalNotice.make(mixed)?.title == "3 new: 1 review request, 2 updates")
+        let updates = Arrivals.compute(previous: [], current: inbox([pushed("u1", 9), pushed("u2", 10)]))
+        #expect(ArrivalNotice.make(updates)?.title == "2 new updates")
+        let everything = Arrivals.compute(
+            previous: [],
+            current: inbox([
+                makePR(id: "r1", number: 1, title: "R1"), pushed("u1", 9),
+                makePR(
+                    id: "p1", number: 3, title: "P1", source: .involved,
+                    threads: [thread(comment("alice", old), comment(testViewer, old), comment("alice", newer))]),
+            ]))
+        #expect(ArrivalNotice.make(everything)?.title == "3 new: 1 review request, 1 reply, 1 update")
+    }
 }

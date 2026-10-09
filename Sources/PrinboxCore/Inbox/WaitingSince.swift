@@ -23,4 +23,11 @@ enum WaitingSince {
         }
         return max(base, visibleSince(pr))
     }
+
+    /// A push after the verdict: the last commit's date when known, else the verdict's, never before the PR was
+    /// visible (spec 0.8 3.4).
+    static func pushed(_ pr: PullRequest) -> Date {
+        let verdict = pr.viewerVerdict?.submittedAt ?? pr.updatedAt
+        return max(pr.lastCommitAt ?? verdict, verdict, visibleSince(pr))
+    }
 }

@@ -9,6 +9,10 @@ public struct InboxRow: Sendable, Equatable, Identifiable {
     public let stack: StackPosition?
     public var id: String { pullRequest.id }
 
+    /// What opening the row shows: GitHub's diff since your review when the diff moved, else the pull request
+    /// (spec 0.8 3.7). Every surface opens this; `pullRequest.url` stays the link to copy.
+    public var openURL: URL { pullRequest.sinceReviewURL ?? pullRequest.url }
+
     public init(
         pullRequest: PullRequest, classification: Classification, pendingReplies: Int = 0,
         stack: StackPosition? = nil

@@ -14,7 +14,7 @@ import Testing
             InboxBuilder.build(makeResult([makePR()])), meta: meta, isNew: { _ in false }, now: now)
         #expect(document.sections.map(\.kind) == SectionKind.allCases.map(\.rawValue))
         #expect(document.sections.map(\.title) == SectionKind.allCases.map(\.title))
-        #expect(document.sections.map { $0.rows.count } == [1, 0, 0, 0, 0, 0])
+        #expect(document.sections.map { $0.rows.count } == [1, 0, 0, 0, 0, 0, 0])
         #expect(document.sections[0].moreUrl == SectionKind.needsReview.moreURL)
         #expect(document.version == 1)
         #expect(document.prinbox == "0.5.0-test")
@@ -64,11 +64,11 @@ import Testing
         #expect(document.badge == 0)
     }
 
-    @Test func noInboxGivesSixEmptySectionsAndTheError() {
+    @Test func noInboxGivesSevenEmptySectionsAndTheError() {
         let error = InboxDocument.ErrorInfo(code: "offline", message: "Offline", help: nil)
         let empty = DocumentMeta(prinbox: "x", source: nil, fetchedAt: nil, checkedAt: nil, viewer: nil, error: error)
         let document = InboxDocument.make(nil, meta: empty, isNew: { _ in false }, now: now)
-        #expect(document.sections.count == 6)
+        #expect(document.sections.count == 7)
         #expect(document.sections.allSatisfy { $0.rows.isEmpty })
         #expect(document.error == error)
         #expect(document.source == nil)

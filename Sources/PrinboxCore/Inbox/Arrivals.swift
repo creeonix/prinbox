@@ -49,21 +49,22 @@ public struct ArrivalNotice: Equatable, Sendable {
         guard let first = rows.first else { return nil }
         if rows.count == 1 {
             let pr = first.pullRequest
-            return ArrivalNotice(
-                title: RowText.title(pr), body: "\(pr.repository) · \(first.classification.section.title)",
-                url: pr.url)
+            let reason = first.classification.reason
+            let what = reason.isPushedSinceVerdict ? reason.rawValue : first.classification.section.title
+            return ArrivalNotice(title: RowText.title(pr), body: "\(pr.repository) · \(what)", url: pr.url)
         }
         let replies = rows.filter { $0.classification.section == .repliesToYou }.count
-        let requests = rows.count - replies
-        let title: String
-        switch (requests, replies) {
-        case (_, 0): title = "\(rows.count) new review requests"
-        case (0, _): title = "\(rows.count) new replies"
-        default:
-            let requestText = counted(requests, "review request")
-            let replyText = counted(replies, "reply", plural: "replies")
-            title = "\(rows.count) new: \(requestText), \(replyText)"
-        }
+        let updates = rows.filter { $0.classification.reason.isPushedSinceVerdict }.count
+        let requests = rows.count - replies - updates
+        let kinds = [
+            (requests, "review request", "review requests"), (replies, "reply", "replies"),
+            (updates, "update", "updates"),
+        ]
+        .filter { $0.0 > 0 }
+        let title =
+            kinds.count == 1
+            ? "\(rows.count) new \(kinds[0].2)"
+            : "\(rows.count) new: " + kinds.map { counted($0.0, $0.1, plural: $0.2) }.joined(separator: ", ")
         let titles = rows.prefix(3).map { RowText.title($0.pullRequest) }
         let rest = rows.count - titles.count
         let lines = titles + (rest > 0 ? ["and \(rest) more"] : [])

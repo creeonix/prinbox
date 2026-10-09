@@ -68,6 +68,16 @@
 
       ],
       "title" : "Waiting on others"
+    },
+    {
+      "count" : 0,
+      "kind" : "reviewed",
+      "moreCount" : 0,
+      "moreUrl" : "https://github.com/pulls?q=is%3Aopen+is%3Apr+involves%3A%40me+-author%3A%40me",
+      "rows" : [
+
+      ],
+      "title" : "Reviewed"
     }
   ],
   "source" : null,

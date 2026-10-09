@@ -199,7 +199,7 @@ import Testing
                 == InboxDocument.ErrorInfo(code: "timedOut", message: "GitHub did not answer in time", help: nil))
         #expect(outcome.document.source == nil)
         #expect(outcome.document.fetchedAt == nil)
-        #expect(outcome.document.sections.count == 6)
+        #expect(outcome.document.sections.count == 7)
         #expect(outcome.stderr == ["prinbox: GitHub did not answer in time"])
     }
 

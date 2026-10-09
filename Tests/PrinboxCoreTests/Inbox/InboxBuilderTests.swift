@@ -281,4 +281,39 @@ import Testing
             #expect(inbox.section(.needsReview)?.moreCount == 1, "cap \(cap)")
         }
     }
+
+    @Test func reviewedRowsAreDroppedUnlessAsked() throws {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: date("2026-08-01T11:00:00Z"), commitOid: "aaa")
+        let quiet = makePR(
+            id: "q", updatedAt: date("2026-08-02T10:00:00Z"), viewerReview: approved, source: .involved, headOid: "aaa",
+            viewerVerdict: approved)
+        let newer = makePR(
+            id: "n", updatedAt: date("2026-08-04T10:00:00Z"),
+            viewerReview: ViewerReview(state: "COMMENTED", submittedAt: nil),
+            source: .involved)
+        let result = makeResult([quiet, newer], totals: [.review: 0, .mentions: 0, .mine: 0, .involved: 5])
+        let hidden = InboxBuilder.build(result)
+        #expect(hidden.sections.isEmpty)
+        #expect(hidden.badgeCount == 0)
+        let shown = InboxBuilder.build(result, showReviewed: true)
+        let section = try #require(shown.section(.reviewed))
+        #expect(section.rows.map(\.id) == ["n", "q"])
+        // Two rows plus the involved search's three unfetched hits, attributed here only when the section shows.
+        #expect(section.count == 5)
+        #expect(section.moreCount == 3)
+        #expect(shown.badgeCount == 0)
+        #expect(shown.sections.map(\.kind) == [.reviewed])
+    }
+
+    @Test func aRowOpensTheDeltaWhenTheDiffMovedSinceYourVerdict() throws {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: nil, commitOid: "aaa")
+        let moved = makePR(
+            id: "m", number: 3, repository: "acme/api", viewerReview: approved, source: .involved, headOid: "ccc",
+            viewerVerdict: approved)
+        let row = try #require(
+            InboxBuilder.build(makeResult([moved, makePR(id: "p")])).section(.takeAnotherLook)?.rows.first)
+        #expect(row.openURL == URL(string: "https://github.com/acme/api/pull/3/files/aaa..ccc"))
+        let plain = try #require(InboxBuilder.build(makeResult([makePR(id: "p")])).section(.needsReview)?.rows.first)
+        #expect(plain.openURL == plain.pullRequest.url)
+    }
 }
