@@ -23,7 +23,7 @@ public final class InboxStore {
     public private(set) var arrivals: [InboxRow] = []
     /// Snoozes and the seen ledger; the popover reads and writes it through this store.
     public let state: StateStore
-    /// What a refresh asks for: Follow review threads (threads, reviews and the `involved` search) and the
+    /// What a refresh asks for: Follow review threads (the conversation fields of the details query) and the
     /// scope settings. A change clears the fingerprint and the in-memory baseline, so the next refresh is a
     /// full one and a quiet start (spec 4.3).
     public private(set) var shape = FetchShape()

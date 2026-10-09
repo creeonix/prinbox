@@ -29,7 +29,7 @@ enum CommandLineMode {
     func run() async -> Int32 {
         switch self {
         case .printQuery:
-            print(SearchQuery.text(includeInvolved: true))
+            print(SearchQuery.text())
             return 0
         case .printDetailsQuery:
             print(DetailsQuery.template(includeConversation: true))

@@ -7,10 +7,10 @@ public enum SearchQuery {
     /// GitHub rejects longer search strings.
     public static let queryLimit = 256
 
-    /// `includeInvolved` adds the search behind Replies to you (Follow review threads on). The four searches
-    /// are disjoint: `involved` excludes the other three qualifiers. `scope` changes every qualifier (spec 4.2).
-    public static func text(includeInvolved: Bool, scope: SearchScope = .none) -> String {
-        let searches = SearchSource.allCases.filter { includeInvolved || $0 != .involved }.map { source in
+    /// The four searches, always: `involved` is the one that returns the PRs you reviewed (spec 0.8 3.3). They are
+    /// disjoint: `involved` excludes the other three qualifiers. `scope` changes every qualifier (spec 0.7 4.2).
+    public static func text(scope: SearchScope = .none) -> String {
+        let searches = SearchSource.allCases.map { source in
             "  \(source.rawValue): search(query: \"\(query(source, scope: scope))\","
                 + " type: ISSUE, first: \(pageSize)) { issueCount nodes { ... on PullRequest { id updatedAt } } }"
         }
@@ -24,11 +24,9 @@ public enum SearchQuery {
         "is:pr is:open archived:false \(qualifier(source, scope: scope)) sort:updated-desc"
     }
 
-    /// How many characters the longest query exceeds `queryLimit` by; 0 when every one fits (spec 3.3).
-    public static func overflow(includeInvolved: Bool, scope: SearchScope) -> Int {
-        let longest =
-            SearchSource.allCases.filter { includeInvolved || $0 != .involved }
-            .map { query($0, scope: scope).count }.max() ?? 0
+    /// How many characters the longest query exceeds `queryLimit` by; 0 when every one fits (spec 0.7 3.3).
+    public static func overflow(scope: SearchScope) -> Int {
+        let longest = SearchSource.allCases.map { query($0, scope: scope).count }.max() ?? 0
         return max(0, longest - queryLimit)
     }
 

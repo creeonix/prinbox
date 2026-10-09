@@ -42,7 +42,7 @@ import Testing
             file.update { _ in cached }
             #expect(file.load() == cached)
             let text = try String(contentsOf: url, encoding: .utf8)
-            #expect(text.contains("\"version\" : 1"))
+            #expect(text.contains("\"version\" : 2"))
             #expect(text.contains("\"fetchedAt\" : \"2026-08-10T12:00:00Z\""))
             #expect(!text.contains("\"cost\""))
             #expect(text.contains("\"reviewDecision\" : \"changesRequested\""))
@@ -64,13 +64,13 @@ import Testing
         try withCacheFile(logger: logger) { file, url in
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try Data("{\"version\" : 2, \"future\" : true}".utf8).write(to: url)
+            try Data("{\"version\" : 3, \"future\" : true}".utf8).write(to: url)
             #expect(file.load() == nil)
             try Data("{\"version\" : 1, \"fetchedAt\" : \"2026-08-10T12:00:00Z\"".utf8).write(to: url)
             #expect(file.load() == nil)
             try Data("[]".utf8).write(to: url)
             #expect(file.load() == nil)
-            #expect(logger.messages(.debug) == ["cache.json version 2 ignored"])
+            #expect(logger.messages(.debug) == ["cache.json version 3 ignored"])
             #expect(logger.messages(.notice).count == 2)
             #expect(logger.lines.filter { $0.level == .notice }.allSatisfy { $0.detail != nil })
         }
@@ -153,7 +153,7 @@ import Testing
             try JSONSerialization.data(withJSONObject: object).write(to: url)
             let loaded = try #require(file.load())
             #expect(loaded.scope == .none)
-            #expect(loaded.version == 1)
+            #expect(loaded.version == 2)
             #expect(loaded.includeConversation == true)
         }
     }
@@ -237,7 +237,7 @@ import Testing
             object["knownRepositories"] = nil
             try JSONSerialization.data(withJSONObject: object).write(to: url)
             let loaded = try #require(file.load())
-            #expect(loaded.version == 1)
+            #expect(loaded.version == 2)
             #expect(loaded.scope == SearchScope(directReviewRequestsOnly: true, hideDrafts: true))
             #expect(loaded.knownRepositories == nil)
             #expect(
@@ -245,6 +245,33 @@ import Testing
                     == FetchShape(
                         includeConversation: true, scope: SearchScope(directReviewRequestsOnly: true, hideDrafts: true))
             )
+        }
+    }
+
+    @Test func aVersionOneFileGivesRowsAndFingerprintButNoBaselineAndIsRewrittenAsVersionTwo() throws {
+        try withCacheFile { file, url in
+            file.update { _ in cache(result: richResult()) }
+            var object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+            #expect(object["version"] as? Int == 2)
+            object["version"] = 1
+            try JSONSerialization.data(withJSONObject: object).write(to: url)
+            let loaded = try #require(file.load())
+            #expect(loaded.version == 1)
+            #expect(loaded.result.pullRequests.map(\.id) == ["PR_1"])
+            #expect(loaded.trustedFingerprint(now: now, shape: loaded.shape) == ["PR_1": now])
+            #expect(loaded.attention == nil)
+            #expect(loaded.trustedAttention(shape: loaded.shape) == nil)
+            // A checkedAt bump rewrites the file as version 2 and still carries no baseline (ruling 12.5).
+            file.update { existing in
+                guard var next = existing else { return nil }
+                next.checkedAt = now + 1
+                return next
+            }
+            let rewritten = try #require(file.load())
+            #expect(rewritten.version == 2)
+            #expect(rewritten.attention == nil)
+            #expect(rewritten.checkedAt == now + 1)
+            #expect(InboxCache.readableVersions == [1, 2])
         }
     }
 }

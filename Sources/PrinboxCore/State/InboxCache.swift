@@ -5,7 +5,10 @@ import Foundation
 /// shape may change with any release, and a `version` a reader does not know means "no cache". Other
 /// programs read the inbox through `prinbox inbox --format json`.
 public struct InboxCache: Codable, Equatable, Sendable {
-    public static let currentVersion = 1
+    public static let currentVersion = 2
+    /// Versions this build reads: 1 (0.5.0 to 0.7.0) for its rows, fingerprint and known repositories, 2 for
+    /// everything (spec 0.8 6.2).
+    public static let readableVersions: Set<Int> = [1, 2]
     /// CI results and merge conflicts do not move `updatedAt`, so a fingerprint older than this never skips
     /// the batches. The same ceiling as the app's `fullFetchInterval`.
     public static let fingerprintCeiling: TimeInterval = 15 * 60
@@ -59,9 +62,25 @@ public struct InboxCache: Codable, Equatable, Sendable {
         scope = try container.decodeIfPresent(SearchScope.self, forKey: .scope) ?? .none
         viewer = try container.decode(String.self, forKey: .viewer)
         fingerprint = try container.decode([String: Date].self, forKey: .fingerprint)
-        attention = try container.decodeIfPresent([String].self, forKey: .attention)
+        // A version-1 file predates the rules of 0.8: its rows and fingerprint hold, its arrivals baseline does not
+        // (spec 0.8 6.2, ruling 12.5).
+        attention = version >= 2 ? try container.decodeIfPresent([String].self, forKey: .attention) : nil
         result = try container.decode(FetchResult.self, forKey: .result)
         knownRepositories = try container.decodeIfPresent([String].self, forKey: .knownRepositories)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(Self.currentVersion, forKey: .version)
+        try container.encode(fetchedAt, forKey: .fetchedAt)
+        try container.encode(checkedAt, forKey: .checkedAt)
+        try container.encode(includeConversation, forKey: .includeConversation)
+        try container.encode(scope, forKey: .scope)
+        try container.encode(viewer, forKey: .viewer)
+        try container.encode(fingerprint, forKey: .fingerprint)
+        try container.encodeIfPresent(attention, forKey: .attention)
+        try container.encode(result, forKey: .result)
+        try container.encodeIfPresent(knownRepositories, forKey: .knownRepositories)
     }
 
     public var shape: FetchShape { FetchShape(includeConversation: includeConversation, scope: scope) }

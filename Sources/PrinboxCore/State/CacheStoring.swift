@@ -46,7 +46,7 @@ public struct JSONCacheFile: CacheStoring {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let version = try decoder.decode(VersionOnly.self, from: data).version ?? 0
-            guard version == InboxCache.currentVersion else {
+            guard InboxCache.readableVersions.contains(version) else {
                 logger.debug(.state, "cache.json version \(version) ignored")
                 return nil
             }

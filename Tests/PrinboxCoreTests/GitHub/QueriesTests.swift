@@ -4,7 +4,7 @@ import Testing
 
 @Suite struct QueriesTests {
     @Test func searchAsksForIdsOnlyAndExcludesArchivedRepositories() {
-        let text = SearchQuery.text(includeInvolved: true)
+        let text = SearchQuery.text()
         #expect(text.hasPrefix("query InboxIDs {"))
         #expect(text.contains("viewer { login }"))
         #expect(text.contains("rateLimit { cost remaining resetAt }"))
@@ -14,15 +14,19 @@ import Testing
         #expect(!text.contains("title"))
     }
 
-    @Test func involvedSearchExcludesTheOtherThreeQualifiersAndIsOptional() {
-        let on = SearchQuery.text(includeInvolved: true)
+    @Test func involvedSearchExcludesTheOtherThreeQualifiers() {
+        let on = SearchQuery.text()
         #expect(
             on.contains(
                 "involved: search(query: \"is:pr is:open archived:false involves:@me -author:@me -review-requested:@me -mentions:@me sort:updated-desc\""
             ))
-        let off = SearchQuery.text(includeInvolved: false)
-        #expect(!off.contains("involved"))
-        #expect(off.components(separatedBy: "search(").count - 1 == 3)
+    }
+
+    @Test func theInvolvedSearchIsAlwaysThere() {
+        let text = SearchQuery.text()
+        #expect(text.contains("involved: search"))
+        #expect(text.contains("review: search") && text.contains("mentions: search") && text.contains("mine: search"))
+        #expect(SearchQuery.text(scope: SearchScope(hideDrafts: true)).contains("involved: search"))
     }
 
     @Test func detailsTemplateCarriesTheRowFieldsAndThePlaceholder() {
@@ -87,11 +91,11 @@ import Testing
                 == "mentions:@me -author:@me -user-review-requested:@me")
         #expect(
             SearchQuery.qualifier(.mine, scope: SearchScope(repositories: ["acme/web"])) == "author:@me repo:acme/web")
-        let text = SearchQuery.text(includeInvolved: true, scope: scope)
+        let text = SearchQuery.text(scope: scope)
         #expect(text.components(separatedBy: "user:acme repo:globex/billing").count - 1 == 4)
         #expect(text.components(separatedBy: " -is:draft").count - 1 == 3)
         #expect(!text.contains(" review-requested:@me"))
-        #expect(SearchQuery.text(includeInvolved: true) == SearchQuery.text(includeInvolved: true, scope: .none))
+        #expect(SearchQuery.text() == SearchQuery.text(scope: .none))
     }
 
     @Test func theQueryStringIsTheOneGitHubSees() {
@@ -112,16 +116,11 @@ import Testing
         let fits = SearchScope(
             directReviewRequestsOnly: true, repositories: [String(repeating: "a", count: 128)], hideDrafts: true)
         #expect(SearchQuery.query(.involved, scope: fits).count == 256)
-        #expect(SearchQuery.overflow(includeInvolved: true, scope: fits) == 0)
+        #expect(SearchQuery.overflow(scope: fits) == 0)
         let over = SearchScope(
             directReviewRequestsOnly: true, repositories: [String(repeating: "a", count: 129)], hideDrafts: true)
-        #expect(SearchQuery.overflow(includeInvolved: true, scope: over) == 1)
-        // Without the involved search the longest is `mentions`, 108 base: 142 letters fit, 143 is one over.
-        #expect(SearchQuery.overflow(includeInvolved: false, scope: over) == 0)
-        let mentionsOver = SearchScope(
-            directReviewRequestsOnly: true, repositories: [String(repeating: "a", count: 143)], hideDrafts: true)
-        #expect(SearchQuery.overflow(includeInvolved: false, scope: mentionsOver) == 1)
-        #expect(SearchQuery.overflow(includeInvolved: true, scope: .none) == 0)
+        #expect(SearchQuery.overflow(scope: over) == 1)
+        #expect(SearchQuery.overflow(scope: .none) == 0)
         #expect(SearchQuery.queryLimit == 256)
     }
 

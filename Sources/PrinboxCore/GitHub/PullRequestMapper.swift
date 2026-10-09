@@ -70,7 +70,7 @@ enum PullRequestMapper {
         }
     }
 
-    /// Only searches the query asked for get an entry (`involved` is absent with the setting off).
+    /// Only searches the response carries get an entry (a fake or older response may lack `involved`).
     private static func perSearch(
         _ data: SearchResponse.Payload, _ value: (SearchResponse.Search) -> Int
     ) -> [SearchSource: Int] {
