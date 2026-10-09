@@ -701,4 +701,24 @@ final class ReceivedRows {
         filteredWithoutField.adoptCache()
         #expect(filteredWithoutField.knownRepositories.isEmpty)
     }
+
+    @Test func setShowReviewedRebuildsFromTheLastResultWithoutAFetch() async {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: nil, commitOid: "aaa")
+        let quiet = makePR(id: "q", viewerReview: approved, source: .involved, headOid: "aaa", viewerVerdict: approved)
+        let fetcher = ScriptedFetcher { _ in makeResult([makePR(id: "r"), quiet]) }
+        let store = InboxStore(fetcher: fetcher)
+        await store.refresh()
+        #expect(store.inbox?.section(.reviewed) == nil)
+        #expect(store.showReviewed == false)
+        store.setShowReviewed(true)
+        #expect(store.inbox?.section(.reviewed)?.rows.map(\.id) == ["q"])
+        #expect(store.inbox?.badgeCount == 1)
+        store.setShowReviewed(false)
+        #expect(store.inbox?.section(.reviewed) == nil)
+        #expect(await fetcher.requests.count == 1)
+        // The next fetch keeps the choice.
+        store.setShowReviewed(true)
+        await store.refresh()
+        #expect(store.inbox?.section(.reviewed)?.rows.map(\.id) == ["q"])
+    }
 }

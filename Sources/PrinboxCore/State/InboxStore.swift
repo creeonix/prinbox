@@ -27,6 +27,7 @@ public final class InboxStore {
     /// scope settings. A change clears the fingerprint and the in-memory baseline, so the next refresh is a
     /// full one and a quiet start (spec 4.3).
     public private(set) var shape = FetchShape()
+    public private(set) var showReviewed = false
     /// The owners and repositories the picker offers: those of the last unfiltered fetch (spec 3.4).
     public private(set) var knownRepositories: Set<String> = []
     /// Follow review threads, read from `shape`.
@@ -75,7 +76,8 @@ public final class InboxStore {
         known = cached.trustedAttention(shape: shape)
         knownRepositories = Set(
             cached.knownRepositories ?? (cached.scope.repositories.isEmpty ? cached.result.repositoryNames : []))
-        let built = InboxBuilder.build(cached.result, snoozed: state.snoozedIDs, scope: shape.scope)
+        let built = InboxBuilder.build(
+            cached.result, snoozed: state.snoozedIDs, scope: shape.scope, showReviewed: showReviewed)
         inbox = built
         // A poller may have refreshed the fingerprint past the baseline, so the first refresh can be an unchanged
         // check: announce what it fetched now, and advance the baseline in the cache too.
@@ -160,6 +162,14 @@ public final class InboxStore {
         known = nil
     }
 
+    /// Whether the Reviewed section keeps its rows (spec 0.8 4.3). A display choice, not a fetch shape: it rebuilds
+    /// from the last result and rides into every later build.
+    public func setShowReviewed(_ on: Bool) {
+        guard on != showReviewed else { return }
+        showReviewed = on
+        rebuild()
+    }
+
     // MARK: Snooze
 
     /// Parks a PR of the last fetch and rebuilds; unknown or already snoozed ids do nothing.
@@ -179,7 +189,8 @@ public final class InboxStore {
     private func rebuild() {
         guard let lastResult else { return }
         arrivals = []
-        inbox = InboxBuilder.build(lastResult, snoozed: state.snoozedIDs, scope: shape.scope)
+        inbox = InboxBuilder.build(
+            lastResult, snoozed: state.snoozedIDs, scope: shape.scope, showReviewed: showReviewed)
         onInboxChange?()
     }
 
@@ -215,7 +226,8 @@ public final class InboxStore {
             case .result(let result):
                 state.didFetch(result, scoped: !request.scope.isEmpty)
                 if request.scope.repositories.isEmpty { knownRepositories = Set(result.repositoryNames) }
-                let built = InboxBuilder.build(result, snoozed: state.snoozedIDs, scope: request.scope)
+                let built = InboxBuilder.build(
+                    result, snoozed: state.snoozedIDs, scope: request.scope, showReviewed: showReviewed)
                 let arrived = Arrivals.compute(previous: known, current: built)
                 let baseline = Arrivals.baseline(after: built, complete: result.isComplete, extending: known)
                 arrivals = arrived

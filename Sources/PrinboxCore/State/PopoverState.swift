@@ -64,6 +64,12 @@ public final class PopoverState {
         reconcileSelection()
     }
 
+    public func setShowReviewed(_ on: Bool) {
+        display.setShowReviewed(on)
+        store.setShowReviewed(on)
+        reconcileSelection()
+    }
+
     // MARK: Opening
 
     /// Opens a PR, a section page or a help link through the adapter, then tells the shell.
@@ -243,6 +249,6 @@ public final class PopoverState {
     }
 
     private func url(forRow id: String) -> URL? {
-        store.inbox?.sections.lazy.flatMap(\.rows).first { $0.id == id }?.pullRequest.url
+        store.inbox?.sections.lazy.flatMap(\.rows).first { $0.id == id }?.openURL
     }
 }
