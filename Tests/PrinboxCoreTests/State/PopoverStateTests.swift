@@ -348,6 +348,24 @@ import Testing
         #expect(state.store.inbox?.section(.reviewed)?.rows.map(\.id) == ["q"])
         #expect(state.items.contains(.header(.reviewed)))
     }
+
+    @Test func sOnAReviewedRowDoesNothingAndANeedsReviewRowStillSnoozes() async {
+        // Ruling 12.10: a Reviewed row has nothing to wait for, so it cannot be snoozed from the popover.
+        let approved = ViewerReview(state: "APPROVED", submittedAt: nil, commitOid: "aaa")
+        let quiet = makePR(id: "q", viewerReview: approved, source: .involved, headOid: "aaa", viewerVerdict: approved)
+        let prs = [a, quiet]
+        let state = await makeState { _ in makeResult(prs) }
+        state.setShowReviewed(true)
+        state.popoverWillShow()
+        state.select(.row("q"))
+        let before = state.items
+        #expect(state.handle(.snooze) == .handled)
+        #expect(!state.store.state.isSnoozed("q"))
+        #expect(state.items == before)
+        state.select(.row("a"))
+        #expect(state.handle(.snooze) == .handled)
+        #expect(state.store.state.isSnoozed("a"))
+    }
 }
 
 @MainActor
