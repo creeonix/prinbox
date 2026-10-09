@@ -122,8 +122,9 @@ public struct InboxDocument: Codable, Equatable, Sendable {
     }
 
     /// Your review of a pull request (spec 0.8 section 5): the verdict, whether the diff moved since it, how, and
-    /// the diff to open. `state` is `approved`, `changesRequested` or `commented`; a comment-only review has no
-    /// commit, nothing moved and no sentence.
+    /// the diff to open. `state` is `approved`, `changesRequested` or `commented`; a comment-only review (latest
+    /// review state COMMENTED, no verdict) has no commit, nothing moved and no sentence; any other review without
+    /// a verdict has no `yourReview` (ruling 12.9).
     public struct YourReview: Codable, Equatable, Sendable {
         public let state: String
         public let submittedAt: Date?
@@ -156,7 +157,8 @@ public struct InboxDocument: Codable, Equatable, Sendable {
                     commit: verdict.commitOid, moved: pr.movedSinceVerdict, commitsSince: pr.commitsSinceVerdict,
                     rewritten: pr.rewrittenSinceVerdict, since: RowText.since(pr), sinceReviewUrl: pr.sinceReviewURL)
             }
-            guard let review = pr.viewerReview else { return nil }
+            // A comment-only review means state COMMENTED; any other review without a verdict says nothing (12.9).
+            guard let review = pr.viewerReview, review.state == "COMMENTED" else { return nil }
             return YourReview(
                 state: "commented", submittedAt: review.submittedAt, commit: nil, moved: false, commitsSince: nil,
                 rewritten: false, since: nil, sinceReviewUrl: nil)

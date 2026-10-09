@@ -236,6 +236,14 @@ import Testing
         #expect(classify(pr).reason == .youCommented)
     }
 
+    @Test func youCommentedRequiresACommentOnlyReview() {
+        // Ruling 12.9: a review that is not COMMENTED and left no verdict (a dismissed approval) says nothing.
+        let approvedOnly = makePR(viewerReview: ViewerReview(state: "APPROVED", submittedAt: nil), source: .involved)
+        #expect(Classifier.classify(approvedOnly, viewer: testViewer) == nil)
+        let commented = makePR(viewerReview: ViewerReview(state: "COMMENTED", submittedAt: nil), source: .involved)
+        #expect(Classifier.classify(commented, viewer: testViewer)?.reason == .youCommented)
+    }
+
     @Test func involvementWithoutAReviewStaysHidden() {
         #expect(Classifier.classify(makePR(source: .involved), viewer: testViewer) == nil)
     }

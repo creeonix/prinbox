@@ -149,4 +149,20 @@ import Testing
         #expect(text.contains("\"sinceReviewUrl\" : null"))
         #expect(text.contains("\"commitsSince\" : null"))
     }
+
+    @Test func yourReviewRequiresACommentOnlyReviewWithoutAVerdict() throws {
+        // Ruling 12.9: a review that is not COMMENTED and left no verdict is neither a row nor a yourReview.
+        let approvedOnly = makePR(
+            id: "a", number: 5, viewerReview: ViewerReview(state: "APPROVED", submittedAt: nil), source: .involved)
+        let commented = makePR(
+            id: "c", number: 6, viewerReview: ViewerReview(state: "COMMENTED", submittedAt: nil), source: .involved)
+        let document = InboxDocument.make(
+            InboxBuilder.build(makeResult([approvedOnly, commented]), showReviewed: true), meta: meta,
+            isNew: { _ in false }, now: now)
+        let rows = document.sections.flatMap(\.rows)
+        #expect(rows.map(\.id) == ["c"])
+        #expect(rows.first?.yourReview?.state == "commented")
+        let requested = makePR(viewerReview: ViewerReview(state: "APPROVED", submittedAt: nil))
+        #expect(InboxDocument.YourReview.make(requested) == nil)
+    }
 }

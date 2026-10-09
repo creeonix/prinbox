@@ -68,12 +68,13 @@ public enum Classifier {
         return state == "APPROVED" ? .pushedSinceApproval : .pushedSinceChangesRequested
     }
 
-    /// The quiet state of a reviewed PR: the verdict, or a comment-only review (nothing by itself).
+    /// The quiet state of a reviewed PR: the verdict, or a comment-only review (latest review state COMMENTED).
+    /// Any other review without a verdict (a dismissed approval) is nothing by itself (ruling 12.9).
     static func reviewedReason(_ pr: PullRequest) -> Reason? {
         switch pr.viewerVerdict?.state {
         case "APPROVED": return .youApproved
         case "CHANGES_REQUESTED": return .youRequestedChanges
-        default: return pr.viewerReview == nil ? nil : .youCommented
+        default: return pr.viewerReview?.state == "COMMENTED" ? .youCommented : nil
         }
     }
 
