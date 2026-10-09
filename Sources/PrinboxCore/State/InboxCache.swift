@@ -6,8 +6,8 @@ import Foundation
 /// programs read the inbox through `prinbox inbox --format json`.
 public struct InboxCache: Codable, Equatable, Sendable {
     public static let currentVersion = 2
-    /// Versions this build reads: 1 (0.5.0 to 0.7.0) for its rows, fingerprint and known repositories, 2 for
-    /// everything (spec 0.8 6.2).
+    /// Versions this build reads: 1 (0.5.0 to 0.7.0) for its rows and known repositories, 2 for everything
+    /// (spec 0.8 6.2, ruling 12.8).
     public static let readableVersions: Set<Int> = [1, 2]
     /// CI results and merge conflicts do not move `updatedAt`, so a fingerprint older than this never skips
     /// the batches. The same ceiling as the app's `fullFetchInterval`.
@@ -62,8 +62,8 @@ public struct InboxCache: Codable, Equatable, Sendable {
         scope = try container.decodeIfPresent(SearchScope.self, forKey: .scope) ?? .none
         viewer = try container.decode(String.self, forKey: .viewer)
         fingerprint = try container.decode([String: Date].self, forKey: .fingerprint)
-        // A version-1 file predates the rules of 0.8: its rows and fingerprint hold, its arrivals baseline does not
-        // (spec 0.8 6.2, ruling 12.5).
+        // A version-1 file predates the rules of 0.8: its rows hold, its arrivals baseline does not (spec 0.8 6.2,
+        // ruling 12.5), and `trustedFingerprint` refuses its fingerprint (ruling 12.8).
         attention = version >= 2 ? try container.decodeIfPresent([String].self, forKey: .attention) : nil
         result = try container.decode(FetchResult.self, forKey: .result)
         knownRepositories = try container.decodeIfPresent([String].self, forKey: .knownRepositories)
@@ -85,9 +85,12 @@ public struct InboxCache: Codable, Equatable, Sendable {
 
     public var shape: FetchShape { FetchShape(includeConversation: includeConversation, scope: scope) }
 
-    /// The fingerprint a fetch may send as `previous`: same request shape, younger than the ceiling.
+    /// The fingerprint a fetch may send as `previous`: the current version, same request shape, younger than the
+    /// ceiling. A version-1 fingerprint would let a notifier's `.unchanged` branch write a baseline computed under
+    /// the 0.7 rules (ruling 12.8), so the first fetch after an upgrade is always full, and quiet by
+    /// `Arrivals.compute(previous: nil)`.
     public func trustedFingerprint(now: Date, shape: FetchShape) -> [String: Date]? {
-        guard self.shape == shape else { return nil }
+        guard version >= Self.currentVersion, self.shape == shape else { return nil }
         let age = now.timeIntervalSince(fetchedAt)
         guard age >= 0, age < Self.fingerprintCeiling else { return nil }
         return fingerprint

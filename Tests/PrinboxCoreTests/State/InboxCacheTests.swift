@@ -248,7 +248,7 @@ import Testing
         }
     }
 
-    @Test func aVersionOneFileGivesRowsAndFingerprintButNoBaselineAndIsRewrittenAsVersionTwo() throws {
+    @Test func aVersionOneFileGivesRowsButNeitherFingerprintNorBaselineAndIsRewrittenAsVersionTwo() throws {
         try withCacheFile { file, url in
             file.update { _ in cache(result: richResult()) }
             var object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
@@ -258,7 +258,9 @@ import Testing
             let loaded = try #require(file.load())
             #expect(loaded.version == 1)
             #expect(loaded.result.pullRequests.map(\.id) == ["PR_1"])
-            #expect(loaded.trustedFingerprint(now: now, shape: loaded.shape) == ["PR_1": now])
+            #expect(loaded.fingerprint == ["PR_1": now])
+            // Ruling 12.8: a version-1 fingerprint is not trusted, so the first fetch after an upgrade is full.
+            #expect(loaded.trustedFingerprint(now: now, shape: loaded.shape) == nil)
             #expect(loaded.attention == nil)
             #expect(loaded.trustedAttention(shape: loaded.shape) == nil)
             // A checkedAt bump rewrites the file as version 2 and still carries no baseline (ruling 12.5).
@@ -271,6 +273,7 @@ import Testing
             #expect(rewritten.version == 2)
             #expect(rewritten.attention == nil)
             #expect(rewritten.checkedAt == now + 1)
+            #expect(rewritten.trustedFingerprint(now: now, shape: rewritten.shape) == ["PR_1": now])
             #expect(InboxCache.readableVersions == [1, 2])
         }
     }
