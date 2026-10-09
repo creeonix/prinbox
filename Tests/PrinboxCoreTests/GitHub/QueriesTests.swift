@@ -30,7 +30,7 @@ import Testing
         #expect(text.contains("nodes(ids: [__IDS__])"))
         for field in [
             "totalCommentsCount", "headRefName baseRefName", "owner { __typename login avatarUrl(size: 64) }",
-            "latestOpinionatedReviews(first: 10) { nodes { state } }", "committedDate statusCheckRollup { state }",
+            "latestOpinionatedReviews(first: 10)", "committedDate statusCheckRollup { state }",
             "timelineItems(last: 20, itemTypes: [REVIEW_REQUESTED_EVENT, READY_FOR_REVIEW_EVENT])",
             "reviewThreads(last: 30) { totalCount nodes { isResolved comments(last: 20) { totalCount nodes { author { login } createdAt } } } }",
             "reviews(last: 50) { totalCount nodes { author { login } state submittedAt } }",
@@ -123,5 +123,15 @@ import Testing
         #expect(SearchQuery.overflow(includeInvolved: false, scope: mentionsOver) == 1)
         #expect(SearchQuery.overflow(includeInvolved: true, scope: .none) == 0)
         #expect(SearchQuery.queryLimit == 256)
+    }
+
+    @Test func theDetailsTemplateAsksForTheHeadTheVerdictCommitsAndTheRecentCommits() {
+        let text = DetailsQuery.template(includeConversation: false)
+        #expect(text.contains("headRefOid"))
+        #expect(
+            text.contains(
+                "latestOpinionatedReviews(first: 10) { nodes { state submittedAt author { login } commit { oid } } }"))
+        #expect(text.contains("recent: commits(last: 30) { totalCount nodes { commit { oid } } }"))
+        #expect(text.contains("commits(last: 1) { nodes { commit { committedDate statusCheckRollup { state } } } }"))
     }
 }

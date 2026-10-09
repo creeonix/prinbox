@@ -114,4 +114,26 @@ import Testing
         let details = try DetailsResponse.decode(TwoPhaseJSON.details([truncated, plain]))
         #expect(PullRequestMapper.truncatedPages([details]) == 1)
     }
+
+    @Test func readsTheVerdictTheHeadAndTheRecentCommitsFromTheFixture() throws {
+        let moved = try pr("PR_C")
+        #expect(
+            moved.viewerVerdict
+                == ViewerReview(state: "APPROVED", submittedAt: date("2026-08-03T09:00:00Z"), commitOid: "c1c1c1c1"))
+        #expect(moved.headOid == "c3c3c3c3")
+        #expect(moved.recentCommitOids == ["c1c1c1c1", "c2c2c2c2", "c3c3c3c3"])
+        #expect(moved.commitCount == 3)
+        #expect(moved.movedSinceVerdict)
+        #expect(moved.commitsSinceVerdict == 2)
+        let still = try pr("PR_B")
+        #expect(still.viewerVerdict?.state == "CHANGES_REQUESTED")
+        #expect(still.movedSinceVerdict == false)
+        #expect(still.commitsSinceVerdict == 0)
+        let own = try pr("PR_E")
+        #expect(own.headOid == "e2e2e2e2")
+        #expect(own.viewerVerdict == nil)
+        #expect(own.commitsSinceVerdict == nil)
+        #expect(try pr("PR_A").headOid == nil)
+        #expect(try pr("PR_A").recentCommitOids == nil)
+    }
 }

@@ -176,6 +176,36 @@
                   }
                 }
               ]
+            },
+            "headRefOid": "b1b1b1b1",
+            "latestOpinionatedReviews": {
+              "nodes": [
+                {
+                  "state": "CHANGES_REQUESTED",
+                  "submittedAt": "2026-08-02T09:00:00Z",
+                  "author": {
+                    "login": "ME"
+                  },
+                  "commit": {
+                    "oid": "b1b1b1b1"
+                  }
+                }
+              ]
+            },
+            "recent": {
+              "totalCount": 2,
+              "nodes": [
+                {
+                  "commit": {
+                    "oid": "b0b0b0b0"
+                  }
+                },
+                {
+                  "commit": {
+                    "oid": "b1b1b1b1"
+                  }
+                }
+              ]
             }
           },
           {
@@ -220,6 +250,41 @@
                   "requestedReviewer": {
                     "__typename": "User",
                     "login": "me"
+                  }
+                }
+              ]
+            },
+            "headRefOid": "c3c3c3c3",
+            "latestOpinionatedReviews": {
+              "nodes": [
+                {
+                  "state": "APPROVED",
+                  "submittedAt": "2026-08-03T09:00:00Z",
+                  "author": {
+                    "login": "me"
+                  },
+                  "commit": {
+                    "oid": "c1c1c1c1"
+                  }
+                }
+              ]
+            },
+            "recent": {
+              "totalCount": 3,
+              "nodes": [
+                {
+                  "commit": {
+                    "oid": "c1c1c1c1"
+                  }
+                },
+                {
+                  "commit": {
+                    "oid": "c2c2c2c2"
+                  }
+                },
+                {
+                  "commit": {
+                    "oid": "c3c3c3c3"
                   }
                 }
               ]
@@ -285,6 +350,22 @@
             },
             "timelineItems": {
               "nodes": []
+            },
+            "headRefOid": "e2e2e2e2",
+            "recent": {
+              "totalCount": 2,
+              "nodes": [
+                {
+                  "commit": {
+                    "oid": "e1e1e1e1"
+                  }
+                },
+                {
+                  "commit": {
+                    "oid": "e2e2e2e2"
+                  }
+                }
+              ]
             }
           },
           {
