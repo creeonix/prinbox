@@ -49,6 +49,30 @@ Thin clients of `prinbox inbox --format json`, in this repository, usable on the
   naming the choice with an [x] to clear it, and a `defaultRepositories` key the command and the server honor in
   their searches. The 0.6.0 text field was held back because a typed filter with no feedback blanked the inbox.
 
+## 0.8.0: since your review
+
+A pull request you reviewed used to vanish from the inbox, and one that came back said nothing about why. 0.8.0 is
+the release that tells you where you stand, and settles the JSON contract before the Linux adapters are written
+against it:
+
+- Your verdict at a glance: a row you approved is washed green, one you asked changes on red, and the fact line says
+  what moved since ("2 commits since you approved", "rewritten since you requested changes", "re-requested, you
+  approved"). Both are settings.
+- A reviewed pull request hides until something happens: the author pushes a diff change (it returns to Take another
+  look as "Pushed since you approved" or "Pushed since you requested changes") or asks again. A rebase that changes
+  nothing does not count.
+- The delta opens: a row whose diff moved since your review lands on GitHub's diff since your review, in the app,
+  the command, the agent's rows and the three plugins.
+- The whole picture on request: a seventh section, Reviewed, lists every open pull request you reviewed with your
+  verdict, behind Settings > Show reviewed pull requests, `prinbox inbox --all`, `get_inbox` with `all: true` and
+  the plugins' options.
+
+The experiment behind it (2026-10-08, the live inbox, read-only): a submitted review removes a pull request from
+`review-requested:@me` (0 hits against 17 open pull requests the author reviewed), so those were visible only through
+`involves:@me`, which now runs on every fetch. GitHub re-points a review's commit across a rebase that leaves the
+diff unchanged (4 pull requests observed), so comparing the review's commit with the head is exactly GitHub's own
+"changes since your last review", where comparing dates mislabels 3 of the 4.
+
 ## 1.0.0: Linux
 
 The same inbox on a Linux desktop, from the same core and the same `state.json`:
@@ -73,3 +97,6 @@ A long-lived daemon can come later without changing the contract; every adapter 
 | Linux desktops | Hyprland first, KDE second, no GNOME | That is where the author runs Linux; GNOME needs a shell extension for any tray icon |
 | MCP server | A subcommand, hand-written stdio JSON-RPC | One binary and one formula; five methods are not worth the first dependency, and the official Swift SDK pulls swift-nio for a stdio loop |
 | Plugin files | At the repository root | lazy.nvim, TPM and use-package clone a repository and expect the plugin at its root; one version, one release |
+| Your verdict | Your latest approving or changes-requesting review, from `latestOpinionatedReviews` | Already fetched; a later comment-only review must not mask the verdict |
+| Moved since your review | The review's commit differs from the head commit id | GitHub's own rule; survives a rebase that changes nothing; one scalar, no dates |
+| The Reviewed section | A seventh section behind a flag (Settings, `--all`, `all: true`), always present in the JSON | The default inbox stays what needs you; "all sections, always" still holds |

@@ -39,29 +39,30 @@ popover on its next refresh or open, and a snooze in the popover shows in `prinb
 
 `settings.json` is one JSON object of the keys the app's stores keep: `compactRows`, `defaultRepositories`,
 `directReviewRequestsOnly`, `foldedSections`, `followReviewThreads`, `ghPath`, `globalShortcut`,
-`groupByOrganization`, `hideDrafts`, `notifyOnNewReviewRequests`, `orgColors`, `showOrganizationAvatars`. A missing
-key means its default. The app rewrites one key at a time after re-reading the file, so a hand edit made while the app
-runs survives; the edit itself takes effect at the next launch. The command and the server read `defaultRepositories`,
-`followReviewThreads`, `ghPath`, `directReviewRequestsOnly` and `hideDrafts`; the server reads them at every call. On
-the first 0.5.0 launch the app copies every known key out of the `io.github.creeonix.prinbox` defaults domain into the
-file and removes it there.
+`groupByOrganization`, `hideDrafts`, `notifyOnNewReviewRequests`, `orgColors`, `rowColor`, `showOrganizationAvatars`,
+`showReviewed`, `sinceReviewLine`. A missing key means its default. The app rewrites one key at a time after
+re-reading the file, so a hand edit made while the app runs survives; the edit itself takes effect at the next launch.
+The command and the server read `defaultRepositories`, `followReviewThreads`, `ghPath`, `directReviewRequestsOnly` and
+`hideDrafts`; the server reads them at every call. On the first 0.5.0 launch the app copies every known key out of the
+`io.github.creeonix.prinbox` defaults domain into the file and removes it there.
 
 ### Cache
 
-`cache.json` is not a contract: its shape may change with any release, and a `version` a reader does not know
-means "no cache". Other programs read the inbox through `prinbox inbox --format json` (see
-`docs/inbox-json.md`). For transparency, its keys: `version` (1), `fetchedAt` (when `result` was fetched),
-`checkedAt` (the last time GitHub confirmed it, including an unchanged check), `includeConversation` (the
-request shape it came from), `scope` (the three scope settings the request had; absent in a 0.5 file, which
-means none), `knownRepositories` (what the picker offers, absent in a 0.6 file: it holds the repositories of
-the last fetch made with no default repositories; a fetch made with some carries the list it found; an unchanged
-check leaves it alone), `viewer`, `fingerprint` (id to `updatedAt` over every search hit),
-`attention` (the arrivals baseline: the non-draft ids of the attention sections, written only by a
-notifier), `result` (the fetch: `viewerLogin`, `pullRequests`, `totals`, `fetched`, `warnings`). Nothing in it
-is body text: the same fields the popover shows, titles, logins and URLs included. Readers trust the
-fingerprint for 15 minutes and only for the same `includeConversation` and `scope`; the rows and the baseline
-have no age limit. A `checkedAt` bump on an unchanged check is written only when the file still holds the
-fingerprint that check confirmed.
+`cache.json` is not a contract: its shape may change with any release, and a `version` a reader does not know means
+"no cache". Other programs read the inbox through `prinbox inbox --format json` (see `docs/inbox-json.md`). For
+transparency, its keys: `version` (2), `fetchedAt` (when `result` was fetched), `checkedAt` (the last time GitHub
+confirmed it, including an unchanged check), `includeConversation` (the request shape it came from), `scope` (the
+three scope settings the request had; absent in a 0.5 file, which means none), `knownRepositories` (what the picker
+offers, absent in a 0.6 file: it holds the repositories of the last fetch made with no default repositories; a fetch
+made with some carries the list it found; an unchanged check leaves it alone), `viewer`, `fingerprint` (id to
+`updatedAt` over every search hit), `attention` (the arrivals baseline: the non-draft ids of the attention sections,
+written only by a notifier), `result` (the fetch: `viewerLogin`, `pullRequests`, `totals`, `fetched`, `warnings`).
+Nothing in it is body text: the same fields the popover shows, titles, logins and URLs included. Readers trust the
+fingerprint for 15 minutes and only for the same `includeConversation` and `scope`; the rows and the baseline have no
+age limit. A version-1 file (0.7.0) is still read for its rows, fingerprint and known repositories, but not for its
+arrivals baseline, so the first notifying run after the upgrade is quiet; a writer always writes version 2, and a
+0.7.0 command beside the 0.8.0 app finds a version it does not know and refetches. A `checkedAt` bump on an unchanged
+check is written only when the file still holds the fingerprint that check confirmed.
 
 ## Shape
 

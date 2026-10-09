@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/popover.png" width="500" alt="PRInbox popover with sample pull requests">
+  <img src="docs/images/popover.png" width="500" alt="PRInbox popover with sample pull requests, rows colored by your verdict and naming what moved">
 </p>
 
 ## Why
@@ -32,15 +32,21 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
 ## Features
 
 - **A count in the menu bar.** It is dimmed when nothing waits on you and red when gh needs attention.
-- **Six sections**, each foldable, with the fold state remembered:
+- **Seven sections**, each foldable, with the fold state remembered:
   - **Needs your review:** you or one of your teams was asked, and you have not reviewed yet.
   - **Replies to you:** someone answered in a review thread you took part in, and the next word is yours.
     Found even on PRs where you are no longer a requested reviewer.
-  - **Take another look:** your review was requested again after you already reviewed.
+  - **Take another look:** your review was requested again, or the author pushed a diff change after you approved
+    or requested changes.
   - **Mentions:** someone mentioned you on their PR.
   - **Your PRs:** yours that need you: changes requested, merge conflicts, review threads you have not
     answered, CI is red, or approved and ready to merge.
   - **Waiting on others:** the rest of yours, one quiet line each, plus anything you snoozed.
+  - **Reviewed** (with Show reviewed on): every open pull request you reviewed, with your verdict.
+- **Where you stand, at a glance:** a row you approved is washed green, one you asked changes on red, and its fact
+  line says what moved since: `2 commits since you approved`, `rewritten since you requested changes`,
+  `re-requested, you approved`. Opening such a row lands on GitHub's diff since your review, not the whole PR. A
+  reviewed PR hides until the author pushes or asks again.
 - **Rows that answer "what, where and how long":** author avatar (with the organization's avatar in its
   corner when your inbox spans more than one organization), `org/repo` (same condition), time waiting (counted from when
   your review was requested), and lines added and removed.
@@ -61,9 +67,9 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
   left out) and hide other people's drafts. Both act in the GitHub searches, so a narrowed inbox costs nothing
   extra and the search window goes to what you asked for.
 - **Default repositories.** The filter icon in the popover's header opens a menu over the owners and repositories
-  your inbox knows; pick `acme/*` or `globex/billing` and every search narrows to them, the strip under the header
-  names them, and the [x] on it brings everything back. The command and the agent follow the same choice
-  (`defaultRepositories` in `settings.json`).
+  your inbox knows (the menu is empty until an inbox has loaded); pick `acme/*` or `globex/billing` and every search
+  narrows to them, the strip under the header names them, and the [x] on it brings everything
+  back. The command and the agent follow the same choice (`defaultRepositories` in `settings.json`).
 - **New since your last look:** rows that appeared or changed since you last closed the popover carry an accent
   bar at their left edge, and the header counts them.
 - **Notifications** (off by default): one banner per refresh when a PR enters Needs your review, Replies to
@@ -164,11 +170,15 @@ When this is set, PRInbox and `prinbox` use only that path. Remove the key to go
 
 Open Settings with the gear in the popover. It holds the global shortcut, launch at login, **Group by organization**,
 **Show organization avatars**, **Compact rows**, **Follow review threads**, **Only direct review requests**, **Hide
-draft pull requests**, **Notify about new review requests and replies**, the detected `gh` path, the version and Quit.
+draft pull requests**, **Color rows by your verdict**, **Show what moved since your review**, **Show reviewed
+pull requests**, **Notify about new review requests and replies**, the detected `gh` path, the version and Quit.
 Turning notifications on asks macOS for permission once; if you decline, Settings says where to turn them on. The
 Scope group narrows what the searches ask GitHub for with two switches, **Only direct review requests** and **Hide
-draft pull requests**; their keys are `directReviewRequestsOnly` and `hideDrafts`. The default repositories are not in
-Settings: the filter icon in the header and the strip under it hold them, under the key `defaultRepositories`.
+draft pull requests**; their keys are `directReviewRequestsOnly` and `hideDrafts`. The three display controls: **Color
+rows by your verdict** (`rowColor`: `none`, `background` or `title`, default `background`), **Show what moved since
+your review** (`sinceReviewLine`, default on) and **Show reviewed pull requests** (`showReviewed`, default off). The
+default repositories are not in Settings: the filter icon in the header and the strip under it hold them, under the
+key `defaultRepositories`.
 Settings stay inside the popover, so there is never a window for a tiling window manager to grab. Every setting lives
 in `~/.config/prinbox/settings.json`, one key per switch; a hand edit takes effect at the next launch, and the first
 0.5.0 launch moves your 0.4 settings there out of macOS defaults.
@@ -179,6 +189,10 @@ in `~/.config/prinbox/settings.json`, one key per switch; a hand edit takes effe
 
 <p align="center">
   <img src="docs/images/popover-filtered.png" width="460" alt="The inbox narrowed to two default repositories">
+</p>
+
+<p align="center">
+  <img src="docs/images/popover-reviewed.png" width="460" alt="The Reviewed section, with Show reviewed on">
 </p>
 
 ### Command line
@@ -193,6 +207,7 @@ prinbox inbox                                # the inbox as JSON (docs/inbox-jso
 prinbox inbox --format lines                 # one tab-separated row per line, for fzf, walker or rofi
 prinbox inbox --format tmux --max-age 60     # the count for a status line, fetching at most once a minute
 prinbox inbox --format waybar                # Waybar's custom-module object
+prinbox inbox --all                          # with every pull request you reviewed (the Reviewed section)
 prinbox inbox --cached                       # print the cache without contacting GitHub (instant pickers)
 prinbox print                                # the inbox as text, a full fetch that touches nothing
 prinbox snooze PR_kwDOA1                     # park a pull request (ids come from the JSON or the lines)
@@ -208,7 +223,8 @@ Exit codes: 0 when GitHub answered or the cache was served as asked, 1 when the 
 still printed, with `error` set), 2 for usage, 3 when gh needs setup. `--format waybar` always exits 0.
 `--notify` delivers arrivals through `notify-send` on Linux; on the Mac the app is the notifier, so run one
 notifier per machine. `--verbose` shows the fetch log on stderr; `--settings <path>` names another settings
-file. In `prinbox print` the fact line and the compact line both show `stack i/n`.
+file. In `prinbox print` the fact line and the compact line both show `stack i/n`. In the `lines` format the url
+column is the URL to open: GitHub's diff since your review when there is one, the pull request otherwise.
 
 The app binary keeps two flags: `/Applications/PRInbox.app/Contents/MacOS/Prinbox --print` (the same as
 `prinbox print`) and `--demo` (sample data). `--settings <path>` applies to the app itself (and to `--demo`);
@@ -231,7 +247,8 @@ or, for Claude Desktop, in `claude_desktop_config.json`:
 ```
 
 Three tools. `get_inbox` returns the JSON document of [docs/inbox-json.md](docs/inbox-json.md), served from the
-cache when GitHub confirmed it within the last 60 seconds (`max_age_seconds` changes that; 0 fetches now).
+cache when GitHub confirmed it within the last 60 seconds (`max_age_seconds` changes that; 0 fetches now);
+`all: true` adds the Reviewed section.
 `snooze_pull_request` and `unsnooze_pull_request` take a row's `id`; a snooze made by an agent shows in the
 menu bar and an open popover within a second. The server is never a notifier and writes nothing an agent did
 not ask for. Details, the error rules and the log in [docs/mcp.md](docs/mcp.md).
@@ -239,7 +256,10 @@ not ask for. Details, the error rules and the log in [docs/mcp.md](docs/mcp.md).
 ### Editors and tmux
 
 Three plugins read the same inbox through `prinbox inbox --format json`; each shows the rows, opens a pull request,
-snoozes and wakes it, and shows the count. They live in this repository, so the repository is the plugin.
+snoozes and wakes it, and shows the count. They live in this repository, so the repository is the plugin. They need
+Neovim 0.10, Emacs 29.1, or tmux 3.2 with fzf; the tmux plugin installs through TPM. Each takes an option for the
+Reviewed section (`all = true` in Neovim, `prinbox-all` in Emacs, `@prinbox_all on` in tmux), and Enter on a row
+whose diff moved since your review opens that diff.
 
 Neovim 0.10 ([docs/neovim.md](docs/neovim.md)): a list buffer with `Enter`, `s`, `u`, `r` and `q`, `:Prinbox pick`
 through `vim.ui.select`, and a statusline count.
@@ -282,7 +302,8 @@ set -g status-right '#{prinbox_status} | %H:%M'
   `~/Library/Caches/io.github.creeonix.prinbox`. `make uninstall` removes all of them.
   [docs/state-file.md](docs/state-file.md) describes the files and the lock that lets the app and the command
   write them.
-- **What it reads:** PRInbox reads who commented in review threads and who reviewed, and when. It never
+- **What it reads:** PRInbox reads who commented in review threads and who reviewed, and when. 0.8.0 also reads the
+  ids of a pull request's last 30 commits and the commit each review points at; still no body text. It never
   fetches, stores or logs the text of a comment, a review or a description.
 
 ## Build from source
@@ -346,7 +367,8 @@ Other targets:
 ## Roadmap
 
 See [docs/roadmap.md](docs/roadmap.md): a shared core with a `prinbox` command and stacked PRs (0.5.0), an MCP server
-(0.6.0), editor and tmux adapters with default repositories (0.7.0), and Linux support for Hyprland and KDE (1.0.0).
+(0.6.0), editor and tmux adapters with default repositories (0.7.0), since your review (0.8.0), and Linux support for
+Hyprland and KDE (1.0.0).
 
 ## Credits
 

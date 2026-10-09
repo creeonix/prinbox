@@ -1,3 +1,23 @@
+## What's new in 0.8.0
+
+- **Where you stand, at a glance.** A row you approved is washed green, one you asked changes on red, and its fact
+  line says what moved since your review: "2 commits since you approved", "rewritten since you requested changes",
+  "re-requested, you approved". Opening such a row lands on GitHub's diff since your review, in the app, the
+  command, the agent's rows and the three plugins. Both cues are Settings (Color rows by your verdict, Show what
+  moved since your review).
+- **A reviewed pull request hides until something happens.** Approved or changes requested with nothing pushed
+  since: out of the inbox. The author pushes a diff change or asks again: back in Take another look, as "Pushed
+  since you approved" or "Pushed since you requested changes", with a notification. A rebase that changes nothing
+  does not count.
+- **The whole picture on request.** Settings > Show reviewed pull requests, `prinbox inbox --all` and `get_inbox`
+  with `all: true` add a Reviewed section listing every open pull request you reviewed with your verdict. The
+  plugins take `all = true`, `prinbox-all` and `@prinbox_all on`.
+- The JSON document carries `rows[].yourReview` and a seventh section; the `lines` url column is the URL to open.
+- Upgrade the app and the command together: the cache is version 2, a 0.7.0 command beside the 0.8.0 app refetches
+  and the first notifying run after the upgrade is quiet.
+- Small fixes from the 0.7.0 review: the README names TPM and the plugins' prerequisites, and the test stub
+  answers usage on a valueless flag.
+
 ## What's new in 0.7.0
 
 - **Default repositories.** The filter icon in the popover's header opens a menu over the owners and repositories
