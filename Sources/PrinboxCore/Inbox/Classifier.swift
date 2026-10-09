@@ -15,10 +15,14 @@ public enum Classifier {
     /// Nil is hidden: a PR from the `involved` search where no answer is owed and no review of the viewer's exists.
     /// Hidden beats snoozed, so a parked PR that stopped concerning the viewer disappears instead of lingering in
     /// Waiting on others.
-    /// Otherwise `snoozed` overrides everything: the PR waits in Waiting on others until it wakes.
+    /// Otherwise `snoozed` overrides everything: the PR waits in Waiting on others until it wakes. The quiet
+    /// Reviewed state is the exception: it keeps its verdict, so the builder hides it unless Reviewed shows
+    /// (spec 0.8 3.9).
     public static func classify(_ pr: PullRequest, viewer: String, snoozed: Bool = false) -> Classification? {
         guard let verdict = verdict(pr, viewer: viewer) else { return nil }
-        if snoozed { return Classification(section: .waitingOnOthers, reason: .snoozed, waitingSince: nil) }
+        if snoozed, verdict.section != .reviewed {
+            return Classification(section: .waitingOnOthers, reason: .snoozed, waitingSince: nil)
+        }
         return verdict
     }
 

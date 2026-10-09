@@ -280,4 +280,14 @@ import Testing
         #expect(Reason.pushedSinceChangesRequested.rawValue == "Pushed since you requested changes")
         #expect(Reason.youRequestedChanges.rawValue == "You requested changes")
     }
+
+    @Test func aSnoozeDoesNotMoveAQuietReviewedPullRequest() {
+        let pr = makePR(viewerReview: approvedAt, source: .involved, headOid: "aaa", viewerVerdict: approvedAt)
+        let result = Classifier.classify(pr, viewer: testViewer, snoozed: true)
+        #expect(result?.section == .reviewed)
+        #expect(result?.reason == .youApproved)
+        // A snoozed row that is not quiet still parks, as today.
+        let parked = Classifier.classify(makePR(source: .review), viewer: testViewer, snoozed: true)
+        #expect(parked?.section == .waitingOnOthers && parked?.reason == .snoozed)
+    }
 }

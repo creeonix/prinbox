@@ -316,4 +316,16 @@ import Testing
         let plain = try #require(InboxBuilder.build(makeResult([makePR(id: "p")])).section(.needsReview)?.rows.first)
         #expect(plain.openURL == plain.pullRequest.url)
     }
+
+    @Test func aSnoozedQuietReviewedPullRequestIsHiddenUnlessAskedAndNeverParked() throws {
+        let approved = ViewerReview(state: "APPROVED", submittedAt: date("2026-08-01T11:00:00Z"), commitOid: "aaa")
+        let quiet = makePR(id: "q", viewerReview: approved, source: .involved, headOid: "aaa", viewerVerdict: approved)
+        let hidden = InboxBuilder.build(makeResult([quiet]), snoozed: ["q"])
+        #expect(hidden.sections.isEmpty)
+        let shown = InboxBuilder.build(makeResult([quiet]), snoozed: ["q"], showReviewed: true)
+        #expect(shown.section(.waitingOnOthers) == nil)
+        let section = try #require(shown.section(.reviewed))
+        #expect(section.rows.map(\.id) == ["q"])
+        #expect(section.rows.first?.classification.reason == .youApproved)
+    }
 }
