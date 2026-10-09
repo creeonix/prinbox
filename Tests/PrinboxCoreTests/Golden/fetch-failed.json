@@ -1,5 +1,5 @@
 {
-  "badge" : 8,
+  "badge" : 10,
   "checkedAt" : "2026-08-10T12:00:00Z",
   "defaultRepositories" : [
 
@@ -261,11 +261,49 @@
       "title" : "Replies to you"
     },
     {
-      "count" : 1,
+      "count" : 3,
       "kind" : "takeAnotherLook",
       "moreCount" : 0,
       "moreUrl" : "https://github.com/pulls/review-requested",
       "rows" : [
+        {
+          "additions" : 96,
+          "age" : "6h",
+          "author" : "alice",
+          "authorAvatarUrl" : null,
+          "createdAt" : "2026-08-05T12:00:00Z",
+          "deletions" : 14,
+          "id" : "DEMO_2210",
+          "isDraft" : false,
+          "isNew" : false,
+          "marks" : {
+            "ci" : "success",
+            "comments" : 3,
+            "merge" : null,
+            "review" : null
+          },
+          "number" : 2210,
+          "pendingReplies" : 0,
+          "reason" : "pushedSinceApproval",
+          "reasonText" : "Pushed since you approved",
+          "repository" : "acme/api",
+          "snoozed" : false,
+          "stack" : null,
+          "title" : "Index the audit log by actor",
+          "updatedAt" : "2026-08-10T06:00:00Z",
+          "url" : "https://github.com/acme/api/pull/2210",
+          "waitingSince" : "2026-08-10T06:00:00Z",
+          "yourReview" : {
+            "commit" : "3f9c2d1",
+            "commitsSince" : 2,
+            "moved" : true,
+            "rewritten" : false,
+            "since" : "2 commits since you approved",
+            "sinceReviewUrl" : "https://github.com/acme/api/pull/2210/files/3f9c2d1..b7e41a0",
+            "state" : "approved",
+            "submittedAt" : "2026-08-08T12:00:00Z"
+          }
+        },
         {
           "additions" : 210,
           "age" : "5h",
@@ -302,6 +340,44 @@
             "sinceReviewUrl" : null,
             "state" : "commented",
             "submittedAt" : "2026-08-09T06:00:00Z"
+          }
+        },
+        {
+          "additions" : 230,
+          "age" : "2h",
+          "author" : "frank",
+          "authorAvatarUrl" : null,
+          "createdAt" : "2026-08-05T12:00:00Z",
+          "deletions" : 120,
+          "id" : "DEMO_733",
+          "isDraft" : false,
+          "isNew" : false,
+          "marks" : {
+            "ci" : "failure",
+            "comments" : 2,
+            "merge" : null,
+            "review" : null
+          },
+          "number" : 733,
+          "pendingReplies" : 0,
+          "reason" : "pushedSinceChangesRequested",
+          "reasonText" : "Pushed since you requested changes",
+          "repository" : "globex/billing",
+          "snoozed" : false,
+          "stack" : null,
+          "title" : "Split the invoice job",
+          "updatedAt" : "2026-08-10T10:00:00Z",
+          "url" : "https://github.com/globex/billing/pull/733",
+          "waitingSince" : "2026-08-10T10:00:00Z",
+          "yourReview" : {
+            "commit" : "a1b2c3d",
+            "commitsSince" : null,
+            "moved" : true,
+            "rewritten" : true,
+            "since" : "rewritten since you requested changes",
+            "sinceReviewUrl" : "https://github.com/globex/billing/pull/733/files/a1b2c3d..e5f6a7b",
+            "state" : "changesRequested",
+            "submittedAt" : "2026-08-09T10:00:00Z"
           }
         }
       ],

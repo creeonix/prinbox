@@ -5,6 +5,8 @@
 #   PRINBOX_STUB_EXIT     3 (signed out) or 1 (the fetch failed) makes `inbox` answer as the command would
 #   PRINBOX_STUB_VERSION  rewrites the document's top-level version (an adapter must refuse what it cannot read)
 #   PRINBOX_STUB_NOCACHE  1 makes `inbox --cached` answer as a first run does: the empty document, exit 1
+# `inbox --all` prints the documents with the Reviewed section (demo-inbox-all.*) and logs as `inbox <format> all`.
+# A --format or --max-age without a value answers usage on stderr and exits 2, as the command does.
 set -euo pipefail
 golden="$(cd "$(dirname "$0")/../../PrinboxCoreTests/Golden" && pwd)"
 command=${1:-}
@@ -13,7 +15,7 @@ command=${1:-}
 log() { if [ -n "${PRINBOX_STUB_LOG:-}" ]; then echo "$1" >> "$PRINBOX_STUB_LOG"; fi; }
 
 case "$command" in
-    --version) echo "prinbox 0.7.0-stub"; exit 0 ;;
+    --version) echo "prinbox 0.8.0-stub"; exit 0 ;;
     snooze|unsnooze|open)
         [ $# -eq 1 ] || { echo "prinbox: $command needs one pull request id" >&2; exit 2; }
         log "$command $1"
@@ -24,17 +26,21 @@ esac
 
 format=json
 cached=0
+all=
 while [ $# -gt 0 ]; do
     case "$1" in
-        --format) format=$2; shift 2 ;;
+        --format|--max-age)
+            [ $# -ge 2 ] || { echo "prinbox: $1 needs a value" >&2; exit 2; }
+            [ "$1" = --format ] && format=$2
+            shift 2 ;;
         --format=*) format=${1#--format=}; shift ;;
         --cached) cached=1; shift ;;
         --notify) shift ;;
-        --max-age) shift 2 ;;
+        --all) all=-all; shift ;;
         *) echo "prinbox: unknown option $1" >&2; exit 2 ;;
     esac
 done
-log "inbox $format"
+log "inbox $format${all:+ all}"
 
 rewrite() {
     if [ -n "${PRINBOX_STUB_VERSION:-}" ]; then
@@ -58,16 +64,16 @@ case "${PRINBOX_STUB_EXIT:-0}" in
     1)
         case "$format" in
             json) rewrite < "$golden/fetch-failed.json" ;;
-            lines) cat "$golden/demo-inbox.lines" ;;
-            tmux) echo '!8' ;;
+            lines) cat "$golden/demo-inbox$all.lines" ;;
+            tmux) echo '!10' ;;
         esac
         echo "prinbox: GitHub did not answer in time" >&2
         exit 1 ;;
 esac
 
 case "$format" in
-    json) rewrite < "$golden/demo-inbox.json" ;;
-    lines) cat "$golden/demo-inbox.lines" ;;
-    tmux) echo 8 ;;
+    json) rewrite < "$golden/demo-inbox$all.json" ;;
+    lines) cat "$golden/demo-inbox$all.lines" ;;
+    tmux) echo 10 ;;
     *) echo "prinbox: unknown format '$format' (json, lines, waybar, tmux)" >&2; exit 2 ;;
 esac

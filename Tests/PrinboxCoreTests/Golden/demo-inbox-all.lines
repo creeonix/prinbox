@@ -17,3 +17,6 @@ DEMO_1298	waitingOnOthers	1298	Bump the Swift toolchain to 6.4	acme/web	Waiting 
 DEMO_33	waitingOnOthers	33	Add a cover sheet to every report	initech/tps	Waiting for review	30h		https://github.com/initech/tps/pull/33
 DEMO_91	waitingOnOthers	91	Explore an offline mode	acme/shop	Draft	3d	draft	https://github.com/acme/shop/pull/91
 DEMO_1284	waitingOnOthers	1284	Cache avatar images on disk	acme/web	Snoozed	3h	snoozed	https://github.com/acme/web/pull/1284
+DEMO_1250	reviewed	1250	Refund flow rework	acme/web	You approved	12h		https://github.com/acme/web/pull/1250
+DEMO_702	reviewed	702	Rotate the API keys	globex/billing	You requested changes	20h		https://github.com/globex/billing/pull/702
+DEMO_140	reviewed	140	Clarify the on-call guide	initech/docs	You commented	28h		https://github.com/initech/docs/pull/140

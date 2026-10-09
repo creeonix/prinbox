@@ -12,11 +12,14 @@ import Testing
     }
 
     @Test func fillsEverySection() async throws {
-        #expect(try await inbox().sections.map(\.kind) == SectionKind.allCases.filter { $0 != .reviewed })
+        let clock = now
+        let result = try await DemoFetcher(now: { clock }).fetch()
+        #expect(InboxBuilder.build(result).sections.map(\.kind) == SectionKind.allCases.filter { $0 != .reviewed })
+        #expect(InboxBuilder.build(result, showReviewed: true).sections.map(\.kind) == SectionKind.allCases)
     }
 
     @Test func badgeCountsTheNonDraftReviewAndMentionRows() async throws {
-        #expect(try await inbox().badgeCount == 9)
+        #expect(try await inbox().badgeCount == 11)
     }
 
     @Test func spansThreeFictionalOrganizations() async throws {
@@ -64,7 +67,7 @@ import Testing
         #expect(Set(unseen) == ["DEMO_2104", "DEMO_482", "DEMO_58", "DEMO_145"])
         let box = InboxBuilder.build(result, snoozed: Set(state.snoozed.keys))
         #expect(box.sections.map(\.kind) == SectionKind.allCases.filter { $0 != .reviewed })
-        #expect(box.badgeCount == 8)
+        #expect(box.badgeCount == 10)
         #expect(box.section(.waitingOnOthers)?.rows.last?.classification.reason == .snoozed)
     }
 
@@ -80,7 +83,7 @@ import Testing
         #expect(own.classification.reason == .openThreads)
         #expect(own.pendingReplies == 1)
         #expect(RowMarks.isReady(own.pullRequest))
-        #expect(box.sections.flatMap(\.rows).count == 17)
+        #expect(box.sections.flatMap(\.rows).count == 19)
     }
 
     @Test func twoChainsOneInsideASectionAndOneAcrossTwo() async throws {
@@ -107,14 +110,39 @@ import Testing
             Issue.record("the demo answered unchanged")
             return
         }
-        // 17 sample PRs; globex/sync (#917), initech/docs (#58) and initech/tps (#612, #33) fall outside.
+        // 22 sample PRs; globex/sync (#917), initech/docs (#58, #140) and initech/tps (#612, #33) fall outside.
         let repositories = Set(result.pullRequests.map(\.repository))
         #expect(repositories == ["acme/web", "acme/api", "acme/shop", "globex/billing"])
-        #expect(result.pullRequests.count == 13)
+        #expect(result.pullRequests.count == 17)
         #expect(result.totals == result.fetched)
         #expect(result.isComplete)
         let drafts = FetchRequest(scope: SearchScope(hideDrafts: true))
         guard case .result(let unfiltered) = try await DemoFetcher(now: { clock }).fetch(drafts) else { return }
-        #expect(unfiltered.pullRequests.count == 17)
+        #expect(unfiltered.pullRequests.count == 22)
+    }
+
+    @Test func theSampleShowsBothPushesAndThreeReviewedRows() async throws {
+        let box = try await inbox()
+        let look = try #require(box.section(.takeAnotherLook))
+        // Longest waiting first: #2210 pushed 6h ago, #917 requested 5h ago, #1284 requested 3h ago, #733 pushed 2h ago.
+        #expect(look.rows.map(\.id) == ["DEMO_2210", "DEMO_917", "DEMO_1284", "DEMO_733"])
+        #expect(
+            look.rows.map(\.classification.reason)
+                == [.pushedSinceApproval, .reReviewRequested, .reReviewRequested, .pushedSinceChangesRequested])
+        #expect(RowText.since(look.rows[0].pullRequest) == "2 commits since you approved")
+        #expect(RowText.since(look.rows[1].pullRequest) == nil)
+        #expect(RowText.since(look.rows[3].pullRequest) == "rewritten since you requested changes")
+        #expect(look.rows[0].openURL == URL(string: "https://github.com/acme/api/pull/2210/files/3f9c2d1..b7e41a0"))
+        #expect(
+            look.rows[3].openURL == URL(string: "https://github.com/globex/billing/pull/733/files/a1b2c3d..e5f6a7b"))
+        #expect(box.section(.reviewed) == nil)
+        let clock = now
+        let all = InboxBuilder.build(try await DemoFetcher(now: { clock }).fetch(), showReviewed: true)
+        let reviewed = try #require(all.section(.reviewed))
+        #expect(reviewed.rows.map(\.id) == ["DEMO_1250", "DEMO_702", "DEMO_140"])
+        #expect(reviewed.rows.map(\.classification.reason) == [.youApproved, .youRequestedChanges, .youCommented])
+        #expect(reviewed.rows.allSatisfy { $0.openURL == $0.pullRequest.url })
+        #expect(all.badgeCount == 11)
+        #expect(all.sections.flatMap(\.rows).count == 22)
     }
 }

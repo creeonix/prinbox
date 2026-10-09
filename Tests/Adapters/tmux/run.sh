@@ -28,13 +28,13 @@ grep -qx -- '3,4,5,6,7' "$work/fzf-args"
 grep -q 'snooze {1}' "$work/fzf-args"
 grep -q 'unsnooze {1}' "$work/fzf-args"
 grep -q 'reload(' "$work/fzf-args"
-grep -q '^8 waiting on you' "$work/fzf-args"
+grep -q '^10 waiting on you' "$work/fzf-args"
 grep -qx 'inbox lines' "$work/log"
 grep -qx 'inbox tmux' "$work/log"
 
-# The 17th line is the snoozed row; a more line would open its ninth field the same way.
+# The 19th line is the snoozed row; a more line would open its ninth field the same way.
 rm -f "$work/opened"
-FAKE_FZF_PICK=17 bash "$root/tmux/popup.sh"
+FAKE_FZF_PICK=19 bash "$root/tmux/popup.sh"
 [ "$(cat "$work/opened")" = "https://github.com/acme/web/pull/1284" ]
 
 # Esc opens nothing.

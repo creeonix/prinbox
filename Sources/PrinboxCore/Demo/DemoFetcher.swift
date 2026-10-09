@@ -4,9 +4,10 @@ import Foundation
 /// login is fictional (three orgs: acme, globex, initech), every mark state appears at least once, and
 /// every time is relative to the moment the fetcher was created, so ages read naturally and refreshes
 /// return identical PRs: nothing "changes", the demo snooze stays asleep and the new marks stay put.
-/// Includes two replies to you (waiting 4h and 1h), one unanswered open thread on an approved PR, and two
-/// stacks: bob's #1291 on #1290 inside Needs your review, and your #1301 on #1298 across Your PRs and Waiting
-/// on others.
+/// Includes two replies to you (waiting 4h and 1h), one unanswered open thread on an approved PR, two pushes
+/// since your review (#2210 after an approval, #733 after a force-push over requested changes), three reviewed
+/// rows for the Reviewed section (#1250, #702, #140), and two stacks: bob's #1291 on #1290 inside Needs your
+/// review, and your #1301 on #1298 across Your PRs and Waiting on others. 22 PRs in all.
 public struct DemoFetcher: InboxFetching {
     private let base: Date
 
@@ -60,17 +61,27 @@ enum DemoData {
             updated: Double, source: SearchSource, isDraft: Bool = false, decision: ReviewDecision = .reviewRequired,
             ci: CIState = .success, mergeable: Mergeable = .mergeable, comments: Int = 0,
             reviewed: Double? = nil, requested: Double? = nil, threads: [ReviewThread]? = nil,
-            head: String? = nil, base: String? = nil
+            head: String? = nil, base: String? = nil,
+            lastCommit: Double? = nil, verdict: String? = nil, verdictAt: Double? = nil, verdictOid: String? = nil,
+            headOid: String? = nil, recent: [String]? = nil, commits: Int? = nil
         ) -> PullRequest {
             PullRequest(
                 id: "DEMO_\(number)", number: number, title: title,
                 url: URL(string: "https://github.com/\(repo)/pull/\(number)")!, repository: repo, isArchived: false,
                 authorLogin: author, avatarURL: nil, isDraft: isDraft, additions: additions, deletions: deletions,
                 createdAt: ago(24 * 5), updatedAt: ago(updated), reviewDecision: decision, mergeable: mergeable,
-                ci: ci, viewerReview: reviewed.map { ViewerReview(state: "COMMENTED", submittedAt: ago($0)) },
+                ci: ci,
+                viewerReview: reviewed.map {
+                    ViewerReview(state: verdict ?? "COMMENTED", submittedAt: ago($0), commitOid: verdictOid)
+                },
                 reviewRequestedAt: requested.map(ago), readyForReviewAt: nil, source: source,
                 commentCount: comments, ownerAvatarURL: nil, ownerIsOrganization: true,
-                headRef: head, baseRef: base, threads: threads)
+                headRef: head, baseRef: base, lastCommitAt: lastCommit.map(ago), threads: threads,
+                headOid: headOid,
+                viewerVerdict: verdict.map {
+                    ViewerReview(state: $0, submittedAt: verdictAt.map(ago), commitOid: verdictOid)
+                },
+                recentCommitOids: recent, commitCount: commits)
         }
         return [
             pr(
@@ -112,6 +123,35 @@ enum DemoData {
                 145, "Rotate the signing keys quarterly", repo: "globex/billing", author: "frank",
                 64, 12, updated: 1, source: .review, comments: 5, reviewed: 20, requested: 1,
                 threads: [thread(comment("frank", 22), comment("me", 20), comment("heidi", 1))]),
+            // Take another look: you approved two days ago and alice pushed twice since; the row opens the diff
+            // since your review (spec 0.8 3.7).
+            pr(
+                2210, "Index the audit log by actor", repo: "acme/api", author: "alice",
+                96, 14, updated: 6, source: .involved, comments: 3, reviewed: 48, lastCommit: 6,
+                verdict: "APPROVED", verdictAt: 48, verdictOid: "3f9c2d1", headOid: "b7e41a0",
+                recent: ["90ab12c", "3f9c2d1", "5d6e7f8", "b7e41a0"], commits: 4),
+            // Take another look: you requested changes and frank force-pushed a rewrite; your commit is gone.
+            pr(
+                733, "Split the invoice job", repo: "globex/billing", author: "frank",
+                230, 120, updated: 2, source: .involved, ci: .failure, comments: 2, reviewed: 26, lastCommit: 2,
+                verdict: "CHANGES_REQUESTED", verdictAt: 26, verdictOid: "a1b2c3d", headOid: "e5f6a7b",
+                recent: ["c0ffee1", "d00d1e2", "e5f6a7b"], commits: 3),
+            // Reviewed (shown with --all or Show reviewed): approved and quiet, changes requested and quiet, and a
+            // comment-only review.
+            pr(
+                1250, "Refund flow rework", repo: "acme/web", author: "bob",
+                410, 95, updated: 12, source: .involved, decision: .approved, comments: 4, reviewed: 30,
+                verdict: "APPROVED", verdictAt: 30, verdictOid: "7a7a7a7", headOid: "7a7a7a7",
+                recent: ["1111111", "7a7a7a7"], commits: 2),
+            pr(
+                702, "Rotate the API keys", repo: "globex/billing", author: "heidi",
+                58, 22, updated: 20, source: .involved, decision: .changesRequested, comments: 3, reviewed: 22,
+                verdict: "CHANGES_REQUESTED", verdictAt: 22, verdictOid: "beefcaf", headOid: "beefcaf",
+                recent: ["beefcaf"], commits: 1),
+            pr(
+                140, "Clarify the on-call guide", repo: "initech/docs", author: "erin",
+                31, 8, updated: 28, source: .involved, ci: .none, comments: 2, reviewed: 28,
+                headOid: "0c0c0c0", recent: ["0c0c0c0"], commits: 1),
             pr(
                 58, "Document the release process", repo: "initech/docs", author: "erin",
                 140, 6, updated: 0.5, source: .mentions, ci: .none, comments: 4),

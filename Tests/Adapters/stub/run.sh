@@ -10,14 +10,25 @@ trap 'rm -f "$log" "$err"' EXIT
 
 diff <("$stub" inbox --format json) "$golden/demo-inbox.json"
 diff <("$stub" inbox --cached --format lines) "$golden/demo-inbox.lines"
-[ "$("$stub" inbox --format tmux --max-age 60)" = "8" ]
-[ "$("$stub" --version)" = "prinbox 0.7.0-stub" ]
+diff <("$stub" inbox --all) "$golden/demo-inbox-all.json"
+diff <("$stub" inbox --all --format lines) "$golden/demo-inbox-all.lines"
+[ "$("$stub" inbox --format tmux --max-age 60)" = "10" ]
+[ "$("$stub" --version)" = "prinbox 0.8.0-stub" ]
 
 PRINBOX_STUB_LOG=$log "$stub" snooze DEMO_1290
 PRINBOX_STUB_LOG=$log "$stub" unsnooze DEMO_1290
 PRINBOX_STUB_LOG=$log "$stub" open DEMO_58
 PRINBOX_STUB_LOG=$log "$stub" inbox --cached --format json > /dev/null
 [ "$(cat "$log")" = $'snooze DEMO_1290\nunsnooze DEMO_1290\nopen DEMO_58\ninbox json' ]
+
+PRINBOX_STUB_LOG=$log "$stub" inbox --all --format json > /dev/null
+[ "$(tail -n1 "$log")" = "inbox json all" ]
+
+set +e
+"$stub" inbox --format 2> "$err"; code=$?
+set -e
+[ "$code" -eq 2 ]
+grep -q 'needs a value' "$err"
 
 set +e
 out=$(PRINBOX_STUB_EXIT=3 "$stub" inbox 2> "$err"); code=$?
@@ -32,7 +43,7 @@ set -e
 [ "$code" -eq 1 ]
 [ "$out" = "$(cat "$golden/fetch-failed.json")" ]
 grep -q 'did not answer' "$err"
-[ "$(PRINBOX_STUB_EXIT=1 "$stub" inbox --format tmux 2>/dev/null || true)" = "!8" ]
+[ "$(PRINBOX_STUB_EXIT=1 "$stub" inbox --format tmux 2>/dev/null || true)" = "!10" ]
 
 PRINBOX_STUB_VERSION=2 "$stub" inbox | grep -q '"version" : 2,'
 
