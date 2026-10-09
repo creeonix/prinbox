@@ -3,6 +3,7 @@
 # and binds a key to a popup picker over the inbox (docs/tmux.md). Options, set in tmux.conf before TPM runs:
 #   @prinbox_command       the prinbox executable (default prinbox)
 #   @prinbox_max_age       seconds the status segment serves the cache (default 60)
+#   @prinbox_all           list every pull request you reviewed too (on or off, default off)
 #   @prinbox_key           the key after the prefix that opens the popup (default P)
 #   @prinbox_popup_width   (default 80%)
 #   @prinbox_popup_height  (default 70%)
@@ -17,6 +18,7 @@ option() {
 
 command=$(option @prinbox_command prinbox)
 max_age=$(option @prinbox_max_age 60)
+all=$(option @prinbox_all off)
 key=$(option @prinbox_key P)
 width=$(option @prinbox_popup_width 80%)
 height=$(option @prinbox_popup_height 70%)
@@ -30,4 +32,4 @@ for name in status-left status-right; do
 done
 
 tmux bind-key "$key" display-popup -E -w "$width" -h "$height" \
-    "PRINBOX_CMD='$command' PRINBOX_MAX_AGE='$max_age' '$dir/tmux/popup.sh'"
+    "PRINBOX_CMD='$command' PRINBOX_MAX_AGE='$max_age' PRINBOX_ALL='$all' '$dir/tmux/popup.sh'"

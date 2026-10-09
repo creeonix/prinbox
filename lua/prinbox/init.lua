@@ -9,6 +9,7 @@ M.config = {
   cmd = "prinbox",
   max_age = 60,
   poll = 0,
+  all = false,
   window = "botright 15split",
 }
 
@@ -23,7 +24,8 @@ local function stop_timer()
 end
 
 --- Applies the options: cmd, max_age (seconds the list serves the cache), poll (seconds between background
---- refreshes for the count, 0 off) and window (the Ex command that opens the list's window).
+--- refreshes for the count, 0 off), all (list every pull request you reviewed) and window (the Ex command that
+--- opens the list's window).
 function M.setup(opts)
   M.config = vim.tbl_extend("force", M.config, opts or {})
   cli.configure(M.config)

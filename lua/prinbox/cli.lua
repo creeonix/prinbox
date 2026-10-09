@@ -2,7 +2,7 @@
 -- string|nil }. vim.system runs the command; every callback runs on the main loop through vim.schedule.
 local M = {}
 
-local config = { cmd = "prinbox" }
+local config = { cmd = "prinbox", all = false }
 local last = nil
 local failed = false
 
@@ -64,6 +64,9 @@ end
 --- Runs `prinbox inbox --format json` with opts.cached or opts.max_age; cb(report) on the main loop.
 function M.inbox(opts, cb)
   local args = { config.cmd, "inbox", "--format", "json" }
+  if config.all then
+    table.insert(args, "--all")
+  end
   if opts.cached then
     table.insert(args, "--cached")
   elseif opts.max_age then
@@ -78,6 +81,12 @@ function M.inbox(opts, cb)
     failed = report.document == nil
     cb(report)
   end)
+end
+
+--- The URL a row opens: GitHub's diff since your review when the diff moved, else the pull request.
+function M.url(row)
+  local review = row.yourReview
+  return (review and review.sinceReviewUrl) or row.url
 end
 
 --- Runs `prinbox <verb> <id>` (snooze, unsnooze, open); cb(ok, message).

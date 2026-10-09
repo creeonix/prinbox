@@ -69,6 +69,18 @@ vim.api.nvim_win_set_cursor(0, { 4, 0 })
 view.open_current()
 assert(opened[1] == "https://github.com/acme/web/pull/1290", opened[1])
 
+-- 2b. A row whose diff moved since your review opens GitHub's diff since that review.
+local delta_line
+for index, line in ipairs(lines()) do
+  if line:find("#2210", 1, true) then
+    delta_line = index
+  end
+end
+assert(delta_line, "the #2210 row")
+vim.api.nvim_win_set_cursor(0, { delta_line, 0 })
+view.open_current()
+assert(opened[#opened] == "https://github.com/acme/api/pull/2210/files/3f9c2d1..b7e41a0", opened[#opened])
+
 -- 3. s and u run the command with the row's id and re-render from the cache.
 reset_log()
 vim.api.nvim_win_set_cursor(0, { 5, 0 })
@@ -161,6 +173,14 @@ view.open_current()
 wait_for(function() return #log_lines() == 1 end, "the fallback open")
 assert(log_lines()[1] == "open DEMO_1290", log_lines()[1])
 open_error = nil
+
+-- 9b. setup{all = true} asks the command for the Reviewed section.
+reset_log()
+prinbox.setup({ cmd = stub, all = true })
+prinbox.refresh()
+wait_for(function() return vim.tbl_contains(log_lines(), "inbox json all") end, "the --all run")
+wait_for(function() return vim.tbl_contains(lines(), "Reviewed (3)") end, "the Reviewed section")
+prinbox.setup({ cmd = stub, all = false })
 
 -- 10. poll runs the command on its own (with max_age the larger of poll and max_age); q closes the window.
 reset_log()

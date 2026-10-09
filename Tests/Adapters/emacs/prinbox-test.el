@@ -222,3 +222,28 @@ count cannot leak into this one."
 
 (provide 'prinbox-test)
 ;;; prinbox-test.el ends here
+
+(ert-deftest prinbox-test-ret-opens-the-diff-since-your-review ()
+  "A row whose diff moved since your review opens GitHub's diff since that review."
+  (prinbox-test--reset)
+  (prinbox)
+  (prinbox-test--wait-for-rows)
+  (with-current-buffer "*prinbox*"
+    (goto-char (point-min))
+    (while (and (not (eobp)) (not (equal (tabulated-list-get-id) "DEMO_2210")))
+      (forward-line 1))
+    (should (equal (tabulated-list-get-id) "DEMO_2210"))
+    (cl-letf (((symbol-function 'browse-url) (lambda (url &rest _) (push url prinbox-test--opened))))
+      (prinbox-open))
+    (should (equal prinbox-test--opened
+                   '("https://github.com/acme/api/pull/2210/files/3f9c2d1..b7e41a0")))))
+
+(ert-deftest prinbox-test-all-asks-for-the-reviewed-section ()
+  "With `prinbox-all' set the buffer lists the Reviewed section."
+  (prinbox-test--reset)
+  (let ((prinbox-all t))
+    (prinbox)
+    (prinbox-test--wait-for-rows)
+    (prinbox-test--wait (lambda () (member "inbox json all" (prinbox-test--log-lines))))
+    (with-current-buffer "*prinbox*"
+      (should (seq-some (lambda (entry) (equal (car entry) "DEMO_1250")) tabulated-list-entries)))))

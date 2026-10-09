@@ -17,7 +17,7 @@ function M.select(report)
   end
   vim.ui.select(items, { prompt = "Pull requests", kind = "prinbox", format_item = M.format }, function(choice)
     if choice then
-      cli.open(choice.row.url, choice.row.id)
+      cli.open(cli.url(choice.row), choice.row.id)
     end
   end)
 end
