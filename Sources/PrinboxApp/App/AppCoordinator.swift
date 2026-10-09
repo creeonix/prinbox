@@ -85,6 +85,7 @@ final class AppCoordinator {
         fetchSettings = FetchSettings(defaults: settings, logger: logger)
         store.setIncludeConversation(fetchSettings.followReviewThreads)
         store.setScope(fetchSettings.scope)
+        store.setShowReviewed(display.showReviewed)
         avatars = AvatarImages(cache: AvatarCache(directory: AvatarCache.directory(in: directories)))
         if !demo {
             stateWatcher = StateFileWatcher(directory: directories.state) { [weak self] in self?.store.reloadState() }

@@ -8,7 +8,7 @@ struct RowContextMenu: View {
     let actions: PopoverActions
 
     var body: some View {
-        Button("Open on GitHub") { actions.open(row.pullRequest.url) }
+        Button("Open on GitHub") { actions.open(row.openURL) }
         if isSnoozed {
             Button("Unsnooze") { actions.unsnooze(row.id) }
         } else {

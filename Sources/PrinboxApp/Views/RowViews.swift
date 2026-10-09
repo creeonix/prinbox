@@ -11,6 +11,7 @@ struct PullRequestRowView: View {
     var body: some View {
         let pr = row.pullRequest
         let marks = RowMarks.marks(for: pr)
+        let color = VerdictCue.of(row).map(Theme.verdictColor)
         Button(action: onOpen) {
             HStack(alignment: .top, spacing: 10) {
                 AvatarView(login: pr.authorLogin, url: pr.avatarURL, avatars: avatars, badge: badge)
@@ -18,6 +19,9 @@ struct PullRequestRowView: View {
                     HStack(spacing: 6) {
                         Text(RowText.title(pr))
                             .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(
+                                state.display.rowColor == .title ? (color ?? Color.primary) : Color.primary
+                            )
                             .lineLimit(1)
                             .truncationMode(.tail)
                         Spacer(minLength: 4)
@@ -29,9 +33,13 @@ struct PullRequestRowView: View {
                     // up to 59 s in the past, which would floor "5h" to "4h", so ages use the current time.
                     TimelineView(.everyMinute) { _ in
                         HStack(spacing: 6) {
-                            Text(RowText.meta(row, now: Date(), showOrg: state.showsOrgNames))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
+                            Text(
+                                RowText.meta(
+                                    row, now: Date(), showOrg: state.showsOrgNames,
+                                    sinceReview: state.display.sinceReviewLine)
+                            )
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
                             Spacer(minLength: 4)
                             MarksLineView(marks: marks, top: false)
                         }
@@ -43,6 +51,7 @@ struct PullRequestRowView: View {
             .padding(.vertical, 6)
             .contentShape(Rectangle())
             .background(RowHighlight(isSelected: isSelected))
+            .background(VerdictWash(color: state.display.rowColor == .background ? color : nil))
             .overlay(alignment: .leading) {
                 if state.isNew(row) { NewBar() }
             }
@@ -71,10 +80,11 @@ struct CompactRowView: View {
 
     var body: some View {
         let snoozed = row.classification.reason == .snoozed
+        let color = VerdictCue.of(row).map(Theme.verdictColor)
         Button(action: onOpen) {
             HStack(spacing: 6) {
                 Text(RowText.title(row.pullRequest))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(titleStyle(color))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .layoutPriority(-1)
@@ -94,6 +104,7 @@ struct CompactRowView: View {
             .padding(.vertical, 4)
             .contentShape(Rectangle())
             .background(RowHighlight(isSelected: isSelected))
+            .background(VerdictWash(color: state.display.rowColor == .background ? color : nil))
             .overlay(alignment: .leading) {
                 if state.isNew(row) { NewBar() }
                 if snoozed { SnoozeGlyph().padding(.leading, 12) }
@@ -102,6 +113,12 @@ struct CompactRowView: View {
         }
         .buttonStyle(.plain)
         .help(RowText.help(row))
+    }
+
+    /// The title keeps its secondary gray unless "Title" colors it by your verdict.
+    private func titleStyle(_ color: Color?) -> AnyShapeStyle {
+        guard state.display.rowColor == .title, let color else { return AnyShapeStyle(.secondary) }
+        return AnyShapeStyle(color)
     }
 
     private func trailer(age: String?) -> some View {
