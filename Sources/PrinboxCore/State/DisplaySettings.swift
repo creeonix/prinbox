@@ -54,9 +54,9 @@ public final class DisplaySettings {
         defaults.set(on, forKey: Self.compactKey)
     }
 
-    public func setRowColor(_ on: RowColor) {
-        rowColor = on
-        defaults.set(on.rawValue, forKey: Self.rowColorKey)
+    public func setRowColor(_ color: RowColor) {
+        rowColor = color
+        defaults.set(color.rawValue, forKey: Self.rowColorKey)
     }
 
     public func setSinceReviewLine(_ on: Bool) {
