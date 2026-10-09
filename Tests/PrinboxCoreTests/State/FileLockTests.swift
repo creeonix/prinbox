@@ -46,6 +46,8 @@ final class OrderLog: @unchecked Sendable {
         #expect(order.entries == ["first in", "first out", "second in"])
     }
 
+    /// The holder keeps the lock until the test says "done", never for a fixed time: on a loaded CI runner the
+    /// 0.6 s it used to sleep could pass before the second lock was even tried, and the notice never came.
     @Test func aStuckLockIsGivenUpWithANotice() async {
         let url = lockURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
@@ -54,12 +56,16 @@ final class OrderLog: @unchecked Sendable {
         let holder = Task.detached {
             FileLock(url: url).withLock {
                 order.add("held")
-                Thread.sleep(forTimeInterval: 0.6)
+                let deadline = Date().addingTimeInterval(5)
+                while !order.entries.contains("done") && Date() < deadline {
+                    Thread.sleep(forTimeInterval: 0.005)
+                }
             }
         }
         await waitUntil { order.entries.contains("held") }
         var ran = false
         FileLock(url: url, patience: 0.1, logger: logger).withLock { ran = true }
+        order.add("done")
         #expect(ran)
         #expect(logger.messages(.notice) == ["lock not acquired within 100 ms, writing without it"])
         await holder.value
