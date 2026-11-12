@@ -1,14 +1,17 @@
 name: Release
 
 # Pushing a tag like v0.2.0 tests, builds a universal DMG and the prinbox command's tarball with version
-# 0.2.0 and publishes a GitHub Release with both and their SHA-256 files. Builds are ad hoc signed;
-# RELEASING.md explains how to switch to Developer ID signing and notarization.
+# 0.2.0, signed with Developer ID and notarized, and publishes a GitHub Release with both and their SHA-256
+# files. RELEASING.md lists the secrets the signing steps read.
 on:
   push:
     tags: ["v*"]
 
 permissions:
   contents: write
+
+env:
+  SIGN_IDENTITY: "Developer ID Application: Shiramori OY (5YB32JUPY7)"
 
 jobs:
   dmg:
@@ -25,10 +28,37 @@ jobs:
         run: make test
       - name: Release notes
         run: mkdir -p build && scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > build/release-notes.md
-      - name: Build DMG
-        run: make dmg VERSION="${GITHUB_REF_NAME#v}"
-      - name: Build the command tarball
-        run: make cli-tarball VERSION="${GITHUB_REF_NAME#v}"
+      # The identity goes into a keychain of its own: the certificate and key from the .p12, plus Apple's
+      # Developer ID G2 intermediate, which the runner's trust store does not carry. The partition list lets
+      # codesign use the key without a prompt.
+      - name: Signing identity
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/build.keychain-db"
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          curl -fsSL https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o "$RUNNER_TEMP/DeveloperIDG2CA.cer"
+          security create-keychain -p ci "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p ci "$keychain"
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k ci "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" "$HOME/Library/Keychains/login.keychain-db"
+          rm "$RUNNER_TEMP/cert.p12"
+          security find-identity -v -p codesigning "$keychain" | grep -F "$SIGN_IDENTITY"
+      - name: Notarization key
+        env:
+          NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
+        run: echo "$NOTARY_KEY" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+      - name: Build the DMG and the command tarball, notarized
+        env:
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          make notarize notarize-cli VERSION="${GITHUB_REF_NAME#v}" SIGN_IDENTITY="$SIGN_IDENTITY" \
+            NOTARY_ARGS="--key $RUNNER_TEMP/notary.p8 --key-id $NOTARY_KEY_ID --issuer $NOTARY_ISSUER_ID"
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

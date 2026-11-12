@@ -104,12 +104,11 @@ third-party OAuth apps but have approved the GitHub CLI. PRInbox never reads, st
 2. Download `PRInbox-<version>.dmg` from the
    [latest release](https://github.com/creeonix/prinbox/releases/latest), open it and drag
    **PRInbox** to **Applications**.
-3. Open PRInbox. Releases are signed ad hoc rather than with an Apple Developer ID, so macOS blocks the
-   first launch. Right-click PRInbox in Applications and choose **Open**, or go to
-   **System Settings › Privacy & Security** and click **Open Anyway**. This is needed once.
+3. Open PRInbox. Releases are signed with a Developer ID and notarized by Apple, so macOS opens them
+   without a warning.
 
-Or with Homebrew: `brew install --cask creeonix/tap/prinbox` for the app (add `--no-quarantine` to skip the
-first-launch step) and `brew install creeonix/tap/prinbox-cli` for the command.
+Or with Homebrew: `brew install --cask creeonix/tap/prinbox` for the app and
+`brew install creeonix/tap/prinbox-cli` for the command.
 
 Requires macOS 14 or later, on Apple silicon or Intel.
 
@@ -332,6 +331,8 @@ Other targets:
 | `make install-cli` | copies the command to `~/.local/bin` (`PREFIX` overrides) |
 | `make cli-tarball VERSION=x.y.z` | builds the command's release asset |
 | `make dmg VERSION=x.y.z` | builds the release DMG into `build/` |
+| `make notarize VERSION=x.y.z SIGN_IDENTITY=...` | the DMG signed with Developer ID, notarized and stapled (see RELEASING.md) |
+| `make notarize-cli VERSION=x.y.z SIGN_IDENTITY=...` | the command's release asset, notarized |
 | `make icon` | rebuilds the app icon from `Resources/AppIcon-source.png` |
 
 ## Development

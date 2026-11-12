@@ -19,6 +19,9 @@ ARCH_FLAGS    := $(foreach arch,$(ARCHS),--arch $(arch))
 # which notarization requires (see RELEASING.md).
 SIGN_IDENTITY ?= -
 SIGN_FLAGS    := $(if $(filter -,$(SIGN_IDENTITY)),,--options runtime --timestamp)
+# Credentials for notarytool: the keychain profile from `xcrun notarytool store-credentials prinbox` here, the
+# API key's files in the release workflow.
+NOTARY_ARGS   ?= --keychain-profile prinbox
 
 # Command Line Tools keep the swift-testing macro plugin in host/plugins/testing, which the default
 # explicit-module dependency scan intermittently misses ("plugin for module 'TestingMacros' not found").
@@ -26,7 +29,7 @@ SIGN_FLAGS    := $(if $(filter -,$(SIGN_IDENTITY)),,--options runtime --timestam
 TESTING_PLUGINS := $(shell d="$$(dirname "$$(dirname "$$(xcrun --find swift)")")/lib/swift/host/plugins/testing"; [ -d "$$d" ] && echo "$$d")
 SWIFT_TEST_FLAGS := $(if $(TESTING_PLUGINS),-Xswiftc -plugin-path -Xswiftc $(TESTING_PLUGINS))
 
-.PHONY: test lint format coverage build icon app dmg install uninstall run clean cli install-cli cli-tarball test-adapters
+.PHONY: test lint format coverage build icon app dmg notarize install uninstall run clean cli install-cli cli-tarball notarize-cli require-identity test-adapters
 
 test:
 	swift test $(SWIFT_TEST_FLAGS)
@@ -79,6 +82,20 @@ app: build
 dmg: app
 	scripts/make-dmg.sh "$(APP)" "$(DMG)" "$(APP_NAME) $(VERSION)"
 
+# Notarization needs a Developer ID identity; the ad hoc default is refused before anything is built.
+require-identity:
+	@[ "$(SIGN_IDENTITY)" != "-" ] || { echo 'error: notarize needs SIGN_IDENTITY="Developer ID Application: <name> (<team>)"' >&2; exit 1; }
+
+# The release DMG, notarized: the app bundle is notarized and stapled first, so a copy dragged out of the DMG
+# passes Gatekeeper offline too; then the DMG is signed, notarized and stapled, and its checksum rewritten
+# (stapling changes the file).
+notarize: require-identity app
+	scripts/notarize.sh "$(APP)" $(NOTARY_ARGS)
+	scripts/make-dmg.sh "$(APP)" "$(DMG)" "$(APP_NAME) $(VERSION)"
+	codesign --sign "$(SIGN_IDENTITY)" --timestamp "$(DMG)"
+	scripts/notarize.sh "$(DMG)" $(NOTARY_ARGS)
+	cd "$(BUILD_DIR)" && shasum -a 256 "$(notdir $(DMG))" > "$(notdir $(DMG)).sha256"
+
 install: app
 	-pkill -x $(EXECUTABLE)
 	@for i in $$(seq 50); do pgrep -xq $(EXECUTABLE) || break; sleep 0.1; done
@@ -98,11 +115,20 @@ install-cli: cli
 
 # The release asset for the Homebrew formula: the universal binary and the license, plus the checksum the
 # tap script reads.
+define pack-cli-tarball
+rm -rf "$(BUILD_DIR)/cli" && mkdir -p "$(BUILD_DIR)/cli"
+cp "$(CLI_BIN)" LICENSE "$(BUILD_DIR)/cli/"
+COPYFILE_DISABLE=1 tar -C "$(BUILD_DIR)/cli" -czf "$(CLI_TARBALL)" $(CLI_PRODUCT) LICENSE
+cd "$(BUILD_DIR)" && shasum -a 256 "$(notdir $(CLI_TARBALL))" > "$(notdir $(CLI_TARBALL)).sha256"
+endef
+
 cli-tarball: cli
-	rm -rf "$(BUILD_DIR)/cli" && mkdir -p "$(BUILD_DIR)/cli"
-	cp "$(CLI_BIN)" LICENSE "$(BUILD_DIR)/cli/"
-	COPYFILE_DISABLE=1 tar -C "$(BUILD_DIR)/cli" -czf "$(CLI_TARBALL)" $(CLI_PRODUCT) LICENSE
-	cd "$(BUILD_DIR)" && shasum -a 256 "$(notdir $(CLI_TARBALL))" > "$(notdir $(CLI_TARBALL)).sha256"
+	$(pack-cli-tarball)
+
+# The tarball with the command notarized first. A bare executable takes no staple; Gatekeeper checks it online.
+notarize-cli: require-identity cli
+	scripts/notarize.sh "$(CLI_BIN)" $(NOTARY_ARGS)
+	$(pack-cli-tarball)
 
 # uninstall takes the same PREFIX as install-cli for the command.
 uninstall:
