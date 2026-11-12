@@ -1,3 +1,10 @@
+## What's new in 0.8.1
+
+- **Signed and notarized.** The app and the `prinbox` command are signed with a Developer ID and notarized by
+  Apple, so macOS opens a fresh download without the right-click Open step, and
+  `brew install --cask creeonix/tap/prinbox` no longer needs `--no-quarantine`. The DMG and the app inside it
+  both carry the notarization ticket, so the first launch works offline too. Nothing else changed since 0.8.0.
+
 ## What's new in 0.8.0
 
 - **Where you stand, at a glance.** A row you approved is washed green, one you asked changes on red, and its fact
@@ -106,10 +113,8 @@
 
 ## Install
 
-1. Download `PRInbox-<version>.dmg`, open it and drag **PRInbox** to **Applications**.
-2. This build is signed ad hoc, not with an Apple Developer ID, so macOS blocks the first launch.
-   Right-click PRInbox in Applications and choose **Open**, or open it once, then go to
-   **System Settings › Privacy & Security** and click **Open Anyway**.
-3. PRInbox needs the GitHub CLI, signed in: `brew install gh && gh auth login`.
+1. Download `PRInbox-<version>.dmg`, open it and drag **PRInbox** to **Applications**. The build is signed
+   with a Developer ID and notarized by Apple, so macOS opens it without a warning.
+2. PRInbox needs the GitHub CLI, signed in: `brew install gh && gh auth login`.
 
 Verify the download with `shasum -a 256 -c PRInbox-<version>.dmg.sha256`.

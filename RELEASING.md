@@ -17,9 +17,10 @@ Releases are built by `.github/workflows/release.yml` when a version tag is push
    git push origin v0.3.0
    ```
 
-4. The workflow tests, runs `make dmg VERSION=0.3.0` and publishes a GitHub Release with
-   `PRInbox-0.3.0.dmg` and `PRInbox-0.3.0.dmg.sha256`, plus `prinbox-0.3.0-macos.tar.gz` and its
-   `.sha256` beside the DMG. The version comes from the tag.
+4. The workflow tests, runs `make notarize notarize-cli VERSION=0.3.0` with the Developer ID identity (see
+   Signing) and publishes a GitHub Release with `PRInbox-0.3.0.dmg` and `PRInbox-0.3.0.dmg.sha256`, plus
+   `prinbox-0.3.0-macos.tar.gz` and its `.sha256` beside the DMG, all signed and notarized. The version
+   comes from the tag.
 5. Update the Homebrew tap. With a `TAP_TOKEN` repository secret (a fine-grained token with contents write
    on `creeonix/homebrew-tap`) the workflow does it; without one, run it by hand once the release page
    shows the assets:
@@ -32,45 +33,67 @@ Releases are built by `.github/workflows/release.yml` when a version tag is push
    `brew install --cask creeonix/tap/prinbox` and `brew install creeonix/tap/prinbox-cli` then serve the
    new version.
 
-To build the same DMG locally: `make dmg VERSION=0.3.0` (output in `build/`).
+`make dmg VERSION=0.3.0` builds the same DMG locally, signed ad hoc; `make notarize VERSION=0.3.0
+SIGN_IDENTITY="Developer ID Application: Shiramori OY (5YB32JUPY7)"` builds the notarized one (output in
+`build/`).
 
 ## Signing
 
-Builds are signed ad hoc (`SIGN_IDENTITY=-`), so Gatekeeper blocks the first launch until the user
-chooses Open (the release notes explain how). Switching to Developer ID needs a paid Apple Developer
-Program membership and no restructuring:
+Releases are signed with `Developer ID Application: Shiramori OY (5YB32JUPY7)` and notarized by Apple. With a
+Developer ID identity the Makefile adds the hardened runtime and a secure timestamp, which notarization
+requires; the app needs no entitlements. Without `SIGN_IDENTITY`, `make dmg`, `make install` and `make cli`
+sign ad hoc, for local builds.
 
-1. Create a **Developer ID Application** certificate and export it with its key as a `.p12`.
-2. Create an App Store Connect API key for notarization (`.p8`, key ID, issuer ID).
-3. Add repository secrets: `MACOS_CERT_P12` (base64 of the `.p12`), `MACOS_CERT_PASSWORD`,
-   `NOTARY_KEY` (base64 of the `.p8`), `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`.
-4. In `release.yml`, before "Build DMG", import the certificate into a temporary keychain:
+`make notarize` notarizes and staples the app bundle, builds the DMG from it, then signs, notarizes and
+staples the DMG and rewrites its `.sha256` (stapling changes the file). `make notarize-cli` notarizes the
+command before packing its tarball; a bare executable takes no staple. Both run `scripts/notarize.sh`, which
+prints Apple's log when a submission is rejected, and both refuse the ad hoc identity.
 
-   ```sh
-   echo "$MACOS_CERT_P12" | base64 --decode > cert.p12
-   security create-keychain -p ci build.keychain
-   security default-keychain -s build.keychain
-   security unlock-keychain -p ci build.keychain
-   security import cert.p12 -k build.keychain -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
-   security set-key-partition-list -S apple-tool:,apple: -s -k ci build.keychain
-   ```
+### The workflow's secrets
 
-5. Build with the identity. With a real identity, the Makefile adds the hardened runtime and a secure
-   timestamp, which notarization requires:
+| Secret | Contents |
+|---|---|
+| `MACOS_CERT_P12` | the identity (certificate and private key) as a `.p12`, base64 |
+| `MACOS_CERT_PASSWORD` | the `.p12` password |
+| `NOTARY_KEY` | an App Store Connect API key (`.p8`, Team Keys, role Developer), base64 |
+| `NOTARY_KEY_ID` | its key ID |
+| `NOTARY_ISSUER_ID` | the issuer ID from the same page |
 
-   ```sh
-   make dmg VERSION="${GITHUB_REF_NAME#v}" SIGN_IDENTITY="Developer ID Application: <Name> (<TEAMID>)"
-   ```
+The workflow imports the `.p12` and Apple's Developer ID G2 intermediate into a keychain of its own and
+passes the API key to `notarytool` through the Makefile's `NOTARY_ARGS`. The identity's name is plain text in
+`release.yml`; it is in every signature anyway.
 
-6. Sign, notarize and staple the DMG:
+### On a machine
 
-   ```sh
-   codesign --sign "Developer ID Application: <Name> (<TEAMID>)" --timestamp build/PRInbox-*.dmg
-   echo "$NOTARY_KEY" | base64 --decode > notary.p8
-   xcrun notarytool submit build/PRInbox-*.dmg --key notary.p8 --key-id "$NOTARY_KEY_ID" \
-     --issuer "$NOTARY_ISSUER_ID" --wait
-   xcrun stapler staple build/PRInbox-*.dmg
-   ```
+The notarize targets need the identity in the login keychain and a `notarytool` keychain profile named
+`prinbox`, the `NOTARY_ARGS` default:
 
-7. Regenerate the `.sha256` after stapling (stapling changes the file), and drop the Gatekeeper
-   paragraph from `.github/release-notes.md`.
+```sh
+xcrun notarytool store-credentials prinbox --key AuthKey_<KEYID>.p8 --key-id <KEYID> --issuer <ISSUERID>
+make notarize notarize-cli VERSION=0.8.0 SIGN_IDENTITY="Developer ID Application: Shiramori OY (5YB32JUPY7)"
+spctl -a -t open --context context:primary-signature -v build/PRInbox-0.8.0.dmg   # accepted, Notarized Developer ID
+```
+
+### Renewal
+
+The certificate expires on 2027-12-12 and Apple does not renew it. Before then, make a new key and request
+(the subject is ignored; Apple writes its own from the account):
+
+```sh
+/usr/bin/openssl req -new -newkey rsa:2048 -nodes -keyout devid.key -out devid.csr -subj "/CN=prinbox"
+```
+
+Upload `devid.csr` as a new **Developer ID Application** certificate at
+developer.apple.com/account/resources/certificates (Account Holder only), download the `.cer`, and build and
+import the identity:
+
+```sh
+curl -O https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+/usr/bin/openssl x509 -inform DER -in DeveloperIDG2CA.cer -out DeveloperIDG2CA.pem
+/usr/bin/openssl x509 -inform DER -in developerID_application.cer -out devid.pem
+/usr/bin/openssl pkcs12 -export -inkey devid.key -in devid.pem -certfile DeveloperIDG2CA.pem -out devid.p12
+security import devid.p12 -k ~/Library/Keychains/login.keychain-db -T /usr/bin/codesign
+```
+
+Then store the `.p12` and its password in `MACOS_CERT_P12` and `MACOS_CERT_PASSWORD`, and delete the key
+file. The API key does not expire; revoke and replace it in App Store Connect if it leaks.
