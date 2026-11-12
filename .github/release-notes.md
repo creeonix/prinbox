@@ -1,3 +1,10 @@
+## What's new in 0.8.1
+
+- **Signed and notarized.** The app and the `prinbox` command are signed with a Developer ID and notarized by
+  Apple, so macOS opens a fresh download without the right-click Open step, and
+  `brew install --cask creeonix/tap/prinbox` no longer needs `--no-quarantine`. The DMG and the app inside it
+  both carry the notarization ticket, so the first launch works offline too. Nothing else changed since 0.8.0.
+
 ## What's new in 0.8.0
 
 - **Where you stand, at a glance.** A row you approved is washed green, one you asked changes on red, and its fact

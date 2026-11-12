@@ -13,7 +13,7 @@ diff <("$stub" inbox --cached --format lines) "$golden/demo-inbox.lines"
 diff <("$stub" inbox --all) "$golden/demo-inbox-all.json"
 diff <("$stub" inbox --all --format lines) "$golden/demo-inbox-all.lines"
 [ "$("$stub" inbox --format tmux --max-age 60)" = "10" ]
-[ "$("$stub" --version)" = "prinbox 0.8.0-stub" ]
+[ "$("$stub" --version)" = "prinbox 0.8.1-stub" ]
 
 PRINBOX_STUB_LOG=$log "$stub" snooze DEMO_1290
 PRINBOX_STUB_LOG=$log "$stub" unsnooze DEMO_1290

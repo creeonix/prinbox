@@ -15,7 +15,7 @@ command=${1:-}
 log() { if [ -n "${PRINBOX_STUB_LOG:-}" ]; then echo "$1" >> "$PRINBOX_STUB_LOG"; fi; }
 
 case "$command" in
-    --version) echo "prinbox 0.8.0-stub"; exit 0 ;;
+    --version) echo "prinbox 0.8.1-stub"; exit 0 ;;
     snooze|unsnooze|open)
         [ $# -eq 1 ] || { echo "prinbox: $command needs one pull request id" >&2; exit 2; }
         log "$command $1"
